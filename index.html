@@ -6,7 +6,7 @@
 <title>MAWD — Your Chief of Staff</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -64,12 +64,20 @@ body{
   z-index:10;
 }
 #topBar .logo{
-  font-family:Arial Black,'Arial Bold',Arial,sans-serif;
-  font-weight:900;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#topBar .logo img{
+  width:22px;height:22px;border-radius:6px;
+}
+#topBar .logo span{
+  font-family:'Bricolage Grotesque','DM Sans',sans-serif;
+  font-weight:800;
   font-size:14px;
   color:var(--gold);
   text-transform:lowercase;
-  letter-spacing:0.5px;
+  letter-spacing:0.3px;
 }
 #topBar .title{
   font-family:Arial Black,'Arial Bold',Arial,sans-serif;
@@ -359,7 +367,7 @@ body{
 
   <!-- TOP BAR -->
   <div id="topBar">
-    <div class="logo">fanded</div>
+    <div class="logo"><img src="logo.png" alt="Fanded"><span>fanded</span></div>
     <div class="title">MAWD</div>
     <div class="agent-dots">
       <div class="agent-dot" data-agent="dollar"></div>
