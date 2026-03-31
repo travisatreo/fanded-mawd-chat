@@ -123,7 +123,7 @@ Never use bullet points or numbered lists in conversation.`;
     if (!response.ok) {
       const err = await response.text();
       console.error('Anthropic API error:', response.status, err);
-      return res.status(500).json({ error: 'API error: ' + response.status });
+      return res.status(500).json({ error: 'API error: ' + response.status, detail: err });
     }
 
     const data = await response.json();
