@@ -552,7 +552,7 @@ body{display:flex;justify-content:center;}
     fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:messages, agent:agent, mode:'demo'})
+      body:JSON.stringify({messages:messages, agent:agent, mode: window.location.search.includes('demo') ? 'demo' : 'personal'})
     })
     .then(function(r){return r.json();})
     .then(function(data){
