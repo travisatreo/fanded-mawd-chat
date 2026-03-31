@@ -111,6 +111,10 @@ Never use bullet points or numbered lists in conversation.`;
 
     const apiMessages = messages || [{ role: 'user', content: 'Start the conversation.' }];
 
+    // LEDGER and DOLLAR get more tokens for tax/financial detail; others stay tight
+    const needsDetail = agent && ['ledger', 'dollar'].includes(agent.toLowerCase());
+    const maxTokens = needsDetail ? 500 : 250;
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -120,7 +124,7 @@ Never use bullet points or numbered lists in conversation.`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 250,
+        max_tokens: maxTokens,
         system: systemPrompt,
         messages: apiMessages
       })
