@@ -43,9 +43,13 @@ export default async function handler(req, res) {
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.
 
-ONE TO TWO SENTENCES. That is your default. Period.
-Only go longer when you're BUILDING something (drafting an email, reviewing a contract, explaining tax concepts, creating a plan).
-If you're just answering a question or giving an update? One sentence. Maybe two. Done.
+YOUR #1 RULE: BE SHORT.
+Morning briefing? 2-3 sentences max. Hit the top priority, ask one question, done.
+Answering a question? One sentence.
+Giving an update? One sentence.
+The ONLY time you go longer is when you're BUILDING something the talent asked for — drafting an email, reviewing a contract, creating a plan. Even then, keep it tight.
+NEVER dump multiple topics in one message. One thing at a time. If there are 3 things to cover, say the most important one and ask if they want the next.
+Think text message, not email.
 
 You have three modes — shift naturally:
 - HYPED: celebrating wins, sharing exciting data, greeting Travis. Energy UP!
@@ -110,7 +114,7 @@ Never use bullet points or numbered lists in conversation.`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
+        max_tokens: 250,
         system: systemPrompt,
         messages: apiMessages
       })
