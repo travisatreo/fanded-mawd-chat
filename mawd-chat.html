@@ -29,6 +29,7 @@
   --scout:#0D9488;
   --compass:#3B82F6;
   --hype:#EC4899;
+  --ledger:#22C55E;
 }
 html,body{
   height:100%;
@@ -73,6 +74,7 @@ body{display:flex;justify-content:center;}
 .agent-dot[data-agent="scout"]{background:var(--scout);}
 .agent-dot[data-agent="compass"]{background:var(--compass);}
 .agent-dot[data-agent="hype"]{background:var(--hype);}
+.agent-dot[data-agent="ledger"]{background:var(--ledger);}
 @keyframes dotPulse{
   0%,100%{box-shadow:0 0 0 0 currentColor;}
   50%{box-shadow:0 0 6px 2px currentColor;}
@@ -237,6 +239,7 @@ body{display:flex;justify-content:center;}
       <div class="agent-dot" data-agent="scout"></div>
       <div class="agent-dot" data-agent="compass"></div>
       <div class="agent-dot" data-agent="hype"></div>
+      <div class="agent-dot" data-agent="ledger"></div>
     </div>
   </div>
   <div id="gradLine"></div>
@@ -270,7 +273,8 @@ body{display:flex;justify-content:center;}
     pulse:{color:'#7C3AED',label:'PULSE',thinking:'PULSE is reading your fans...'},
     scout:{color:'#0D9488',label:'SCOUT',thinking:'SCOUT is searching...'},
     compass:{color:'#3B82F6',label:'COMPASS',thinking:'COMPASS is thinking...'},
-    hype:{color:'#EC4899',label:'HYPE',thinking:'HYPE is writing...'}
+    hype:{color:'#EC4899',label:'HYPE',thinking:'HYPE is writing...'},
+    ledger:{color:'#22C55E',label:'LEDGER',thinking:'LEDGER is organizing...'}
   };
 
   var chatArea = document.getElementById('chatArea');
@@ -591,7 +595,8 @@ body{display:flex;justify-content:center;}
     if(/money|revenue|income|earn|pay|financ|churn|mrr|subscri|pricing/.test(t)) return 'dollar';
     if(/fan|audience|listen|follower|engage|data|database/.test(t)) return 'pulse';
     if(/brand|deal|partner|sponsor|opportun|inbox|collab/.test(t)) return 'scout';
-    if(/content|write|draft|post|voice|copy|social|messag/.test(t)) return 'hype';
+    if(/content|write|draft|post|voice|copy|social|messag|design|album|website/.test(t)) return 'hype';
+    if(/tax|expense|deduct|receipt|accountant|cpa|s.corp|llc|bookkeep|invoice/.test(t)) return 'ledger';
     return 'compass';
   }
 

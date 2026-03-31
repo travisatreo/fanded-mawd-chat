@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mawd-chat",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3006"],
+      "port": 3006
+    }
+  ]
+}
