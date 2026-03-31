@@ -24,7 +24,6 @@
   --border:rgba(196,149,58,0.2);
   --font-h:'Playfair Display',Georgia,serif;
   --font-ui:'DM Sans',system-ui,sans-serif;
-  /* Agent colors */
   --dollar:#C4953A;
   --pulse:#7C3AED;
   --scout:#0D9488;
@@ -39,402 +38,196 @@ html,body{
   -webkit-font-smoothing:antialiased;
   overflow:hidden;
 }
-body{
-  display:flex;
-  justify-content:center;
-}
+body{display:flex;justify-content:center;}
 #app{
-  width:100%;
-  max-width:430px;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  position:relative;
+  width:100%;max-width:430px;height:100%;
+  display:flex;flex-direction:column;position:relative;
   background:linear-gradient(180deg,var(--bg) 0%,var(--bg-bottom) 100%);
 }
 /* ── TOP BAR ── */
 #topBar{
-  flex-shrink:0;
-  padding:12px 16px 0;
+  flex-shrink:0;padding:12px 16px 0;
   padding-top:max(12px,env(safe-area-inset-top));
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  position:relative;
-  z-index:10;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;z-index:10;
 }
-#topBar .logo{
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-#topBar .logo img{
-  width:22px;height:22px;border-radius:6px;
-}
+#topBar .logo{display:flex;align-items:center;gap:6px;}
+#topBar .logo img{width:22px;height:22px;border-radius:6px;}
 #topBar .logo span{
   font-family:'Bricolage Grotesque','DM Sans',sans-serif;
-  font-weight:800;
-  font-size:14px;
-  color:var(--gold);
-  text-transform:lowercase;
-  letter-spacing:0.3px;
+  font-weight:800;font-size:14px;color:var(--gold);
+  text-transform:lowercase;letter-spacing:0.3px;
 }
 #topBar .title{
   font-family:'Space Grotesk',sans-serif;
-  font-weight:500;
-  font-size:17px;
-  color:var(--cream);
-  letter-spacing:3px;
+  font-weight:500;font-size:17px;color:var(--cream);letter-spacing:3px;
 }
-.agent-dots{
-  display:flex;
-  gap:5px;
-  align-items:center;
-}
+.agent-dots{display:flex;gap:5px;align-items:center;}
 .agent-dot{
-  width:7px;height:7px;border-radius:50%;
-  opacity:0.4;
+  width:7px;height:7px;border-radius:50%;opacity:0.4;
   transition:opacity 0.4s,box-shadow 0.4s;
 }
-.agent-dot.active{
-  opacity:1;
-}
+.agent-dot.active{opacity:1;animation:dotPulse 2s ease-in-out infinite;}
 .agent-dot[data-agent="dollar"]{background:var(--dollar);}
 .agent-dot[data-agent="pulse"]{background:var(--pulse);}
 .agent-dot[data-agent="scout"]{background:var(--scout);}
 .agent-dot[data-agent="compass"]{background:var(--compass);}
 .agent-dot[data-agent="hype"]{background:var(--hype);}
-.agent-dot.active{
-  animation:dotPulse 2s ease-in-out infinite;
-}
 @keyframes dotPulse{
   0%,100%{box-shadow:0 0 0 0 currentColor;}
   50%{box-shadow:0 0 6px 2px currentColor;}
 }
-/* Gradient line */
-#gradLine{
-  flex-shrink:0;
-  height:2px;
-  width:100%;
-  background:linear-gradient(90deg,var(--gold),var(--purple));
-  margin-top:10px;
-}
+#gradLine{flex-shrink:0;height:2px;width:100%;background:linear-gradient(90deg,var(--gold),var(--purple));margin-top:10px;}
 /* ── STATUS PILL ── */
-#statusPill{
-  flex-shrink:0;
-  display:flex;
-  justify-content:center;
-  padding:10px 0 6px;
-}
+#statusPill{flex-shrink:0;display:flex;justify-content:center;padding:10px 0 6px;}
 #statusPill .pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  background:rgba(196,149,58,0.15);
-  border:1px solid rgba(196,149,58,0.3);
-  border-radius:50px;
-  padding:5px 14px;
-  font-size:11px;
-  color:var(--gold);
-  font-family:var(--font-ui);
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(196,149,58,0.15);border:1px solid rgba(196,149,58,0.3);
+  border-radius:50px;padding:5px 14px;font-size:11px;color:var(--gold);font-family:var(--font-ui);
 }
 #statusPill .pill .dot{
-  width:6px;height:6px;border-radius:50%;
-  background:var(--gold);
+  width:6px;height:6px;border-radius:50%;background:var(--gold);
   animation:statusPulse 2s ease-in-out infinite;
 }
-@keyframes statusPulse{
-  0%,100%{opacity:1;}
-  50%{opacity:0.3;}
-}
+@keyframes statusPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
 /* ── CHAT AREA ── */
 #chatArea{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
-  padding:12px 16px 8px;
-  scroll-behavior:smooth;
-  -webkit-overflow-scrolling:touch;
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:12px 16px 8px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
 }
 #chatArea::-webkit-scrollbar{width:0;display:none;}
-/* Message wrapper */
 .msg-wrap{
-  margin-bottom:16px;
-  opacity:0;
-  transform:translateY(12px);
+  margin-bottom:16px;opacity:0;transform:translateY(12px);
   animation:msgIn 0.3s ease-out forwards;
 }
-@keyframes msgIn{
-  to{opacity:1;transform:translateY(0);}
-}
+@keyframes msgIn{to{opacity:1;transform:translateY(0);}}
 /* MAWD message */
-.msg-mawd{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-}
+.msg-mawd{display:flex;gap:10px;align-items:flex-start;}
 .mawd-avatar{
-  width:28px;height:28px;border-radius:50%;
-  background:var(--gold);
+  width:28px;height:28px;border-radius:50%;background:var(--gold);
   display:flex;align-items:center;justify-content:center;
   font-family:Arial Black,'Arial Bold',Arial,sans-serif;
-  font-size:12px;color:var(--cream);
-  flex-shrink:0;
-  margin-top:18px;
+  font-size:12px;color:var(--cream);flex-shrink:0;margin-top:18px;
 }
-.mawd-content{
-  flex:1;
-  max-width:85%;
-}
+.mawd-content{flex:1;max-width:85%;}
 .agent-label{
-  font-family:var(--font-ui);
-  font-size:9px;
-  font-weight:700;
-  letter-spacing:0.1em;
-  text-transform:uppercase;
-  margin-bottom:4px;
-  padding-left:2px;
+  font-family:var(--font-ui);font-size:9px;font-weight:700;
+  letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;padding-left:2px;
 }
 .mawd-bubble{
-  background:var(--card);
-  border:1px solid rgba(196,149,58,0.15);
-  border-radius:4px 16px 16px 16px;
-  padding:14px 16px;
-  font-family:'Space Grotesk',sans-serif;
-  font-weight:400;
-  font-size:15px;
-  line-height:1.65;
-  color:var(--cream);
+  background:var(--card);border:1px solid rgba(196,149,58,0.15);
+  border-radius:4px 16px 16px 16px;padding:14px 16px;
+  font-family:'Space Grotesk',sans-serif;font-weight:400;
+  font-size:15px;line-height:1.65;color:var(--cream);
 }
 .mawd-bubble .typing-cursor{
-  display:inline-block;
-  width:2px;
-  height:18px;
-  background:var(--gold);
-  margin-left:2px;
-  vertical-align:text-bottom;
+  display:inline-block;width:2px;height:18px;background:var(--gold);
+  margin-left:2px;vertical-align:text-bottom;
   animation:cursorBlink 0.6s step-end infinite;
 }
-@keyframes cursorBlink{
-  0%,100%{opacity:1;}
-  50%{opacity:0;}
-}
+@keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
 /* Talent message */
-.msg-talent{
-  display:flex;
-  justify-content:flex-end;
-}
+.msg-talent{display:flex;justify-content:flex-end;}
 .talent-bubble{
-  background:rgba(196,149,58,0.12);
-  border:1px solid rgba(196,149,58,0.25);
-  border-radius:16px 4px 16px 16px;
-  padding:12px 16px;
-  font-family:var(--font-ui);
-  font-size:15px;
-  color:var(--cream);
-  max-width:80%;
-  line-height:1.5;
+  background:rgba(196,149,58,0.12);border:1px solid rgba(196,149,58,0.25);
+  border-radius:16px 4px 16px 16px;padding:12px 16px;
+  font-family:var(--font-ui);font-size:15px;color:var(--cream);
+  max-width:80%;line-height:1.5;
 }
 /* Timestamp */
 .timestamp{
-  text-align:center;
-  font-size:10px;
-  color:var(--cream-40);
-  font-family:var(--font-ui);
-  margin:16px 0 12px;
+  text-align:center;font-size:10px;color:var(--cream-40);
+  font-family:var(--font-ui);margin:16px 0 12px;
 }
 /* Quick replies */
-.quick-replies{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:10px;
-  padding-left:38px;
-}
+.quick-replies{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-left:38px;}
 .qr-btn{
-  background:rgba(196,149,58,0.08);
-  border:1px solid rgba(196,149,58,0.3);
-  color:var(--cream);
-  font-family:var(--font-ui);
-  font-size:13px;
-  padding:8px 16px;
-  border-radius:50px;
-  cursor:pointer;
-  transition:all 0.2s ease;
-  -webkit-tap-highlight-color:transparent;
+  background:rgba(196,149,58,0.08);border:1px solid rgba(196,149,58,0.3);
+  color:var(--cream);font-family:var(--font-ui);font-size:13px;
+  padding:8px 16px;border-radius:50px;cursor:pointer;
+  transition:all 0.2s ease;-webkit-tap-highlight-color:transparent;
 }
-.qr-btn:hover{
-  background:rgba(196,149,58,0.15);
-  border-color:var(--gold);
-}
-.qr-btn:active,.qr-btn.selected{
-  background:rgba(196,149,58,0.2);
-  border-color:var(--gold);
-}
-/* Thinking indicator */
+.qr-btn:hover{background:rgba(196,149,58,0.15);border-color:var(--gold);}
+.qr-btn:active,.qr-btn.selected{background:rgba(196,149,58,0.2);border-color:var(--gold);}
+/* Thinking */
 .thinking-wrap{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-  margin-bottom:16px;
-  opacity:0;
-  animation:msgIn 0.3s ease-out forwards;
+  display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;
+  opacity:0;animation:msgIn 0.3s ease-out forwards;
 }
-.thinking-content{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  padding-top:18px;
-}
-.thinking-dots{
-  display:flex;
-  gap:5px;
-  padding-left:4px;
-}
+.thinking-content{display:flex;flex-direction:column;gap:6px;padding-top:18px;}
+.thinking-dots{display:flex;gap:5px;padding-left:4px;}
 .thinking-dots span{
   width:8px;height:8px;border-radius:50%;
   animation:bounce 1.2s ease-in-out infinite;
 }
 .thinking-dots span:nth-child(2){animation-delay:0.15s;}
 .thinking-dots span:nth-child(3){animation-delay:0.3s;}
-@keyframes bounce{
-  0%,60%,100%{transform:translateY(0);}
-  30%{transform:translateY(-8px);}
-}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-8px);}}
 .thinking-label{
-  font-size:11px;
-  font-style:italic;
-  font-family:var(--font-ui);
-  color:var(--cream-60);
-  padding-left:2px;
+  font-size:11px;font-style:italic;font-family:var(--font-ui);
+  color:var(--cream-60);padding-left:2px;
+}
+/* ── JARGON TOOLTIPS ── */
+.jargon{
+  color:var(--gold-2);text-decoration:underline;text-decoration-style:dotted;
+  text-underline-offset:3px;text-decoration-color:rgba(232,184,75,0.4);
+  cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
+}
+.jargon-tip{
+  position:fixed;z-index:100;background:#13132A;
+  border:1px solid rgba(196,149,58,0.35);border-radius:12px;
+  padding:12px 14px;max-width:280px;width:max-content;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  opacity:0;transform:translateY(6px);
+  transition:opacity 0.2s ease,transform 0.2s ease;pointer-events:none;
+}
+.jargon-tip.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+.jargon-tip .tip-term{
+  font-family:var(--font-ui);font-weight:700;font-size:11px;
+  color:var(--gold);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;
+}
+.jargon-tip .tip-def{font-family:var(--font-ui);font-size:13px;line-height:1.5;color:var(--cream);}
+.jargon-tip .tip-link{
+  display:inline-block;margin-top:6px;font-family:var(--font-ui);font-size:11px;
+  color:var(--gold);text-decoration:none;opacity:0.7;transition:opacity 0.15s;
+}
+.jargon-tip .tip-link:hover{opacity:1;}
+.jargon-tip .tip-close{
+  position:absolute;top:6px;right:8px;background:none;border:none;
+  color:var(--cream-40);font-size:16px;cursor:pointer;line-height:1;padding:2px;
 }
 /* ── INPUT BAR ── */
 #inputBar{
-  flex-shrink:0;
-  background:var(--bg);
-  border-top:1px solid var(--border);
-  padding:12px 16px;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
-  display:flex;
-  align-items:center;
-  gap:10px;
+  flex-shrink:0;background:var(--bg);border-top:1px solid var(--border);
+  padding:12px 16px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  display:flex;align-items:center;gap:10px;
 }
 #inputBar .mic-btn{
-  background:none;border:none;cursor:pointer;
-  color:var(--gold);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  width:24px;height:24px;
+  background:none;border:none;cursor:pointer;color:var(--gold);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;width:24px;height:24px;
   -webkit-tap-highlight-color:transparent;
 }
 #inputBar .mic-btn svg{width:20px;height:20px;}
 #inputBar input{
-  flex:1;
-  background:rgba(245,241,234,0.06);
-  border:1px solid rgba(196,149,58,0.2);
-  border-radius:50px;
-  padding:10px 16px;
-  color:var(--cream);
-  font-family:var(--font-ui);
-  font-size:15px;
-  outline:none;
-  transition:border-color 0.2s;
+  flex:1;background:rgba(245,241,234,0.06);border:1px solid rgba(196,149,58,0.2);
+  border-radius:50px;padding:10px 16px;color:var(--cream);
+  font-family:var(--font-ui);font-size:15px;outline:none;transition:border-color 0.2s;
 }
-#inputBar input::placeholder{
-  color:var(--cream-30);
-}
-#inputBar input:focus{
-  border-color:rgba(196,149,58,0.5);
-}
+#inputBar input::placeholder{color:var(--cream-30);}
+#inputBar input:focus{border-color:rgba(196,149,58,0.5);}
 #inputBar .send-btn{
-  width:32px;height:32px;border-radius:50%;
-  background:var(--gold);
-  border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  transition:transform 0.15s,opacity 0.2s;
-  -webkit-tap-highlight-color:transparent;
+  width:32px;height:32px;border-radius:50%;background:var(--gold);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:transform 0.15s,opacity 0.2s;-webkit-tap-highlight-color:transparent;
 }
 #inputBar .send-btn:active{transform:scale(0.9);}
 #inputBar .send-btn svg{width:16px;height:16px;}
-/* ── JARGON TOOLTIPS ── */
-.jargon{
-  color:var(--gold-2);
-  text-decoration:underline;
-  text-decoration-style:dotted;
-  text-underline-offset:3px;
-  text-decoration-color:rgba(232,184,75,0.4);
-  cursor:pointer;
-  position:relative;
-  -webkit-tap-highlight-color:transparent;
-}
-.jargon-tip{
-  position:fixed;
-  z-index:100;
-  background:#13132A;
-  border:1px solid rgba(196,149,58,0.35);
-  border-radius:12px;
-  padding:12px 14px;
-  max-width:280px;
-  width:max-content;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  opacity:0;
-  transform:translateY(6px);
-  transition:opacity 0.2s ease,transform 0.2s ease;
-  pointer-events:none;
-}
-.jargon-tip.visible{
-  opacity:1;
-  transform:translateY(0);
-  pointer-events:auto;
-}
-.jargon-tip .tip-term{
-  font-family:var(--font-ui);
-  font-weight:700;
-  font-size:11px;
-  color:var(--gold);
-  letter-spacing:0.05em;
-  text-transform:uppercase;
-  margin-bottom:4px;
-}
-.jargon-tip .tip-def{
-  font-family:var(--font-ui);
-  font-size:13px;
-  line-height:1.5;
-  color:var(--cream);
-}
-.jargon-tip .tip-link{
-  display:inline-block;
-  margin-top:6px;
-  font-family:var(--font-ui);
-  font-size:11px;
-  color:var(--gold);
-  text-decoration:none;
-  opacity:0.7;
-  transition:opacity 0.15s;
-}
-.jargon-tip .tip-link:hover{opacity:1;}
-.jargon-tip .tip-close{
-  position:absolute;
-  top:6px;right:8px;
-  background:none;border:none;
-  color:var(--cream-40);
-  font-size:16px;
-  cursor:pointer;
-  line-height:1;
-  padding:2px;
-}
-/* Desktop fill */
-@media(min-width:431px){
-  body{background:var(--bg);}
-}
+@media(min-width:431px){body{background:var(--bg);}}
 </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- TOP BAR -->
   <div id="topBar">
     <div class="logo"><img src="logo.png" alt="Fanded"><span>fanded</span></div>
     <div class="title">MAWD</div>
@@ -447,16 +240,10 @@ body{
     </div>
   </div>
   <div id="gradLine"></div>
-
-  <!-- STATUS PILL -->
   <div id="statusPill">
     <div class="pill"><span class="dot"></span> MAWD is active</div>
   </div>
-
-  <!-- CHAT AREA -->
   <div id="chatArea"></div>
-
-  <!-- INPUT BAR -->
   <div id="inputBar">
     <button class="mic-btn" aria-label="Voice input">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -474,12 +261,10 @@ body{
       </svg>
     </button>
   </div>
-
 </div>
 
 <script>
 (function(){
-  // ── Agent config ──
   var AGENTS = {
     dollar:{color:'#C4953A',label:'DOLLAR',thinking:'DOLLAR is calculating...'},
     pulse:{color:'#7C3AED',label:'PULSE',thinking:'PULSE is reading your fans...'},
@@ -491,85 +276,45 @@ body{
   var chatArea = document.getElementById('chatArea');
   var userInput = document.getElementById('userInput');
   var sendBtn = document.getElementById('sendBtn');
-  var demoIndex = 0;
   var isTyping = false;
-  var demoComplete = false;
   var conversationHistory = [];
+  var currentAgent = 'compass';
   var activeTip = null;
 
   // ── Glossary ──
   var GLOSSARY = {
-    'MRR':{
-      def:'Monthly Recurring Revenue \u2014 the predictable income you earn every month from subscriptions like Patreon or your fan club.',
-      link:'https://www.investopedia.com/terms/m/mrr.asp'
-    },
-    'patrons':{
-      def:'People who pay a monthly subscription to support you directly, usually through Patreon or a fan club.',
-      link:'https://support.patreon.com/hc/en-us/articles/204606315-What-is-Patreon'
-    },
-    'win-back message':{
-      def:'A message sent to fans who canceled their subscription, designed to bring them back. Usually personal and direct.',
-      link:null
-    },
-    'engagement history':{
-      def:'A record of how a fan interacts with your content \u2014 opens, clicks, comments, watch time. Shows who actually cares vs. who\'s passive.',
-      link:null
-    },
-    'recurring':{
-      def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',
-      link:null
-    },
-    'card on file':{
-      def:'The credit or debit card a fan saved for their subscription. When it expires, the payment fails silently \u2014 the fan doesn\'t even know.',
-      link:null
-    },
-    'density per capita':{
-      def:'How concentrated your fans are relative to the city\'s population. High density = a lot of your fans live there relative to city size.',
-      link:null
-    },
-    'Spotify discovery':{
-      def:'When Spotify\'s algorithm recommends your music to new listeners through playlists like Discover Weekly or Release Radar.',
-      link:null
-    },
-    'routing plan':{
-      def:'A tour schedule mapped by city, optimized by where your fans actually are and what venues make sense for your audience size.',
-      link:null
-    },
-    'projected ticket revenue':{
-      def:'An estimate of how much money you\'d make from ticket sales in a specific city, based on your fan count and typical conversion rates.',
-      link:null
-    },
-    'audience overlaps':{
-      def:'When a brand\'s customers and your fans are the same type of people. Higher overlap = better partnership fit and more money for you.',
-      link:null
-    },
-    'fan profile':{
-      def:'A picture of who your fans are \u2014 age, location, interests, spending habits. Built from your actual data, not guesses.',
-      link:null
-    },
-    'sync opportunity':{
-      def:'A chance to license your music for use in a TV show, film, ad, or video game. Can be a major payday.',
-      link:'https://www.ascap.com/help/music-business-101/sync-licensing'
-    },
-    'catalog':{
-      def:'Your entire library of released music \u2014 every song, album, and feature you\'ve ever put out. It\'s an asset that can earn money forever.',
-      link:null
-    },
-    'revenue summary':{
-      def:'A breakdown of all money earned across every source \u2014 streaming, fan club, merch, brand deals, sync, and live shows.',
-      link:null
-    },
-    'CPM':{
-      def:'Cost Per Mille \u2014 how much a brand pays per 1,000 views or impressions on your content. Higher CPM = more money per post.',
-      link:'https://www.investopedia.com/terms/c/cpm.asp'
-    },
-    'brand deal':{
-      def:'When a company pays you to promote their product to your audience. Can be a social post, video mention, or full campaign.',
-      link:null
-    }
+    'MRR':{def:'Monthly Recurring Revenue \u2014 the predictable income you earn every month from subscriptions like Patreon or your fan club.',link:'https://www.investopedia.com/terms/m/mrr.asp'},
+    'churn':{def:'The rate at which subscribers cancel. If 5 out of 100 leave this month, that\'s 5% churn. Lower is better.',link:null},
+    'churn rate':{def:'The percentage of subscribers who cancel in a given period. If 5 out of 100 leave this month, that\'s 5% churn. Lower is better.',link:null},
+    'churn forecast':{def:'A prediction of how many subscribers are likely to cancel soon, based on their recent engagement patterns. Lets you save them before they leave.',link:null},
+    'churn risk':{def:'How likely a subscriber is to cancel. High churn risk means they\'ve stopped engaging and might leave soon.',link:null},
+    'patrons':{def:'People who pay a monthly subscription to support you directly, usually through Patreon or a fan club.',link:null},
+    'win-back':{def:'A strategy to bring back fans who canceled their subscription. Usually a personal message or special offer.',link:null},
+    'engagement':{def:'How actively fans interact with your content \u2014 likes, comments, shares, watch time, opens. High engagement = real fans, not just followers.',link:null},
+    'recurring revenue':{def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',link:null},
+    'recurring':{def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',link:null},
+    'audience overlap':{def:'When a brand\'s customers and your fans are the same type of people. Higher overlap = better partnership fit and more money.',link:null},
+    'fan profile':{def:'A picture of who your fans are \u2014 age, location, interests, spending habits. Built from your actual data, not guesses.',link:null},
+    'sync':{def:'Licensing your music for use in a TV show, film, ad, or video game. Can pay anywhere from $1,500 to $500,000+.',link:null},
+    'sync opportunity':{def:'A chance to license your music for use in a TV show, film, ad, or video game. Can be a major payday.',link:'https://www.ascap.com/help/music-business-101/sync-licensing'},
+    'catalog':{def:'Your entire library of released music \u2014 every song, album, and feature you\'ve ever put out. It\'s an asset that earns money forever.',link:null},
+    'CPM':{def:'Cost Per Mille \u2014 how much a brand pays per 1,000 views or impressions on your content. Higher CPM = more money per post.',link:'https://www.investopedia.com/terms/c/cpm.asp'},
+    'brand deal':{def:'When a company pays you to promote their product to your audience. Can be a social post, video mention, or full campaign.',link:null},
+    'conversion rate':{def:'The percentage of people who take an action you want \u2014 like going from follower to email subscriber, or from free to paid member.',link:null},
+    'first-party data':{def:'Information you collect directly from your fans (emails, purchases, preferences) \u2014 as opposed to data platforms collect about your fans and keep from you.',link:null},
+    'owned database':{def:'A list of your fans\' contact info (emails, phones) that YOU control. Unlike followers on Instagram or Spotify, no algorithm can take this away.',link:null},
+    'fan density':{def:'How concentrated your fans are in a specific city or region. High density = enough fans to sell out a venue there.',link:null},
+    'recoupment':{def:'When a label or distributor gave you an advance (upfront money), they keep your earnings until that advance is paid back. You don\'t see streaming money until it recoups.',link:null},
+    'advance':{def:'Upfront money from a label or distributor. Sounds great, but they keep your future earnings until it\'s paid back (recouped).',link:null},
+    'retention':{def:'How well you keep subscribers over time. 95% retention means only 5% leave each month. The higher the better.',link:null},
+    'LTV':{def:'Lifetime Value \u2014 the total amount of money a fan will spend on you over their entire relationship with you. A fan who pays $10/mo for 3 years has an LTV of $360.',link:null},
+    'top of funnel':{def:'The first point of contact with a potential fan. A TikTok video or Spotify play is top of funnel \u2014 it introduces you. The goal is to move them deeper (email, club, purchase).',link:null},
+    'funnel':{def:'The journey a person takes from discovering you to becoming a paying fan. Top = discovery (Spotify, TikTok). Middle = connection (email, follow). Bottom = revenue (club, merch, tickets).',link:null},
+    'income streams':{def:'The different ways you make money \u2014 streaming, fan clubs, merch, brand deals, sync, touring, production. More streams = more stable income.',link:null},
+    'revenue streams':{def:'The different ways you make money \u2014 streaming, fan clubs, merch, brand deals, sync, touring, production. More streams = more stable income.',link:null}
   };
 
-  // ── Jargon detection + tooltip ──
+  // ── Jargon detection + tooltips ──
   function applyGlossary(bubble){
     var html = bubble.innerHTML;
     var terms = Object.keys(GLOSSARY).sort(function(a,b){return b.length-a.length;});
@@ -581,7 +326,6 @@ body{
       });
     });
     bubble.innerHTML = html;
-
     bubble.querySelectorAll('.jargon').forEach(function(el){
       el.addEventListener('click',function(e){
         e.stopPropagation();
@@ -594,40 +338,29 @@ body{
     closeTip();
     var entry = GLOSSARY[termKey];
     if(!entry) return;
-
     var tip = document.createElement('div');
     tip.className='jargon-tip';
-
     var close = document.createElement('button');
     close.className='tip-close';
     close.innerHTML='&times;';
     close.addEventListener('click',function(e){e.stopPropagation();closeTip();});
     tip.appendChild(close);
-
     var title = document.createElement('div');
     title.className='tip-term';
     title.textContent=termKey;
     tip.appendChild(title);
-
     var def = document.createElement('div');
     def.className='tip-def';
     def.textContent=entry.def;
     tip.appendChild(def);
-
     if(entry.link){
       var a = document.createElement('a');
-      a.className='tip-link';
-      a.href=entry.link;
-      a.target='_blank';
-      a.rel='noopener';
+      a.className='tip-link';a.href=entry.link;a.target='_blank';a.rel='noopener';
       a.textContent='Learn more \u2192';
       tip.appendChild(a);
     }
-
     document.body.appendChild(tip);
     activeTip = tip;
-
-    // Position below the term
     var rect = el.getBoundingClientRect();
     var tipW = Math.min(280, window.innerWidth - 32);
     var left = rect.left + rect.width/2 - tipW/2;
@@ -641,110 +374,11 @@ body{
     tip.style.left = left+'px';
     tip.style.top = top+'px';
     tip.style.width = tipW+'px';
-
-    requestAnimationFrame(function(){
-      tip.classList.add('visible');
-    });
+    requestAnimationFrame(function(){tip.classList.add('visible');});
   }
 
-  function closeTip(){
-    if(activeTip){
-      activeTip.remove();
-      activeTip=null;
-    }
-  }
+  function closeTip(){if(activeTip){activeTip.remove();activeTip=null;}}
   document.addEventListener('click',closeTip);
-
-  // ── Demo script ──
-  var DEMO = [
-    {
-      type:'timestamp',
-      text:'Today, 7:02 AM'
-    },
-    {
-      type:'mawd',
-      agent:'compass',
-      text:"Good morning. I've been through everything while you were asleep.\n\nThree things need your attention today \u2014 in order of priority.\n\nFirst, your Patreon MRR has an opportunity I spotted in your data. Want the number?\n\nSecond, there are fans from your last show who've never heard from you again. I have a message ready for them.\n\nThird, your catalog has a sync opportunity that fits a brand currently looking. Should I surface it?\n\nWhich one do we handle first?",
-      replies:['Show me the money','My fans','The opportunity']
-    },
-    {
-      type:'talent',
-      text:'Show me the money',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'dollar',
-      text:"Your Patreon MRR this month is $11,100. Down $340 from last month. I traced it to 34 patrons who didn't renew.\n\nI already know why \u2014 and I have a win-back message ready in your voice. Want me to show you?",
-      replies:['Show me','How many can we recover?','Skip']
-    },
-    {
-      type:'talent',
-      text:'How many can we recover?',
-      triggerIndex:1
-    },
-    {
-      type:'mawd',
-      agent:'dollar',
-      text:"Based on their engagement history, 22 of the 34 were active in the last 90 days. They opened your emails, watched your content, commented on posts. They didn't leave because they lost interest \u2014 they left because the card on file expired or they forgot.\n\nA single personal message from you recovers 60\u201370% of these historically. That's roughly $150\u2013$200/month back, recurring. I've already drafted it. Say the word.",
-      replies:['Send it','Show me the draft','Move on']
-    },
-    {
-      type:'talent',
-      text:'Send it',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'pulse',
-      text:"Done. Messages go out in 15 minutes.\n\nWhile DOLLAR was working, I finished your fan analysis. Your most loyal fans right now are concentrated in three cities you haven't toured in 18 months.\n\nShould I route your next show there?",
-      replies:['Which cities?','Build the route','Later']
-    },
-    {
-      type:'talent',
-      text:'Which cities?',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'pulse',
-      text:"Manila \u2014 4,200 fans, your highest density per capita. You sold out last time and they're still talking about it in your club.\n\nSydney \u2014 1,800 fans, mostly from Spotify discovery. They've never seen you live. That's an untapped room.\n\nLondon \u2014 2,100 fans, steady growth from YouTube. Three of your top 10 most engaged patrons are based there.\n\nI can build a routing plan with venue recommendations and projected ticket revenue for all three. Want it?",
-      replies:['Build it','Start with Manila','Not right now']
-    },
-    {
-      type:'talent',
-      text:'Build it',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'scout',
-      text:"Routing plan is queued \u2014 you'll have it by end of day.\n\nOne more thing. I found a fitness brand in your inbox that's been sitting for 6 days unanswered. Their audience overlaps 73% with your fan profile.\n\nThis one is worth responding to. Want me to draft the reply?",
-      replies:['Draft it','Show me their brief','Pass']
-    },
-    {
-      type:'talent',
-      text:'Draft it',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'hype',
-      text:"Draft is ready. Here's what I wrote in your voice:\n\n\"Hey \u2014 really appreciate you reaching out. I've looked through what you're building and I think there's something genuine here. My team and I would love to explore what a partnership looks like. Let's find 20 minutes this week?\"\n\nApprove or should I adjust the tone?",
-      replies:['Approve and send','Make it warmer','I\'ll edit']
-    },
-    {
-      type:'talent',
-      text:'Approve and send',
-      triggerIndex:0
-    },
-    {
-      type:'mawd',
-      agent:'compass',
-      text:"Sent.\n\nThat's everything urgent for today. You have 3 things resolved in under 10 minutes. Your business ran itself while you were creating.\n\nTomorrow I'll have your weekly revenue summary ready before you wake up. Anything else before I let you go?",
-      replies:["That's it",'One more thing','How am I tracking?']
-    }
-  ];
 
   // ── Helpers ──
   function scrollBottom(){
@@ -755,105 +389,76 @@ body{
 
   function setActiveAgent(agent){
     document.querySelectorAll('.agent-dot').forEach(function(d){
-      d.classList.remove('active');
-      d.style.color='';
+      d.classList.remove('active');d.style.color='';
     });
-    if(agent){
+    if(agent && AGENTS[agent]){
       var dot = document.querySelector('.agent-dot[data-agent="'+agent+'"]');
-      if(dot){
-        dot.classList.add('active');
-        dot.style.color=AGENTS[agent].color;
-      }
+      if(dot){dot.classList.add('active');dot.style.color=AGENTS[agent].color;}
     }
+    currentAgent = agent || currentAgent;
   }
 
   function addTimestamp(text){
     var div = document.createElement('div');
-    div.className='timestamp';
-    div.textContent=text;
-    chatArea.appendChild(div);
-    scrollBottom();
+    div.className='timestamp';div.textContent=text;
+    chatArea.appendChild(div);scrollBottom();
   }
 
   function addTalentMessage(text){
     var wrap = document.createElement('div');
     wrap.className='msg-wrap msg-talent';
     var bubble = document.createElement('div');
-    bubble.className='talent-bubble';
-    bubble.textContent=text;
-    wrap.appendChild(bubble);
-    chatArea.appendChild(wrap);
-    scrollBottom();
+    bubble.className='talent-bubble';bubble.textContent=text;
+    wrap.appendChild(bubble);chatArea.appendChild(wrap);scrollBottom();
   }
 
-  function showThinking(agent,callback){
+  function showThinking(agent){
     setActiveAgent(agent);
-    var a = AGENTS[agent];
+    var a = AGENTS[agent] || AGENTS.compass;
     var wrap = document.createElement('div');
-    wrap.className='thinking-wrap';
-
+    wrap.className='thinking-wrap';wrap.id='thinkingIndicator';
     var avatar = document.createElement('div');
-    avatar.className='mawd-avatar';
-    avatar.textContent='M';
+    avatar.className='mawd-avatar';avatar.textContent='M';
     wrap.appendChild(avatar);
-
     var content = document.createElement('div');
     content.className='thinking-content';
-
     var dots = document.createElement('div');
     dots.className='thinking-dots';
     for(var i=0;i<3;i++){
-      var s = document.createElement('span');
-      s.style.background=a.color;
-      dots.appendChild(s);
+      var s=document.createElement('span');s.style.background=a.color;dots.appendChild(s);
     }
     content.appendChild(dots);
-
     var label = document.createElement('div');
-    label.className='thinking-label';
-    label.textContent=a.thinking;
+    label.className='thinking-label';label.textContent=a.thinking;
     content.appendChild(label);
-
     wrap.appendChild(content);
-    chatArea.appendChild(wrap);
-    scrollBottom();
-
-    var delay = 1200 + Math.random()*800;
-    setTimeout(function(){
-      chatArea.removeChild(wrap);
-      callback();
-    },delay);
+    chatArea.appendChild(wrap);scrollBottom();
   }
 
-  function typeMessage(agent,text,replies,callback){
-    isTyping=true;
-    var a = AGENTS[agent];
-    setActiveAgent(agent);
+  function hideThinking(){
+    var el = document.getElementById('thinkingIndicator');
+    if(el) el.remove();
+  }
 
+  function typeMessage(agent, text, quickReplies, callback){
+    isTyping = true;
+    var a = AGENTS[agent] || AGENTS.compass;
+    setActiveAgent(agent);
     var wrap = document.createElement('div');
     wrap.className='msg-wrap msg-mawd';
-
     var avatar = document.createElement('div');
-    avatar.className='mawd-avatar';
-    avatar.textContent='M';
-
+    avatar.className='mawd-avatar';avatar.textContent='M';
     var contentDiv = document.createElement('div');
     contentDiv.className='mawd-content';
-
     var lbl = document.createElement('div');
-    lbl.className='agent-label';
-    lbl.style.color=a.color;
-    lbl.textContent=a.label;
-
+    lbl.className='agent-label';lbl.style.color=a.color;lbl.textContent=a.label;
     var bubble = document.createElement('div');
     bubble.className='mawd-bubble';
     bubble.style.borderLeftColor=a.color;
     bubble.style.borderLeftWidth='3px';
     bubble.style.borderLeftStyle='solid';
-
     var cursor = document.createElement('span');
     cursor.className='typing-cursor';
-
     contentDiv.appendChild(lbl);
     contentDiv.appendChild(bubble);
     wrap.appendChild(avatar);
@@ -861,7 +466,6 @@ body{
     chatArea.appendChild(wrap);
     scrollBottom();
 
-    // Typewriter
     var chars = text.split('');
     var idx = 0;
     bubble.innerHTML='';
@@ -871,45 +475,36 @@ body{
       if(idx < chars.length){
         var ch = chars[idx];
         if(ch==='\n'){
-          var br = document.createElement('br');
-          bubble.insertBefore(br,cursor);
+          bubble.insertBefore(document.createElement('br'),cursor);
         } else {
-          var span = document.createTextNode(ch);
-          bubble.insertBefore(span,cursor);
+          bubble.insertBefore(document.createTextNode(ch),cursor);
         }
         idx++;
-        // Scroll every few chars
         if(idx%3===0) scrollBottom();
-        var speed = 18;
-        if(ch==='.') speed=120;
-        else if(ch===',') speed=60;
-        else if(ch==='\n') speed=80;
-        else if(ch==='\u2014') speed=80;
+        var speed = 15;
+        if(ch==='.') speed=100;
+        else if(ch===',') speed=50;
+        else if(ch==='\n') speed=60;
+        else if(ch==='\u2014') speed=60;
         setTimeout(typeNext,speed);
       } else {
-        // Done typing
         bubble.removeChild(cursor);
         applyGlossary(bubble);
-        isTyping=false;
+        isTyping = false;
         scrollBottom();
 
-        // Add quick replies if any
-        if(replies && replies.length){
+        if(quickReplies && quickReplies.length){
           var qrDiv = document.createElement('div');
           qrDiv.className='quick-replies';
-          replies.forEach(function(r,ri){
+          quickReplies.forEach(function(r){
             var btn = document.createElement('button');
-            btn.className='qr-btn';
-            btn.textContent=r;
+            btn.className='qr-btn';btn.textContent=r;
             btn.addEventListener('click',function(){
-              // Disable all buttons
               qrDiv.querySelectorAll('.qr-btn').forEach(function(b){
-                b.style.pointerEvents='none';
-                b.style.opacity='0.4';
+                b.style.pointerEvents='none';b.style.opacity='0.4';
               });
-              btn.style.opacity='1';
-              btn.classList.add('selected');
-              handleQuickReply(r);
+              btn.style.opacity='1';btn.classList.add('selected');
+              sendMessage(r);
             });
             qrDiv.appendChild(btn);
           });
@@ -923,129 +518,115 @@ body{
     typeNext();
   }
 
-  // ── Demo playback ──
-  function playNext(){
-    if(demoIndex>=DEMO.length){
-      demoComplete=true;
-      return;
-    }
-    var step = DEMO[demoIndex];
-    demoIndex++;
+  // ── Suggest quick replies based on response ──
+  function generateQuickReplies(text){
+    // If the message ends with a question, generate contextual replies
+    var replies = [];
+    var lower = text.toLowerCase();
 
-    if(step.type==='timestamp'){
-      addTimestamp(step.text);
-      playNext();
-    } else if(step.type==='mawd'){
-      showThinking(step.agent,function(){
-        typeMessage(step.agent,step.text,step.replies,null);
-      });
-    } else if(step.type==='talent'){
-      // Talent messages are triggered by quick replies
-      // This path is only for auto-play — skip in interactive mode
-    }
-  }
-
-  function handleQuickReply(text){
-    // Add talent message
-    setTimeout(function(){
-      addTalentMessage(text);
-
-      // Find next MAWD message in demo
-      if(demoIndex<DEMO.length){
-        var next = DEMO[demoIndex];
-        // Skip talent entries that match
-        if(next.type==='talent'){
-          demoIndex++;
-        }
-        // Play next MAWD
-        setTimeout(function(){
-          playNext();
-        },400);
-      } else {
-        demoComplete=true;
-      }
-    },150);
-  }
-
-  // ── Live input handling ──
-  function sendMessage(){
-    var text = userInput.value.trim();
-    if(!text || isTyping) return;
-    userInput.value='';
-
-    addTalentMessage(text);
-
-    if(!demoComplete){
-      // During demo, treat as quick reply trigger
-      if(demoIndex<DEMO.length){
-        var next = DEMO[demoIndex];
-        if(next.type==='talent') demoIndex++;
-        setTimeout(function(){ playNext(); },400);
-      }
-      return;
+    if(lower.indexOf('what do you do') > -1 || lower.indexOf('what kind of') > -1 || lower.indexOf('what type') > -1){
+      replies = ["I'm a musician","I'm an actor","I'm a creator","I manage talent"];
+    } else if(lower.indexOf('want me to show') > -1 || lower.indexOf('want to see') > -1){
+      replies = ['Show me','Tell me more','What else can you do?'];
+    } else if(lower.indexOf('should i') > -1 || lower.indexOf('shall i') > -1){
+      replies = ['Yes, do it','Tell me more first','What else?'];
+    } else if(lower.indexOf('connect') > -1 && lower.indexOf('?') > -1){
+      replies = ['What happens when I connect?','Show me an example','What data do you need?'];
+    } else if(lower.indexOf('which') > -1 && lower.indexOf('first') > -1){
+      replies = ['The money stuff','My fans','The biggest opportunity'];
+    } else if(lower.indexOf('want') > -1 && lower.indexOf('?') > -1){
+      replies = ['Yes','Tell me more','What else can you do?'];
+    } else if(lower.indexOf('?') > -1){
+      replies = ['Yes','Tell me more','What else?'];
     }
 
-    // ── Live API mode ──
-    conversationHistory.push({role:'user',content:text});
-    var agents = ['dollar','pulse','scout','compass','hype'];
-    var agent = agents[Math.floor(Math.random()*agents.length)];
-
-    showThinking(agent,function(){
-      callAPI(agent);
-    });
+    return replies;
   }
 
-  function callAPI(agent){
-    var systemPrompt = "You are MAWD \u2014 Management AI Working Daily. You are the AI chief of staff for a talent business. You always speak first. You lead every conversation. You are proactive, specific, and action-oriented. You know this talent's entire business intimately. You never give generic advice. You always end your turn with a specific question or a specific action for the talent to approve. You coordinate five specialist agents \u2014 DOLLAR for finances and revenue, PULSE for fan intelligence and audience, SCOUT for opportunities and brand deals, COMPASS for strategy and career direction, HYPE for content, voice, and communications. You are currently speaking as "+AGENTS[agent].label+". Your voice is warm, direct, brilliant, and brief. Like a chief of staff who already did the work before the talent woke up. Never use bullet points in your responses. Always write in flowing natural language. Always end with one specific question. Keep responses under 120 words.";
-
-    fetch('https://api.anthropic.com/v1/messages',{
+  // ── API call ──
+  function callMAWD(messages, agent, callback){
+    fetch('/api/chat', {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':getAPIKey(),
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        system:systemPrompt,
-        messages:conversationHistory
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:messages, agent:agent, mode:'demo'})
     })
     .then(function(r){return r.json();})
     .then(function(data){
-      var reply = data.content && data.content[0] ? data.content[0].text : "I'm having trouble connecting. Try again in a moment.";
-      conversationHistory.push({role:'assistant',content:reply});
-      typeMessage(agent,reply,null,null);
+      if(data.error){
+        callback('I\'m having trouble connecting right now. Try again in a moment.', agent);
+      } else {
+        callback(data.reply, data.agent || agent);
+      }
     })
     .catch(function(){
-      typeMessage(agent,"I'm having trouble connecting right now. Let's try again in a moment.",null,null);
+      callback('I\'m having trouble connecting. Let\'s try again in a moment.', agent);
     });
   }
 
-  function getAPIKey(){
-    var key = localStorage.getItem('mawd_api_key');
-    if(!key){
-      key = prompt('Enter your Anthropic API key to enable live MAWD:');
-      if(key) localStorage.setItem('mawd_api_key',key);
+  // ── Send message ──
+  function sendMessage(text){
+    if(!text){
+      text = userInput.value.trim();
     }
-    return key || '';
+    if(!text || isTyping) return;
+    userInput.value = '';
+
+    addTalentMessage(text);
+    conversationHistory.push({role:'user', content:text});
+
+    // Pick agent based on content keywords
+    var agent = pickAgent(text);
+    showThinking(agent);
+
+    callMAWD(conversationHistory, agent, function(reply, detectedAgent){
+      hideThinking();
+      conversationHistory.push({role:'assistant', content:reply});
+      var qr = generateQuickReplies(reply);
+      typeMessage(detectedAgent || agent, reply, qr, null);
+    });
+  }
+
+  function pickAgent(text){
+    var t = text.toLowerCase();
+    if(/money|revenue|income|earn|pay|financ|churn|mrr|subscri|pricing/.test(t)) return 'dollar';
+    if(/fan|audience|listen|follower|engage|data|database/.test(t)) return 'pulse';
+    if(/brand|deal|partner|sponsor|opportun|inbox|collab/.test(t)) return 'scout';
+    if(/content|write|draft|post|voice|copy|social|messag/.test(t)) return 'hype';
+    return 'compass';
   }
 
   // ── Event listeners ──
-  sendBtn.addEventListener('click',sendMessage);
-  userInput.addEventListener('keydown',function(e){
-    if(e.key==='Enter' && !e.shiftKey){
-      e.preventDefault();
-      sendMessage();
-    }
+  sendBtn.addEventListener('click', function(){sendMessage();});
+  userInput.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
   });
 
-  // ── Start ──
-  setTimeout(function(){
-    playNext();
-  },600);
+  // ── Opening sequence ──
+  function startMAWD(){
+    var now = new Date();
+    var hours = now.getHours();
+    var mins = now.getMinutes().toString().padStart(2,'0');
+    var ampm = hours >= 12 ? 'PM' : 'AM';
+    var h = hours % 12 || 12;
+    addTimestamp('Today, ' + h + ':' + mins + ' ' + ampm);
+
+    showThinking('compass');
+
+    // First message — MAWD introduces herself via API
+    callMAWD(
+      [{role:'user', content:'Start the conversation. Introduce yourself to a new potential user who just opened the MAWD demo for the first time. Ask what they do.'}],
+      'compass',
+      function(reply, detectedAgent){
+        hideThinking();
+        // Don't add the hidden prompt to visible history
+        conversationHistory.push({role:'assistant', content:reply});
+        var qr = generateQuickReplies(reply);
+        typeMessage(detectedAgent || 'compass', reply, qr, null);
+      }
+    );
+  }
+
+  setTimeout(startMAWD, 600);
 
 })();
 </script>
