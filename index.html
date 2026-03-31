@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MAWD — Your Chief of Staff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07070F;
+  --bg-bottom:#0A0A18;
+  --cream:#F5F1EA;
+  --cream-60:rgba(245,241,234,0.6);
+  --cream-40:rgba(245,241,234,0.4);
+  --cream-30:rgba(245,241,234,0.3);
+  --gold:#C4953A;
+  --gold-2:#E8B84B;
+  --purple:#7C3AED;
+  --blue:#3BADE4;
+  --card:#0D0D1A;
+  --border:rgba(196,149,58,0.2);
+  --font-h:'Playfair Display',Georgia,serif;
+  --font-ui:'DM Sans',system-ui,sans-serif;
+  /* Agent colors */
+  --dollar:#C4953A;
+  --pulse:#7C3AED;
+  --scout:#0D9488;
+  --compass:#3B82F6;
+  --hype:#EC4899;
+}
+html,body{
+  height:100%;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-bottom) 100%);
+  color:var(--cream);
+  font-family:var(--font-ui);
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+body{
+  display:flex;
+  justify-content:center;
+}
+#app{
+  width:100%;
+  max-width:430px;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-bottom) 100%);
+}
+/* ── TOP BAR ── */
+#topBar{
+  flex-shrink:0;
+  padding:12px 16px 0;
+  padding-top:max(12px,env(safe-area-inset-top));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:relative;
+  z-index:10;
+}
+#topBar .logo{
+  font-family:Arial Black,'Arial Bold',Arial,sans-serif;
+  font-weight:900;
+  font-size:14px;
+  color:var(--gold);
+  text-transform:lowercase;
+  letter-spacing:0.5px;
+}
+#topBar .title{
+  font-family:Arial Black,'Arial Bold',Arial,sans-serif;
+  font-weight:900;
+  font-size:16px;
+  color:var(--cream);
+  letter-spacing:1px;
+}
+.agent-dots{
+  display:flex;
+  gap:5px;
+  align-items:center;
+}
+.agent-dot{
+  width:7px;height:7px;border-radius:50%;
+  opacity:0.4;
+  transition:opacity 0.4s,box-shadow 0.4s;
+}
+.agent-dot.active{
+  opacity:1;
+}
+.agent-dot[data-agent="dollar"]{background:var(--dollar);}
+.agent-dot[data-agent="pulse"]{background:var(--pulse);}
+.agent-dot[data-agent="scout"]{background:var(--scout);}
+.agent-dot[data-agent="compass"]{background:var(--compass);}
+.agent-dot[data-agent="hype"]{background:var(--hype);}
+.agent-dot.active{
+  animation:dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse{
+  0%,100%{box-shadow:0 0 0 0 currentColor;}
+  50%{box-shadow:0 0 6px 2px currentColor;}
+}
+/* Gradient line */
+#gradLine{
+  flex-shrink:0;
+  height:2px;
+  width:100%;
+  background:linear-gradient(90deg,var(--gold),var(--purple));
+  margin-top:10px;
+}
+/* ── STATUS PILL ── */
+#statusPill{
+  flex-shrink:0;
+  display:flex;
+  justify-content:center;
+  padding:10px 0 6px;
+}
+#statusPill .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  background:rgba(196,149,58,0.15);
+  border:1px solid rgba(196,149,58,0.3);
+  border-radius:50px;
+  padding:5px 14px;
+  font-size:11px;
+  color:var(--gold);
+  font-family:var(--font-ui);
+}
+#statusPill .pill .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--gold);
+  animation:statusPulse 2s ease-in-out infinite;
+}
+@keyframes statusPulse{
+  0%,100%{opacity:1;}
+  50%{opacity:0.3;}
+}
+/* ── CHAT AREA ── */
+#chatArea{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:12px 16px 8px;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+}
+#chatArea::-webkit-scrollbar{width:0;display:none;}
+/* Message wrapper */
+.msg-wrap{
+  margin-bottom:16px;
+  opacity:0;
+  transform:translateY(12px);
+  animation:msgIn 0.3s ease-out forwards;
+}
+@keyframes msgIn{
+  to{opacity:1;transform:translateY(0);}
+}
+/* MAWD message */
+.msg-mawd{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+.mawd-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:Arial Black,'Arial Bold',Arial,sans-serif;
+  font-size:12px;color:var(--cream);
+  flex-shrink:0;
+  margin-top:18px;
+}
+.mawd-content{
+  flex:1;
+  max-width:85%;
+}
+.agent-label{
+  font-family:var(--font-ui);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  margin-bottom:4px;
+  padding-left:2px;
+}
+.mawd-bubble{
+  background:var(--card);
+  border:1px solid rgba(196,149,58,0.15);
+  border-radius:4px 16px 16px 16px;
+  padding:14px 16px;
+  font-family:var(--font-h);
+  font-style:italic;
+  font-size:16px;
+  line-height:1.6;
+  color:var(--cream);
+}
+.mawd-bubble .typing-cursor{
+  display:inline-block;
+  width:2px;
+  height:18px;
+  background:var(--gold);
+  margin-left:2px;
+  vertical-align:text-bottom;
+  animation:cursorBlink 0.6s step-end infinite;
+}
+@keyframes cursorBlink{
+  0%,100%{opacity:1;}
+  50%{opacity:0;}
+}
+/* Talent message */
+.msg-talent{
+  display:flex;
+  justify-content:flex-end;
+}
+.talent-bubble{
+  background:rgba(196,149,58,0.12);
+  border:1px solid rgba(196,149,58,0.25);
+  border-radius:16px 4px 16px 16px;
+  padding:12px 16px;
+  font-family:var(--font-ui);
+  font-size:15px;
+  color:var(--cream);
+  max-width:80%;
+  line-height:1.5;
+}
+/* Timestamp */
+.timestamp{
+  text-align:center;
+  font-size:10px;
+  color:var(--cream-40);
+  font-family:var(--font-ui);
+  margin:16px 0 12px;
+}
+/* Quick replies */
+.quick-replies{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+  padding-left:38px;
+}
+.qr-btn{
+  background:rgba(196,149,58,0.08);
+  border:1px solid rgba(196,149,58,0.3);
+  color:var(--cream);
+  font-family:var(--font-ui);
+  font-size:13px;
+  padding:8px 16px;
+  border-radius:50px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.qr-btn:hover{
+  background:rgba(196,149,58,0.15);
+  border-color:var(--gold);
+}
+.qr-btn:active,.qr-btn.selected{
+  background:rgba(196,149,58,0.2);
+  border-color:var(--gold);
+}
+/* Thinking indicator */
+.thinking-wrap{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin-bottom:16px;
+  opacity:0;
+  animation:msgIn 0.3s ease-out forwards;
+}
+.thinking-content{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding-top:18px;
+}
+.thinking-dots{
+  display:flex;
+  gap:5px;
+  padding-left:4px;
+}
+.thinking-dots span{
+  width:8px;height:8px;border-radius:50%;
+  animation:bounce 1.2s ease-in-out infinite;
+}
+.thinking-dots span:nth-child(2){animation-delay:0.15s;}
+.thinking-dots span:nth-child(3){animation-delay:0.3s;}
+@keyframes bounce{
+  0%,60%,100%{transform:translateY(0);}
+  30%{transform:translateY(-8px);}
+}
+.thinking-label{
+  font-size:11px;
+  font-style:italic;
+  font-family:var(--font-ui);
+  color:var(--cream-60);
+  padding-left:2px;
+}
+/* ── INPUT BAR ── */
+#inputBar{
+  flex-shrink:0;
+  background:var(--bg);
+  border-top:1px solid var(--border);
+  padding:12px 16px;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+#inputBar .mic-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--gold);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;
+  -webkit-tap-highlight-color:transparent;
+}
+#inputBar .mic-btn svg{width:20px;height:20px;}
+#inputBar input{
+  flex:1;
+  background:rgba(245,241,234,0.06);
+  border:1px solid rgba(196,149,58,0.2);
+  border-radius:50px;
+  padding:10px 16px;
+  color:var(--cream);
+  font-family:var(--font-ui);
+  font-size:15px;
+  outline:none;
+  transition:border-color 0.2s;
+}
+#inputBar input::placeholder{
+  color:var(--cream-30);
+}
+#inputBar input:focus{
+  border-color:rgba(196,149,58,0.5);
+}
+#inputBar .send-btn{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--gold);
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  transition:transform 0.15s,opacity 0.2s;
+  -webkit-tap-highlight-color:transparent;
+}
+#inputBar .send-btn:active{transform:scale(0.9);}
+#inputBar .send-btn svg{width:16px;height:16px;}
+/* Desktop fill */
+@media(min-width:431px){
+  body{background:var(--bg);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="topBar">
+    <div class="logo">fanded</div>
+    <div class="title">MAWD</div>
+    <div class="agent-dots">
+      <div class="agent-dot" data-agent="dollar"></div>
+      <div class="agent-dot" data-agent="pulse"></div>
+      <div class="agent-dot" data-agent="scout"></div>
+      <div class="agent-dot" data-agent="compass"></div>
+      <div class="agent-dot" data-agent="hype"></div>
+    </div>
+  </div>
+  <div id="gradLine"></div>
+
+  <!-- STATUS PILL -->
+  <div id="statusPill">
+    <div class="pill"><span class="dot"></span> MAWD is active</div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div id="chatArea"></div>
+
+  <!-- INPUT BAR -->
+  <div id="inputBar">
+    <button class="mic-btn" aria-label="Voice input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </button>
+    <input type="text" id="userInput" placeholder="Reply to MAWD..." autocomplete="off">
+    <button class="send-btn" id="sendBtn" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--cream)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2" fill="var(--cream)" stroke="var(--cream)"/>
+      </svg>
+    </button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ── Agent config ──
+  var AGENTS = {
+    dollar:{color:'#C4953A',label:'DOLLAR',thinking:'DOLLAR is calculating...'},
+    pulse:{color:'#7C3AED',label:'PULSE',thinking:'PULSE is reading your fans...'},
+    scout:{color:'#0D9488',label:'SCOUT',thinking:'SCOUT is searching...'},
+    compass:{color:'#3B82F6',label:'COMPASS',thinking:'COMPASS is thinking...'},
+    hype:{color:'#EC4899',label:'HYPE',thinking:'HYPE is writing...'}
+  };
+
+  var chatArea = document.getElementById('chatArea');
+  var userInput = document.getElementById('userInput');
+  var sendBtn = document.getElementById('sendBtn');
+  var demoIndex = 0;
+  var isTyping = false;
+  var demoComplete = false;
+  var conversationHistory = [];
+
+  // ── Demo script ──
+  var DEMO = [
+    {
+      type:'timestamp',
+      text:'Today, 7:02 AM'
+    },
+    {
+      type:'mawd',
+      agent:'compass',
+      text:"Good morning. I've been through everything while you were asleep.\n\nThree things need your attention today \u2014 in order of priority.\n\nFirst, your Patreon MRR has an opportunity I spotted in your data. Want the number?\n\nSecond, there are fans from your last show who've never heard from you again. I have a message ready for them.\n\nThird, your catalog has a sync opportunity that fits a brand currently looking. Should I surface it?\n\nWhich one do we handle first?",
+      replies:['Show me the money','My fans','The opportunity']
+    },
+    {
+      type:'talent',
+      text:'Show me the money',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'dollar',
+      text:"Your Patreon MRR this month is $11,100. Down $340 from last month. I traced it to 34 patrons who didn't renew.\n\nI already know why \u2014 and I have a win-back message ready in your voice. Want me to show you?",
+      replies:['Show me','How many can we recover?','Skip']
+    },
+    {
+      type:'talent',
+      text:'How many can we recover?',
+      triggerIndex:1
+    },
+    {
+      type:'mawd',
+      agent:'dollar',
+      text:"Based on their engagement history, 22 of the 34 were active in the last 90 days. They opened your emails, watched your content, commented on posts. They didn't leave because they lost interest \u2014 they left because the card on file expired or they forgot.\n\nA single personal message from you recovers 60\u201370% of these historically. That's roughly $150\u2013$200/month back, recurring. I've already drafted it. Say the word.",
+      replies:['Send it','Show me the draft','Move on']
+    },
+    {
+      type:'talent',
+      text:'Send it',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'pulse',
+      text:"Done. Messages go out in 15 minutes.\n\nWhile DOLLAR was working, I finished your fan analysis. Your most loyal fans right now are concentrated in three cities you haven't toured in 18 months.\n\nShould I route your next show there?",
+      replies:['Which cities?','Build the route','Later']
+    },
+    {
+      type:'talent',
+      text:'Which cities?',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'pulse',
+      text:"Manila \u2014 4,200 fans, your highest density per capita. You sold out last time and they're still talking about it in your club.\n\nSydney \u2014 1,800 fans, mostly from Spotify discovery. They've never seen you live. That's an untapped room.\n\nLondon \u2014 2,100 fans, steady growth from YouTube. Three of your top 10 most engaged patrons are based there.\n\nI can build a routing plan with venue recommendations and projected ticket revenue for all three. Want it?",
+      replies:['Build it','Start with Manila','Not right now']
+    },
+    {
+      type:'talent',
+      text:'Build it',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'scout',
+      text:"Routing plan is queued \u2014 you'll have it by end of day.\n\nOne more thing. I found a fitness brand in your inbox that's been sitting for 6 days unanswered. Their audience overlaps 73% with your fan profile.\n\nThis one is worth responding to. Want me to draft the reply?",
+      replies:['Draft it','Show me their brief','Pass']
+    },
+    {
+      type:'talent',
+      text:'Draft it',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'hype',
+      text:"Draft is ready. Here's what I wrote in your voice:\n\n\"Hey \u2014 really appreciate you reaching out. I've looked through what you're building and I think there's something genuine here. My team and I would love to explore what a partnership looks like. Let's find 20 minutes this week?\"\n\nApprove or should I adjust the tone?",
+      replies:['Approve and send','Make it warmer','I\'ll edit']
+    },
+    {
+      type:'talent',
+      text:'Approve and send',
+      triggerIndex:0
+    },
+    {
+      type:'mawd',
+      agent:'compass',
+      text:"Sent.\n\nThat's everything urgent for today. You have 3 things resolved in under 10 minutes. Your business ran itself while you were creating.\n\nTomorrow I'll have your weekly revenue summary ready before you wake up. Anything else before I let you go?",
+      replies:["That's it",'One more thing','How am I tracking?']
+    }
+  ];
+
+  // ── Helpers ──
+  function scrollBottom(){
+    requestAnimationFrame(function(){
+      chatArea.scrollTo({top:chatArea.scrollHeight,behavior:'smooth'});
+    });
+  }
+
+  function setActiveAgent(agent){
+    document.querySelectorAll('.agent-dot').forEach(function(d){
+      d.classList.remove('active');
+      d.style.color='';
+    });
+    if(agent){
+      var dot = document.querySelector('.agent-dot[data-agent="'+agent+'"]');
+      if(dot){
+        dot.classList.add('active');
+        dot.style.color=AGENTS[agent].color;
+      }
+    }
+  }
+
+  function addTimestamp(text){
+    var div = document.createElement('div');
+    div.className='timestamp';
+    div.textContent=text;
+    chatArea.appendChild(div);
+    scrollBottom();
+  }
+
+  function addTalentMessage(text){
+    var wrap = document.createElement('div');
+    wrap.className='msg-wrap msg-talent';
+    var bubble = document.createElement('div');
+    bubble.className='talent-bubble';
+    bubble.textContent=text;
+    wrap.appendChild(bubble);
+    chatArea.appendChild(wrap);
+    scrollBottom();
+  }
+
+  function showThinking(agent,callback){
+    setActiveAgent(agent);
+    var a = AGENTS[agent];
+    var wrap = document.createElement('div');
+    wrap.className='thinking-wrap';
+
+    var avatar = document.createElement('div');
+    avatar.className='mawd-avatar';
+    avatar.textContent='M';
+    wrap.appendChild(avatar);
+
+    var content = document.createElement('div');
+    content.className='thinking-content';
+
+    var dots = document.createElement('div');
+    dots.className='thinking-dots';
+    for(var i=0;i<3;i++){
+      var s = document.createElement('span');
+      s.style.background=a.color;
+      dots.appendChild(s);
+    }
+    content.appendChild(dots);
+
+    var label = document.createElement('div');
+    label.className='thinking-label';
+    label.textContent=a.thinking;
+    content.appendChild(label);
+
+    wrap.appendChild(content);
+    chatArea.appendChild(wrap);
+    scrollBottom();
+
+    var delay = 1200 + Math.random()*800;
+    setTimeout(function(){
+      chatArea.removeChild(wrap);
+      callback();
+    },delay);
+  }
+
+  function typeMessage(agent,text,replies,callback){
+    isTyping=true;
+    var a = AGENTS[agent];
+    setActiveAgent(agent);
+
+    var wrap = document.createElement('div');
+    wrap.className='msg-wrap msg-mawd';
+
+    var avatar = document.createElement('div');
+    avatar.className='mawd-avatar';
+    avatar.textContent='M';
+
+    var contentDiv = document.createElement('div');
+    contentDiv.className='mawd-content';
+
+    var lbl = document.createElement('div');
+    lbl.className='agent-label';
+    lbl.style.color=a.color;
+    lbl.textContent=a.label;
+
+    var bubble = document.createElement('div');
+    bubble.className='mawd-bubble';
+    bubble.style.borderLeftColor=a.color;
+    bubble.style.borderLeftWidth='3px';
+    bubble.style.borderLeftStyle='solid';
+
+    var cursor = document.createElement('span');
+    cursor.className='typing-cursor';
+
+    contentDiv.appendChild(lbl);
+    contentDiv.appendChild(bubble);
+    wrap.appendChild(avatar);
+    wrap.appendChild(contentDiv);
+    chatArea.appendChild(wrap);
+    scrollBottom();
+
+    // Typewriter
+    var chars = text.split('');
+    var idx = 0;
+    bubble.innerHTML='';
+    bubble.appendChild(cursor);
+
+    function typeNext(){
+      if(idx < chars.length){
+        var ch = chars[idx];
+        if(ch==='\n'){
+          var br = document.createElement('br');
+          bubble.insertBefore(br,cursor);
+        } else {
+          var span = document.createTextNode(ch);
+          bubble.insertBefore(span,cursor);
+        }
+        idx++;
+        // Scroll every few chars
+        if(idx%3===0) scrollBottom();
+        var speed = 18;
+        if(ch==='.') speed=120;
+        else if(ch===',') speed=60;
+        else if(ch==='\n') speed=80;
+        else if(ch==='\u2014') speed=80;
+        setTimeout(typeNext,speed);
+      } else {
+        // Done typing
+        bubble.removeChild(cursor);
+        isTyping=false;
+        scrollBottom();
+
+        // Add quick replies if any
+        if(replies && replies.length){
+          var qrDiv = document.createElement('div');
+          qrDiv.className='quick-replies';
+          replies.forEach(function(r,ri){
+            var btn = document.createElement('button');
+            btn.className='qr-btn';
+            btn.textContent=r;
+            btn.addEventListener('click',function(){
+              // Disable all buttons
+              qrDiv.querySelectorAll('.qr-btn').forEach(function(b){
+                b.style.pointerEvents='none';
+                b.style.opacity='0.4';
+              });
+              btn.style.opacity='1';
+              btn.classList.add('selected');
+              handleQuickReply(r);
+            });
+            qrDiv.appendChild(btn);
+          });
+          contentDiv.appendChild(qrDiv);
+          scrollBottom();
+        }
+
+        if(callback) callback();
+      }
+    }
+    typeNext();
+  }
+
+  // ── Demo playback ──
+  function playNext(){
+    if(demoIndex>=DEMO.length){
+      demoComplete=true;
+      return;
+    }
+    var step = DEMO[demoIndex];
+    demoIndex++;
+
+    if(step.type==='timestamp'){
+      addTimestamp(step.text);
+      playNext();
+    } else if(step.type==='mawd'){
+      showThinking(step.agent,function(){
+        typeMessage(step.agent,step.text,step.replies,null);
+      });
+    } else if(step.type==='talent'){
+      // Talent messages are triggered by quick replies
+      // This path is only for auto-play — skip in interactive mode
+    }
+  }
+
+  function handleQuickReply(text){
+    // Add talent message
+    setTimeout(function(){
+      addTalentMessage(text);
+
+      // Find next MAWD message in demo
+      if(demoIndex<DEMO.length){
+        var next = DEMO[demoIndex];
+        // Skip talent entries that match
+        if(next.type==='talent'){
+          demoIndex++;
+        }
+        // Play next MAWD
+        setTimeout(function(){
+          playNext();
+        },400);
+      } else {
+        demoComplete=true;
+      }
+    },150);
+  }
+
+  // ── Live input handling ──
+  function sendMessage(){
+    var text = userInput.value.trim();
+    if(!text || isTyping) return;
+    userInput.value='';
+
+    addTalentMessage(text);
+
+    if(!demoComplete){
+      // During demo, treat as quick reply trigger
+      if(demoIndex<DEMO.length){
+        var next = DEMO[demoIndex];
+        if(next.type==='talent') demoIndex++;
+        setTimeout(function(){ playNext(); },400);
+      }
+      return;
+    }
+
+    // ── Live API mode ──
+    conversationHistory.push({role:'user',content:text});
+    var agents = ['dollar','pulse','scout','compass','hype'];
+    var agent = agents[Math.floor(Math.random()*agents.length)];
+
+    showThinking(agent,function(){
+      callAPI(agent);
+    });
+  }
+
+  function callAPI(agent){
+    var systemPrompt = "You are MAWD \u2014 Management AI Working Daily. You are the AI chief of staff for a talent business. You always speak first. You lead every conversation. You are proactive, specific, and action-oriented. You know this talent's entire business intimately. You never give generic advice. You always end your turn with a specific question or a specific action for the talent to approve. You coordinate five specialist agents \u2014 DOLLAR for finances and revenue, PULSE for fan intelligence and audience, SCOUT for opportunities and brand deals, COMPASS for strategy and career direction, HYPE for content, voice, and communications. You are currently speaking as "+AGENTS[agent].label+". Your voice is warm, direct, brilliant, and brief. Like a chief of staff who already did the work before the talent woke up. Never use bullet points in your responses. Always write in flowing natural language. Always end with one specific question. Keep responses under 120 words.";
+
+    fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':getAPIKey(),
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:systemPrompt,
+        messages:conversationHistory
+      })
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var reply = data.content && data.content[0] ? data.content[0].text : "I'm having trouble connecting. Try again in a moment.";
+      conversationHistory.push({role:'assistant',content:reply});
+      typeMessage(agent,reply,null,null);
+    })
+    .catch(function(){
+      typeMessage(agent,"I'm having trouble connecting right now. Let's try again in a moment.",null,null);
+    });
+  }
+
+  function getAPIKey(){
+    var key = localStorage.getItem('mawd_api_key');
+    if(!key){
+      key = prompt('Enter your Anthropic API key to enable live MAWD:');
+      if(key) localStorage.setItem('mawd_api_key',key);
+    }
+    return key || '';
+  }
+
+  // ── Event listeners ──
+  sendBtn.addEventListener('click',sendMessage);
+  userInput.addEventListener('keydown',function(e){
+    if(e.key==='Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ── Start ──
+  setTimeout(function(){
+    playNext();
+  },600);
+
+})();
+</script>
+</body>
+</html>
