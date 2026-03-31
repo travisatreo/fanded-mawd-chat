@@ -356,6 +356,75 @@ body{
 }
 #inputBar .send-btn:active{transform:scale(0.9);}
 #inputBar .send-btn svg{width:16px;height:16px;}
+/* ── JARGON TOOLTIPS ── */
+.jargon{
+  color:var(--gold-2);
+  text-decoration:underline;
+  text-decoration-style:dotted;
+  text-underline-offset:3px;
+  text-decoration-color:rgba(232,184,75,0.4);
+  cursor:pointer;
+  position:relative;
+  -webkit-tap-highlight-color:transparent;
+}
+.jargon-tip{
+  position:fixed;
+  z-index:100;
+  background:#13132A;
+  border:1px solid rgba(196,149,58,0.35);
+  border-radius:12px;
+  padding:12px 14px;
+  max-width:280px;
+  width:max-content;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity 0.2s ease,transform 0.2s ease;
+  pointer-events:none;
+}
+.jargon-tip.visible{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+.jargon-tip .tip-term{
+  font-family:var(--font-ui);
+  font-weight:700;
+  font-size:11px;
+  color:var(--gold);
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.jargon-tip .tip-def{
+  font-family:var(--font-ui);
+  font-size:13px;
+  line-height:1.5;
+  color:var(--cream);
+}
+.jargon-tip .tip-link{
+  display:inline-block;
+  margin-top:6px;
+  font-family:var(--font-ui);
+  font-size:11px;
+  color:var(--gold);
+  text-decoration:none;
+  opacity:0.7;
+  transition:opacity 0.15s;
+}
+.jargon-tip .tip-link:hover{opacity:1;}
+.jargon-tip .tip-close{
+  position:absolute;
+  top:6px;right:8px;
+  background:none;border:none;
+  color:var(--cream-40);
+  font-size:16px;
+  cursor:pointer;
+  line-height:1;
+  padding:2px;
+}
 /* Desktop fill */
 @media(min-width:431px){
   body{background:var(--bg);}
@@ -426,6 +495,165 @@ body{
   var isTyping = false;
   var demoComplete = false;
   var conversationHistory = [];
+  var activeTip = null;
+
+  // ── Glossary ──
+  var GLOSSARY = {
+    'MRR':{
+      def:'Monthly Recurring Revenue \u2014 the predictable income you earn every month from subscriptions like Patreon or your fan club.',
+      link:'https://www.investopedia.com/terms/m/mrr.asp'
+    },
+    'patrons':{
+      def:'People who pay a monthly subscription to support you directly, usually through Patreon or a fan club.',
+      link:'https://support.patreon.com/hc/en-us/articles/204606315-What-is-Patreon'
+    },
+    'win-back message':{
+      def:'A message sent to fans who canceled their subscription, designed to bring them back. Usually personal and direct.',
+      link:null
+    },
+    'engagement history':{
+      def:'A record of how a fan interacts with your content \u2014 opens, clicks, comments, watch time. Shows who actually cares vs. who\'s passive.',
+      link:null
+    },
+    'recurring':{
+      def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',
+      link:null
+    },
+    'card on file':{
+      def:'The credit or debit card a fan saved for their subscription. When it expires, the payment fails silently \u2014 the fan doesn\'t even know.',
+      link:null
+    },
+    'density per capita':{
+      def:'How concentrated your fans are relative to the city\'s population. High density = a lot of your fans live there relative to city size.',
+      link:null
+    },
+    'Spotify discovery':{
+      def:'When Spotify\'s algorithm recommends your music to new listeners through playlists like Discover Weekly or Release Radar.',
+      link:null
+    },
+    'routing plan':{
+      def:'A tour schedule mapped by city, optimized by where your fans actually are and what venues make sense for your audience size.',
+      link:null
+    },
+    'projected ticket revenue':{
+      def:'An estimate of how much money you\'d make from ticket sales in a specific city, based on your fan count and typical conversion rates.',
+      link:null
+    },
+    'audience overlaps':{
+      def:'When a brand\'s customers and your fans are the same type of people. Higher overlap = better partnership fit and more money for you.',
+      link:null
+    },
+    'fan profile':{
+      def:'A picture of who your fans are \u2014 age, location, interests, spending habits. Built from your actual data, not guesses.',
+      link:null
+    },
+    'sync opportunity':{
+      def:'A chance to license your music for use in a TV show, film, ad, or video game. Can be a major payday.',
+      link:'https://www.ascap.com/help/music-business-101/sync-licensing'
+    },
+    'catalog':{
+      def:'Your entire library of released music \u2014 every song, album, and feature you\'ve ever put out. It\'s an asset that can earn money forever.',
+      link:null
+    },
+    'revenue summary':{
+      def:'A breakdown of all money earned across every source \u2014 streaming, fan club, merch, brand deals, sync, and live shows.',
+      link:null
+    },
+    'CPM':{
+      def:'Cost Per Mille \u2014 how much a brand pays per 1,000 views or impressions on your content. Higher CPM = more money per post.',
+      link:'https://www.investopedia.com/terms/c/cpm.asp'
+    },
+    'brand deal':{
+      def:'When a company pays you to promote their product to your audience. Can be a social post, video mention, or full campaign.',
+      link:null
+    }
+  };
+
+  // ── Jargon detection + tooltip ──
+  function applyGlossary(bubble){
+    var html = bubble.innerHTML;
+    var terms = Object.keys(GLOSSARY).sort(function(a,b){return b.length-a.length;});
+    terms.forEach(function(term){
+      var escaped = term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var regex = new RegExp('(?<![<\\w])(' + escaped + ')(?![\\w>])','gi');
+      html = html.replace(regex, function(match){
+        return '<span class="jargon" data-term="'+term+'">'+match+'</span>';
+      });
+    });
+    bubble.innerHTML = html;
+
+    bubble.querySelectorAll('.jargon').forEach(function(el){
+      el.addEventListener('click',function(e){
+        e.stopPropagation();
+        showTip(el, el.getAttribute('data-term'));
+      });
+    });
+  }
+
+  function showTip(el, termKey){
+    closeTip();
+    var entry = GLOSSARY[termKey];
+    if(!entry) return;
+
+    var tip = document.createElement('div');
+    tip.className='jargon-tip';
+
+    var close = document.createElement('button');
+    close.className='tip-close';
+    close.innerHTML='&times;';
+    close.addEventListener('click',function(e){e.stopPropagation();closeTip();});
+    tip.appendChild(close);
+
+    var title = document.createElement('div');
+    title.className='tip-term';
+    title.textContent=termKey;
+    tip.appendChild(title);
+
+    var def = document.createElement('div');
+    def.className='tip-def';
+    def.textContent=entry.def;
+    tip.appendChild(def);
+
+    if(entry.link){
+      var a = document.createElement('a');
+      a.className='tip-link';
+      a.href=entry.link;
+      a.target='_blank';
+      a.rel='noopener';
+      a.textContent='Learn more \u2192';
+      tip.appendChild(a);
+    }
+
+    document.body.appendChild(tip);
+    activeTip = tip;
+
+    // Position below the term
+    var rect = el.getBoundingClientRect();
+    var tipW = Math.min(280, window.innerWidth - 32);
+    var left = rect.left + rect.width/2 - tipW/2;
+    if(left < 16) left = 16;
+    if(left + tipW > window.innerWidth - 16) left = window.innerWidth - 16 - tipW;
+    var top = rect.bottom + 8;
+    if(top + 120 > window.innerHeight){
+      top = rect.top - 8;
+      tip.style.transform='translateY(-100%)';
+    }
+    tip.style.left = left+'px';
+    tip.style.top = top+'px';
+    tip.style.width = tipW+'px';
+
+    requestAnimationFrame(function(){
+      tip.classList.add('visible');
+    });
+  }
+
+  function closeTip(){
+    if(activeTip){
+      activeTip.remove();
+      activeTip=null;
+    }
+  }
+  document.addEventListener('click',closeTip);
 
   // ── Demo script ──
   var DEMO = [
@@ -661,6 +889,7 @@ body{
       } else {
         // Done typing
         bubble.removeChild(cursor);
+        applyGlossary(bubble);
         isTyping=false;
         scrollBottom();
 
