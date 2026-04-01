@@ -115,7 +115,7 @@ Never use bullet points or numbered lists in conversation.`;
     const userMsg = (messages && messages.length) ? messages[messages.length - 1].content.toLowerCase() : '';
     const isBuildMode = /generat|create|draft|build|write me|full .*(breakdown|report|p&l|p\+l|profit.?loss|statement|plan|email|contract|list)|show me (everything|all|the full|the complete)|break(down| it down)|itemize|line.by.line|detailed|in full|don't cut|finish|keep going|continue|more detail|elaborate/.test(userMsg);
     const isFinanceAgent = agent && ['ledger', 'dollar'].includes(agent.toLowerCase());
-    const maxTokens = isBuildMode ? 4096 : isFinanceAgent ? 1024 : 300;
+    const maxTokens = isBuildMode ? 8192 : isFinanceAgent ? 1024 : 300;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
