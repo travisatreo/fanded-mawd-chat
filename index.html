@@ -1033,32 +1033,24 @@ body{display:flex;justify-content:center;}
     addTalentMessage(text);
     conversationHistory.push({role:'user', content:text});
 
-    // Intercept tax package requests — handle client-side
-    if(isTaxPackageRequest(text)){
+    // Intercept tax package requests — use local books if available, otherwise let AI handle
+    var booksEntries = loadBooks();
+    if(isTaxPackageRequest(text) && booksEntries.length > 0){
       showThinking('ledger');
       setTimeout(function(){
         hideThinking();
         var result = generateTaxPackage();
-        var reply;
-        if(result.entries === 0){
-          reply = 'Your books are empty right now — no entries logged yet. Log some income and expenses first, then I\'ll generate the full package for Citrine. Want me to help you log some entries?';
-          conversationHistory.push({role:'assistant', content:reply});
-          typeMessage('ledger', reply, ['Yes, help me log','What do I need to log?'], null);
-        } else {
-          reply = 'Tax package generated — '+result.entries+' entries, $'+Math.abs(result.net).toFixed(2)+' net '+(result.net >= 0 ? 'income' : 'loss')+'. I opened it in a new tab for you to save as PDF. It\'s also saved in your documents. Ready to send to Citrine when you are.';
-          conversationHistory.push({role:'assistant', content:reply});
-          var contentWrapper = null;
-          typeMessage('ledger', reply, ['Send to Citrine','Show me what\'s missing'], function(){
-            // After typing, add doc actions to the message
-            var msgs = chatArea.querySelectorAll('.msg-mawd');
-            var lastMsg = msgs[msgs.length-1];
-            if(lastMsg){
-              var content = lastMsg.querySelector('.mawd-content');
-              if(content && result.doc) addDocActions(content, result.doc);
-              scrollBottom();
-            }
-          });
-        }
+        var reply = 'Tax package generated — '+result.entries+' entries, $'+Math.abs(result.net).toFixed(2)+' net '+(result.net >= 0 ? 'income' : 'loss')+'. I opened it in a new tab for you to save as PDF. It\'s also saved in your documents. Ready to send to Citrine when you are.';
+        conversationHistory.push({role:'assistant', content:reply});
+        typeMessage('ledger', reply, ['Send to Citrine','Show me what\'s missing'], function(){
+          var msgs = chatArea.querySelectorAll('.msg-mawd');
+          var lastMsg = msgs[msgs.length-1];
+          if(lastMsg){
+            var content = lastMsg.querySelector('.mawd-content');
+            if(content && result.doc) addDocActions(content, result.doc);
+            scrollBottom();
+          }
+        });
       }, 800);
       return;
     }
