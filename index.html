@@ -590,6 +590,100 @@ body{display:flex;justify-content:center;}
 
   updateDocsBadge();
 
+  // ── Tax Package Generator (same data as fanded-journal Books) ──
+  var BOOKS_STORAGE_KEY = 'fanded_books_2025';
+  function loadBooks(){ try { return JSON.parse(localStorage.getItem(BOOKS_STORAGE_KEY)) || []; } catch(e){ return []; } }
+
+  function isTaxPackageRequest(text){
+    var t = text.toLowerCase();
+    return /tax.*(package|doc|document|prep|filing|return)|generate.*(tax|package|for.*(accountant|cpa|citrine))|send.*(accountant|cpa|citrine)|prep.*(tax|filing)|package.*accountant/.test(t);
+  }
+
+  function generateTaxPackage(){
+    var entries = loadBooks();
+    var year = '2025';
+    var incByCat = {}, expByCat = {}, totalInc = 0, totalExp = 0;
+
+    entries.forEach(function(e){
+      if(e.type === 'income'){ incByCat[e.category] = (incByCat[e.category]||0) + e.amount; totalInc += e.amount; }
+      else { expByCat[e.category] = (expByCat[e.category]||0) + e.amount; totalExp += e.amount; }
+    });
+
+    var html = '<!DOCTYPE html><html><head><title>Tax Package - Travis Atreo Productions LLC - '+year+'</title>'+
+      '<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#222;line-height:1.6;padding:20px}'+
+      'h1{font-size:24px;border-bottom:2px solid #222;padding-bottom:8px}h2{font-size:18px;color:#444;margin-top:32px}'+
+      'table{width:100%;border-collapse:collapse;margin:16px 0}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #ddd}'+
+      'th{background:#f5f5f5;font-weight:600}.total{font-weight:700;border-top:2px solid #222}'+
+      '.note{background:#f9f9f2;padding:16px;border-left:4px solid #3BADE4;margin:20px 0;font-size:14px}'+
+      '@media print{body{margin:20px}}</style></head><body>';
+
+    html += '<h1>Tax Package: '+year+' Tax Year</h1>';
+    html += '<p><strong>Travis Atreo Productions LLC</strong> (S-Corp / Form 1120-S)</p>';
+    html += '<p>Prepared: '+new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'</p>';
+    html += '<p>Prepared for: Citrine CPAs</p><hr>';
+
+    html += '<h2>Summary</h2><table>';
+    html += '<tr><td>Total Income</td><td style="text-align:right;color:green"><strong>$'+totalInc.toFixed(2)+'</strong></td></tr>';
+    html += '<tr><td>Total Expenses</td><td style="text-align:right;color:#c0392b"><strong>$'+totalExp.toFixed(2)+'</strong></td></tr>';
+    html += '<tr class="total"><td>Net Income</td><td style="text-align:right"><strong>$'+(totalInc-totalExp).toFixed(2)+'</strong></td></tr>';
+    html += '<tr><td>Logged Entries</td><td style="text-align:right">'+entries.length+'</td></tr></table>';
+
+    if(Object.keys(incByCat).length){
+      html += '<h2>Income by Category</h2><table><tr><th>Category</th><th style="text-align:right">Amount</th></tr>';
+      Object.keys(incByCat).sort().forEach(function(c){ html += '<tr><td>'+c+'</td><td style="text-align:right">$'+incByCat[c].toFixed(2)+'</td></tr>'; });
+      html += '<tr class="total"><td>Total</td><td style="text-align:right">$'+totalInc.toFixed(2)+'</td></tr></table>';
+    }
+
+    if(Object.keys(expByCat).length){
+      html += '<h2>Expenses by Category</h2><table><tr><th>Category</th><th style="text-align:right">Amount</th></tr>';
+      Object.keys(expByCat).sort().forEach(function(c){ html += '<tr><td>'+c+'</td><td style="text-align:right">$'+expByCat[c].toFixed(2)+'</td></tr>'; });
+      html += '<tr class="total"><td>Total</td><td style="text-align:right">$'+totalExp.toFixed(2)+'</td></tr></table>';
+    }
+
+    html += '<h2>Detailed Transactions</h2><table><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right">Amount</th></tr>';
+    entries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).forEach(function(e){
+      var sign = e.type==='income' ? '+' : '-';
+      var color = e.type==='income' ? 'green' : '#c0392b';
+      html += '<tr><td>'+(e.date||'')+'</td><td>'+(e.description||e.category)+'</td><td>'+e.category+'</td><td style="text-align:right;color:'+color+'">'+sign+'$'+e.amount.toFixed(2)+'</td></tr>';
+    });
+    html += '</table>';
+
+    html += '<div class="note"><strong>Additional items needed for filing:</strong><ul>';
+    html += '<li>All 1099s received (Ingrooves, Studio 71/YouTube, Songtrust, BMI)</li>';
+    html += '<li>W-2 for owner salary (if payroll was run through the S-Corp)</li>';
+    html += '<li>Home office: square footage of office space vs total home square footage</li>';
+    html += '<li>Health insurance premium documentation (S-Corp: reported on W-2)</li>';
+    html += '<li>Bank statements: BofA Business Checking, AmEx, Capital One, Amazon Store Card</li>';
+    html += '<li>Vehicle mileage log (if applicable)</li>';
+    html += '<li>Retirement contribution records (Roth IRA)</li>';
+    html += '<li>Any contractor payments over $600 (1099-NEC obligations)</li>';
+    html += '</ul></div>';
+
+    html += '<p style="color:#999;font-size:12px;margin-top:40px">Generated by MAWD \u00b7 fanded.com</p></body></html>';
+
+    // Plain text summary for doc storage
+    var summary = 'Tax Package: '+year+' Tax Year\nTravis Atreo Productions LLC (S-Corp / Form 1120-S)\n';
+    summary += 'Prepared: '+new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'\n';
+    summary += 'Prepared for: Citrine CPAs\n\n';
+    summary += 'SUMMARY\nTotal Income: $'+totalInc.toFixed(2)+'\nTotal Expenses: $'+totalExp.toFixed(2)+'\nNet Income: $'+(totalInc-totalExp).toFixed(2)+'\nEntries: '+entries.length+'\n\n';
+    if(Object.keys(expByCat).length){
+      summary += 'EXPENSES BY CATEGORY\n';
+      Object.keys(expByCat).sort().forEach(function(c){ summary += c+': $'+expByCat[c].toFixed(2)+'\n'; });
+    }
+    if(Object.keys(incByCat).length){
+      summary += '\nINCOME BY CATEGORY\n';
+      Object.keys(incByCat).sort().forEach(function(c){ summary += c+': $'+incByCat[c].toFixed(2)+'\n'; });
+    }
+
+    var doc = saveDoc('tax-summary', 'Tax Package '+year+' - Travis Atreo Productions LLC', summary);
+
+    // Open in new window for print/PDF
+    var win = window.open('','_blank');
+    if(win){ win.document.write(html); win.document.close(); setTimeout(function(){ win.print(); },500); }
+
+    return {entries:entries.length, totalInc:totalInc, totalExp:totalExp, net:totalInc-totalExp, doc:doc};
+  }
+
   // ── Glossary ──
   var GLOSSARY = {
     'MRR':{def:'Monthly Recurring Revenue \u2014 the predictable income you earn every month from subscriptions like Patreon or your fan club.',link:'https://www.investopedia.com/terms/m/mrr.asp'},
@@ -938,6 +1032,36 @@ body{display:flex;justify-content:center;}
 
     addTalentMessage(text);
     conversationHistory.push({role:'user', content:text});
+
+    // Intercept tax package requests — handle client-side
+    if(isTaxPackageRequest(text)){
+      showThinking('ledger');
+      setTimeout(function(){
+        hideThinking();
+        var result = generateTaxPackage();
+        var reply;
+        if(result.entries === 0){
+          reply = 'Your books are empty right now — no entries logged yet. Log some income and expenses first, then I\'ll generate the full package for Citrine. Want me to help you log some entries?';
+          conversationHistory.push({role:'assistant', content:reply});
+          typeMessage('ledger', reply, ['Yes, help me log','What do I need to log?'], null);
+        } else {
+          reply = 'Tax package generated — '+result.entries+' entries, $'+Math.abs(result.net).toFixed(2)+' net '+(result.net >= 0 ? 'income' : 'loss')+'. I opened it in a new tab for you to save as PDF. It\'s also saved in your documents. Ready to send to Citrine when you are.';
+          conversationHistory.push({role:'assistant', content:reply});
+          var contentWrapper = null;
+          typeMessage('ledger', reply, ['Send to Citrine','Show me what\'s missing'], function(){
+            // After typing, add doc actions to the message
+            var msgs = chatArea.querySelectorAll('.msg-mawd');
+            var lastMsg = msgs[msgs.length-1];
+            if(lastMsg){
+              var content = lastMsg.querySelector('.mawd-content');
+              if(content && result.doc) addDocActions(content, result.doc);
+              scrollBottom();
+            }
+          });
+        }
+      }, 800);
+      return;
+    }
 
     // Pick agent based on content keywords
     var agent = pickAgent(text);
