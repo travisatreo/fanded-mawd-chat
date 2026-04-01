@@ -225,6 +225,115 @@ body{display:flex;justify-content:center;}
 }
 #inputBar .send-btn:active{transform:scale(0.9);}
 #inputBar .send-btn svg{width:16px;height:16px;}
+/* ── DOC ACTIONS (inline in chat) ── */
+.doc-actions{
+  display:flex;gap:8px;margin-top:10px;padding-left:38px;
+}
+.doc-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);
+  color:#22C55E;font-family:var(--font-ui);font-size:12px;font-weight:600;
+  padding:8px 14px;border-radius:50px;cursor:pointer;
+  transition:all 0.2s;-webkit-tap-highlight-color:transparent;
+}
+.doc-btn:hover{background:rgba(34,197,94,0.18);border-color:#22C55E;}
+.doc-btn:active{transform:scale(0.96);}
+.doc-btn svg{width:14px;height:14px;flex-shrink:0;}
+/* ── DOCUMENTS DRAWER ── */
+#docsOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;
+}
+#docsOverlay.open{opacity:1;pointer-events:auto;}
+#docsDrawer{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;max-height:80vh;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;z-index:201;
+  display:flex;flex-direction:column;
+  transform:translateX(-50%) translateY(100%);
+  transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+#docsOverlay.open + #docsDrawer,
+#docsDrawer.open{transform:translateX(-50%) translateY(0);}
+.drawer-handle{
+  width:36px;height:4px;border-radius:2px;background:rgba(245,241,234,0.2);
+  margin:10px auto 0;flex-shrink:0;
+}
+.drawer-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 12px;flex-shrink:0;
+}
+.drawer-header h2{
+  font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;
+  color:var(--cream);letter-spacing:1px;
+}
+.drawer-close{
+  background:none;border:none;color:var(--cream-40);font-size:20px;
+  cursor:pointer;padding:4px 8px;-webkit-tap-highlight-color:transparent;
+}
+.drawer-list{
+  flex:1;overflow-y:auto;padding:0 16px 24px;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);
+}
+.drawer-list::-webkit-scrollbar{width:0;display:none;}
+.doc-item{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;
+  transition:border-color 0.2s;-webkit-tap-highlight-color:transparent;
+}
+.doc-item:hover{border-color:var(--gold);}
+.doc-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:16px;
+}
+.doc-icon.pnl,.doc-icon.expense-report{background:rgba(34,197,94,0.12);color:#22C55E;}
+.doc-icon.tax-summary{background:rgba(196,149,58,0.12);color:var(--gold);}
+.doc-icon.email{background:rgba(236,72,153,0.12);color:#EC4899;}
+.doc-icon.plan,.doc-icon.contract{background:rgba(59,130,246,0.12);color:#3B82F6;}
+.doc-info{flex:1;min-width:0;}
+.doc-info .doc-title{
+  font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--cream);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.doc-info .doc-meta{font-size:11px;color:var(--cream-40);margin-top:2px;}
+.doc-item-actions{display:flex;gap:6px;}
+.doc-item-btn{
+  background:rgba(245,241,234,0.06);border:1px solid rgba(245,241,234,0.1);
+  border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--cream-60);
+  transition:all 0.15s;-webkit-tap-highlight-color:transparent;
+}
+.doc-item-btn:hover{background:rgba(245,241,234,0.1);color:var(--cream);}
+.doc-item-btn svg{width:14px;height:14px;display:block;}
+.drawer-empty{
+  text-align:center;padding:40px 20px;color:var(--cream-40);font-size:14px;
+}
+/* ── DOCS BUTTON (top bar) ── */
+.docs-badge{
+  position:relative;background:none;border:none;cursor:pointer;
+  color:var(--cream-40);padding:0;display:flex;align-items:center;
+  -webkit-tap-highlight-color:transparent;transition:color 0.2s;
+}
+.docs-badge:hover{color:var(--cream);}
+.docs-badge svg{width:18px;height:18px;}
+.docs-badge .badge-count{
+  position:absolute;top:-4px;right:-6px;
+  min-width:14px;height:14px;border-radius:7px;
+  background:#22C55E;color:#fff;font-size:9px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 3px;display:none;
+}
+.docs-badge .badge-count.has-docs{display:flex;}
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+  background:#1a1a2e;border:1px solid var(--border);border-radius:12px;
+  padding:10px 18px;font-size:13px;color:var(--cream);font-family:var(--font-ui);
+  z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;
+}
+.toast.show{opacity:1;}
 @media(min-width:431px){body{background:var(--bg);}}
 </style>
 </head>
@@ -233,13 +342,24 @@ body{display:flex;justify-content:center;}
   <div id="topBar">
     <div class="logo"><img src="logo.png" alt="Fanded"><span>fanded</span></div>
     <div class="title">MAWD</div>
-    <div class="agent-dots">
-      <div class="agent-dot" data-agent="dollar"></div>
-      <div class="agent-dot" data-agent="pulse"></div>
-      <div class="agent-dot" data-agent="scout"></div>
-      <div class="agent-dot" data-agent="compass"></div>
-      <div class="agent-dot" data-agent="hype"></div>
-      <div class="agent-dot" data-agent="ledger"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="agent-dots">
+        <div class="agent-dot" data-agent="dollar"></div>
+        <div class="agent-dot" data-agent="pulse"></div>
+        <div class="agent-dot" data-agent="scout"></div>
+        <div class="agent-dot" data-agent="compass"></div>
+        <div class="agent-dot" data-agent="hype"></div>
+        <div class="agent-dot" data-agent="ledger"></div>
+      </div>
+      <button class="docs-badge" id="docsBtn" aria-label="Documents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span class="badge-count" id="docsBadge">0</span>
+      </button>
     </div>
   </div>
   <div id="gradLine"></div>
@@ -247,6 +367,20 @@ body{display:flex;justify-content:center;}
     <div class="pill"><span class="dot"></span> MAWD is active</div>
   </div>
   <div id="chatArea"></div>
+  <!-- Documents Drawer -->
+  <div id="docsOverlay"></div>
+  <div id="docsDrawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <h2>Documents</h2>
+      <button class="drawer-close" id="drawerClose">&times;</button>
+    </div>
+    <div class="drawer-list" id="docsList">
+      <div class="drawer-empty" id="docsEmpty">No documents yet. Ask MAWD to generate a P&L, expense report, or tax summary.</div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
   <div id="inputBar">
     <button class="mic-btn" aria-label="Voice input">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -280,10 +414,181 @@ body{display:flex;justify-content:center;}
   var chatArea = document.getElementById('chatArea');
   var userInput = document.getElementById('userInput');
   var sendBtn = document.getElementById('sendBtn');
+  var docsBtn = document.getElementById('docsBtn');
+  var docsBadge = document.getElementById('docsBadge');
+  var docsOverlay = document.getElementById('docsOverlay');
+  var docsDrawer = document.getElementById('docsDrawer');
+  var drawerClose = document.getElementById('drawerClose');
+  var docsList = document.getElementById('docsList');
+  var docsEmpty = document.getElementById('docsEmpty');
+  var toastEl = document.getElementById('toast');
   var isTyping = false;
   var conversationHistory = [];
   var currentAgent = 'compass';
   var activeTip = null;
+  var savedDocs = JSON.parse(localStorage.getItem('mawd_docs') || '[]');
+
+  // ── Documents system ──
+  var DOC_ICONS = {
+    'pnl':'📊','expense-report':'🧾','tax-summary':'💰',
+    'email':'✉️','plan':'📋','contract':'📄'
+  };
+
+  function saveDoc(type, title, content){
+    var doc = {
+      id: Date.now(),
+      type: type,
+      title: title,
+      content: content,
+      date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    };
+    savedDocs.unshift(doc);
+    localStorage.setItem('mawd_docs', JSON.stringify(savedDocs));
+    updateDocsBadge();
+    return doc;
+  }
+
+  function updateDocsBadge(){
+    var count = savedDocs.length;
+    docsBadge.textContent = count;
+    if(count > 0) docsBadge.classList.add('has-docs');
+    else docsBadge.classList.remove('has-docs');
+  }
+
+  function openDrawer(){
+    renderDocsList();
+    docsOverlay.classList.add('open');
+    docsDrawer.classList.add('open');
+  }
+
+  function closeDrawer(){
+    docsOverlay.classList.remove('open');
+    docsDrawer.classList.remove('open');
+  }
+
+  docsBtn.addEventListener('click', openDrawer);
+  docsOverlay.addEventListener('click', closeDrawer);
+  drawerClose.addEventListener('click', closeDrawer);
+
+  function renderDocsList(){
+    docsList.innerHTML = '';
+    if(savedDocs.length === 0){
+      docsList.innerHTML = '<div class="drawer-empty">No documents yet. Ask MAWD to generate a P&L, expense report, or tax summary.</div>';
+      return;
+    }
+    savedDocs.forEach(function(doc){
+      var item = document.createElement('div');
+      item.className = 'doc-item';
+      var icon = document.createElement('div');
+      icon.className = 'doc-icon ' + doc.type;
+      icon.textContent = DOC_ICONS[doc.type] || '📄';
+      var info = document.createElement('div');
+      info.className = 'doc-info';
+      info.innerHTML = '<div class="doc-title">' + doc.title + '</div><div class="doc-meta">' + doc.date + '</div>';
+      var actions = document.createElement('div');
+      actions.className = 'doc-item-actions';
+      // Download button
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'doc-item-btn';
+      dlBtn.title = 'Download';
+      dlBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+      dlBtn.addEventListener('click',function(e){e.stopPropagation();downloadDoc(doc);});
+      // Share/forward button
+      var shareBtn = document.createElement('button');
+      shareBtn.className = 'doc-item-btn';
+      shareBtn.title = 'Share';
+      shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+      shareBtn.addEventListener('click',function(e){e.stopPropagation();shareDoc(doc);});
+      // Delete button
+      var delBtn = document.createElement('button');
+      delBtn.className = 'doc-item-btn';
+      delBtn.title = 'Delete';
+      delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+      delBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+        savedDocs = savedDocs.filter(function(d){return d.id !== doc.id;});
+        localStorage.setItem('mawd_docs', JSON.stringify(savedDocs));
+        updateDocsBadge();
+        renderDocsList();
+        showToast('Document deleted');
+      });
+      actions.appendChild(dlBtn);
+      actions.appendChild(shareBtn);
+      actions.appendChild(delBtn);
+      item.appendChild(icon);
+      item.appendChild(info);
+      item.appendChild(actions);
+      item.addEventListener('click',function(){downloadDoc(doc);});
+      docsList.appendChild(item);
+    });
+  }
+
+  function downloadDoc(doc){
+    // Generate a clean text file
+    var text = doc.title + '\n' + '='.repeat(doc.title.length) + '\n\n' + doc.content;
+    var blob = new Blob([text], {type:'text/plain'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = doc.title.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,'-').toLowerCase() + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded: ' + doc.title);
+  }
+
+  function shareDoc(doc){
+    var text = doc.title + '\n\n' + doc.content;
+    if(navigator.share){
+      navigator.share({title:doc.title, text:text}).catch(function(){});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(function(){
+        showToast('Copied to clipboard — paste into email or message');
+      });
+    } else {
+      // Fallback: open mailto
+      var subject = encodeURIComponent(doc.title);
+      var body = encodeURIComponent(doc.content);
+      window.open('mailto:?subject='+subject+'&body='+body);
+    }
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(function(){toastEl.classList.remove('show');},2500);
+  }
+
+  // Detect document markers in MAWD response and extract/save
+  function processDocMarkers(text){
+    var match = text.match(/<!--DOC:([^:]+):([^>]+)-->/);
+    if(!match) return {cleanText:text, doc:null};
+    var type = match[1].trim();
+    var title = match[2].trim();
+    var cleanText = text.replace(/<!--DOC:[^>]+-->/g,'').trim();
+    var doc = saveDoc(type, title, cleanText);
+    return {cleanText:cleanText, doc:doc};
+  }
+
+  // Add download/share buttons after a document message
+  function addDocActions(contentDiv, doc){
+    var actionsDiv = document.createElement('div');
+    actionsDiv.className = 'doc-actions';
+    var dlBtn = document.createElement('button');
+    dlBtn.className = 'doc-btn';
+    dlBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download';
+    dlBtn.addEventListener('click',function(){downloadDoc(doc);});
+    var shareBtn = document.createElement('button');
+    shareBtn.className = 'doc-btn';
+    shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Send to accountant';
+    shareBtn.addEventListener('click',function(){shareDoc(doc);});
+    actionsDiv.appendChild(dlBtn);
+    actionsDiv.appendChild(shareBtn);
+    contentDiv.appendChild(actionsDiv);
+  }
+
+  updateDocsBadge();
 
   // ── Glossary ──
   var GLOSSARY = {
@@ -448,6 +753,12 @@ body{display:flex;justify-content:center;}
     isTyping = true;
     var a = AGENTS[agent] || AGENTS.compass;
     setActiveAgent(agent);
+
+    // Check for document markers before displaying
+    var result = processDocMarkers(text);
+    var displayText = result.cleanText;
+    var generatedDoc = result.doc;
+
     var wrap = document.createElement('div');
     wrap.className='msg-wrap msg-mawd';
     var avatar = document.createElement('div');
@@ -470,7 +781,51 @@ body{display:flex;justify-content:center;}
     chatArea.appendChild(wrap);
     scrollBottom();
 
-    var chars = text.split('');
+    // For long documents, skip character-by-character and render instantly
+    var isLongDoc = displayText.length > 600;
+
+    if(isLongDoc){
+      bubble.innerHTML = '';
+      // Render the text with line breaks
+      var lines = displayText.split('\n');
+      lines.forEach(function(line, i){
+        if(i > 0) bubble.appendChild(document.createElement('br'));
+        if(line.trim()) bubble.appendChild(document.createTextNode(line));
+      });
+      applyGlossary(bubble);
+      isTyping = false;
+      scrollBottom();
+
+      if(generatedDoc){
+        addDocActions(contentDiv, generatedDoc);
+        showToast('Document saved — tap 📄 to access anytime');
+        scrollBottom();
+      }
+
+      if(quickReplies && quickReplies.length){
+        var qrDiv = document.createElement('div');
+        qrDiv.className='quick-replies';
+        quickReplies.forEach(function(r){
+          var btn = document.createElement('button');
+          btn.className='qr-btn';btn.textContent=r;
+          btn.addEventListener('click',function(){
+            qrDiv.querySelectorAll('.qr-btn').forEach(function(b){
+              b.style.pointerEvents='none';b.style.opacity='0.4';
+            });
+            btn.style.opacity='1';btn.classList.add('selected');
+            sendMessage(r);
+          });
+          qrDiv.appendChild(btn);
+        });
+        contentDiv.appendChild(qrDiv);
+        scrollBottom();
+      }
+
+      if(callback) callback();
+      return;
+    }
+
+    var chars = displayText.split('');
     var idx = 0;
     bubble.innerHTML='';
     bubble.appendChild(cursor);
@@ -496,6 +851,12 @@ body{display:flex;justify-content:center;}
         applyGlossary(bubble);
         isTyping = false;
         scrollBottom();
+
+        if(generatedDoc){
+          addDocActions(contentDiv, generatedDoc);
+          showToast('Document saved — tap 📄 to access anytime');
+          scrollBottom();
+        }
 
         if(quickReplies && quickReplies.length){
           var qrDiv = document.createElement('div');
@@ -596,7 +957,7 @@ body{display:flex;justify-content:center;}
     if(/fan|audience|listen|follower|engage|data|database/.test(t)) return 'pulse';
     if(/brand|deal|partner|sponsor|opportun|inbox|collab/.test(t)) return 'scout';
     if(/content|write|draft|post|voice|copy|social|messag|design|album|website/.test(t)) return 'hype';
-    if(/tax|expense|deduct|receipt|accountant|cpa|s.corp|llc|bookkeep|invoice/.test(t)) return 'ledger';
+    if(/tax|expense|deduct|receipt|accountant|cpa|s.corp|llc|bookkeep|invoice|p&l|p\+l|profit.?loss|report|statement|generat/.test(t)) return 'ledger';
     return 'compass';
   }
 
