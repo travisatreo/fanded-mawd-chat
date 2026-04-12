@@ -1,5 +1,74 @@
 import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from './brain.js';
-import { getBusinessSnapshot } from './supabase.js';
+import { getBusinessSnapshot, getMemories, saveMemory } from './supabase.js';
+import { executeTool } from './google.js';
+
+// ── Tool definitions for Anthropic tool_use ──
+const TOOLS = [
+  {
+    name: 'send_email',
+    description: 'Send an email from Travis\'s Gmail (travis@travisatreo.com). Use this when Travis approves sending an email. Always confirm with Travis before sending.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Recipient email address' },
+        subject: { type: 'string', description: 'Email subject line' },
+        body: { type: 'string', description: 'Email body text' },
+        cc: { type: 'string', description: 'CC recipients (optional)' },
+        bcc: { type: 'string', description: 'BCC recipients (optional)' }
+      },
+      required: ['to', 'subject', 'body']
+    }
+  },
+  {
+    name: 'create_draft',
+    description: 'Create a draft email in Travis\'s Gmail for review before sending. Use this when drafting emails that Travis hasn\'t approved to send yet.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Recipient email address' },
+        subject: { type: 'string', description: 'Email subject line' },
+        body: { type: 'string', description: 'Email body text' },
+        cc: { type: 'string', description: 'CC recipients (optional)' }
+      },
+      required: ['to', 'subject', 'body']
+    }
+  },
+  {
+    name: 'create_event',
+    description: 'Create a Google Calendar event and send invites to attendees. Use when Travis asks to schedule a meeting or event.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: 'Event title' },
+        description: { type: 'string', description: 'Event description/notes' },
+        startTime: { type: 'string', description: 'Start time in ISO 8601 format (e.g. 2026-04-17T17:00:00)' },
+        endTime: { type: 'string', description: 'End time in ISO 8601 format (e.g. 2026-04-17T17:30:00)' },
+        attendees: { type: 'array', items: { type: 'string' }, description: 'List of attendee email addresses' },
+        location: { type: 'string', description: 'Event location (optional)' }
+      },
+      required: ['summary', 'startTime', 'endTime']
+    }
+  },
+  {
+    name: 'save_memory',
+    description: 'Save something important to MAWD\'s persistent memory so you remember it in future conversations. Use this to remember: preferences Travis expresses, decisions he makes, people he mentions, deadlines, context about his business that isn\'t in your brain data. Do NOT save obvious or trivial things.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: {
+          type: 'string',
+          enum: ['preference', 'decision', 'contact', 'deadline', 'context', 'feedback'],
+          description: 'Type of memory: preference (how Travis likes things done), decision (a choice he made), contact (person info), deadline (time-sensitive), context (business context), feedback (what he liked/disliked about MAWD)'
+        },
+        content: {
+          type: 'string',
+          description: 'What to remember. Be specific and concise. Include dates when relevant.'
+        }
+      },
+      required: ['category', 'content']
+    }
+  }
+];
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +81,26 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   try {
-    const { messages, agent, mode } = req.body;
+    const { messages, agent, mode, executeAction } = req.body;
+
+    // ── Direct action execution (from approval card) ──
+    if (executeAction) {
+      try {
+        const result = await executeTool(executeAction.tool, executeAction.input);
+        return res.status(200).json({
+          reply: null,
+          agent: agent || 'compass',
+          actionResult: { tool: executeAction.tool, success: true, result }
+        });
+      } catch (err) {
+        return res.status(200).json({
+          reply: null,
+          agent: agent || 'compass',
+          actionResult: { tool: executeAction.tool, success: false, error: err.message }
+        });
+      }
+    }
+
     const isDemo = mode === 'demo';
 
     // ── Build system prompt ──
@@ -21,10 +109,8 @@ export default async function handler(req, res) {
     if (isDemo) {
       systemPrompt = buildDemoPrompt(agent);
     } else {
-      // REAL MODE — full brain + live data
       systemPrompt = MAWD_SYSTEM_PROMPT;
 
-      // Inject live Fanded data if available
       try {
         const snapshot = await getBusinessSnapshot();
         if (!snapshot.error) {
@@ -35,11 +121,19 @@ export default async function handler(req, res) {
             `- Recent fan messages: ${snapshot.recentMessages.length} in last 7 days\n` +
             snapshot.recentMessages.slice(0, 3).map(m => `  "${m.name}: ${(m.body || '').substring(0, 100)}"`).join('\n');
         }
-      } catch (e) {
-        // Supabase not configured — still works with brain data
-      }
+      } catch (e) {}
 
-      // Voice override for chat — shorter, more energy
+      // ── Load MAWD memories ──
+      try {
+        const memories = await getMemories(30);
+        if (memories.length > 0) {
+          systemPrompt += `\n\nMAWD MEMORY (things you've learned about Travis from past conversations — use this to be smarter):\n`;
+          memories.forEach(m => {
+            systemPrompt += `- [${m.category}] ${m.content}\n`;
+          });
+        }
+      } catch (e) {}
+
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.
 
@@ -106,16 +200,73 @@ You coordinate six agents. Declare which one is active in brackets like [DOLLAR]
 
 If you use jargon, explain it in the same sentence.
 Always end with ONE question or action to approve.
-Never use bullet points or numbered lists in conversation.`;
+Never use bullet points or numbered lists in conversation.
+
+TOOL USE INSTRUCTIONS:
+You have tools to draft emails and schedule calendar events. USE THEM PROACTIVELY.
+
+EMAIL DRAFTING:
+When Travis asks you to email someone or reply to someone, use the send_email or create_draft tool. This generates an approval card in the UI — Travis taps "Approve" and it opens in his email client pre-filled and ready to send.
+ALWAYS write the full email in the tool call body field. Write it as Travis — first person, his voice, his tone. Professional but warm.
+If Travis says "email Max" or "reply to Jason" — don't just describe what you'd write. Actually draft it and use the tool.
+Default to send_email (it still shows an approval card, doesn't auto-send).
+
+CALENDAR:
+When Travis asks to schedule something, use create_event with the right time, attendees, and description.
+
+CHIEF OF STAFF BEHAVIOR:
+You are not a chatbot. You are Travis's chief of staff. Act like it:
+1. When Travis mentions needing to reply to someone, draft the email immediately — don't ask "would you like me to draft that?" Just draft it.
+2. When Travis mentions a meeting, offer to schedule it and draft the invite.
+3. When someone asks Travis for materials, draft the email with the links (deck: fanded-investor-narrative.vercel.app/deck.html, memo: fanded-investor-narrative.vercel.app/memo.html, demo: fanded-mawd-chat.vercel.app/v2.html).
+4. When Travis confirms a meeting time with someone, create the calendar event AND draft a confirmation email.
+5. Track commitments — if Travis says "I'll get back to them" about anything, draft the follow-up.
+6. When in doubt, DO the work. Don't describe it. Don't ask permission. Show Travis the draft and let him approve or skip.
+
+KNOWN CONTACTS (use these for email drafts):
+- Jason Sparks (investor): jasonrsparks@gmail.com
+- Max Diez (Twenty Five Ventures): max@25v.co
+- Shawn Xu (Lowercarbon Capital): shawn@lowercarbon.com
+- Kevin (CTO, Fanded): zhuolewis@gmail.com
+- Daniel Suh: (check conversation context)
+- Anna Akana: (check conversation context)
+
+ALWAYS show a brief text message BEFORE the tool use explaining what you're doing. Keep it to one sentence like "Drafting the reply to Max now." then use the tool.
+
+MEMORY:
+You have a save_memory tool. Use it to remember important things Travis tells you:
+- When he expresses a preference ("I prefer X" or "don't do Y") → save as 'preference'
+- When he makes a business decision → save as 'decision'
+- When he mentions someone new with their role/email → save as 'contact'
+- When he mentions a deadline → save as 'deadline'
+- When he gives you feedback about how MAWD works → save as 'feedback'
+- When he shares context about his business that isn't in your brain → save as 'context'
+
+Save silently — don't tell Travis you're saving a memory. Just do it. But DO use your memories to get smarter. If Travis told you last week he prefers short emails, draft short emails this week without being told again.
+Your memories from past conversations are injected above in "MAWD MEMORY". Reference them naturally.`;
     }
 
     const apiMessages = messages || [{ role: 'user', content: 'Start the conversation.' }];
 
-    // Smart token allocation: short by default, long when BUILDING something
     const userMsg = (messages && messages.length) ? messages[messages.length - 1].content.toLowerCase() : '';
     const isBuildMode = /generat|create|draft|build|write me|full .*(breakdown|report|p&l|p\+l|profit.?loss|statement|plan|email|contract|list)|show me (everything|all|the full|the complete)|break(down| it down)|itemize|line.by.line|detailed|in full|don't cut|finish|keep going|continue|more detail|elaborate/.test(userMsg);
     const isFinanceAgent = agent && ['ledger', 'dollar'].includes(agent.toLowerCase());
-    const maxTokens = isBuildMode ? 8192 : isFinanceAgent ? 1024 : 300;
+    const maxTokens = isBuildMode ? 8192 : isFinanceAgent ? 1024 : 1200;
+
+    // ── Anthropic API call with tools ──
+    const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REFRESH_TOKEN);
+    const requestBody = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: apiMessages
+    };
+
+    // Always include tools (except demo mode) — approval cards work without Google OAuth
+    // Google OAuth is only needed for direct server-side execution
+    if (!isDemo) {
+      requestBody.tools = TOOLS;
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -124,12 +275,7 @@ Never use bullet points or numbered lists in conversation.`;
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: apiMessages
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -139,7 +285,31 @@ Never use bullet points or numbered lists in conversation.`;
     }
 
     const data = await response.json();
-    const text = data.content[0].text;
+
+    // ── Parse response: extract text and tool_use blocks ──
+    let text = '';
+    let pendingActions = [];
+
+    for (const block of data.content) {
+      if (block.type === 'text') {
+        text += block.text;
+      } else if (block.type === 'tool_use') {
+        if (block.name === 'save_memory') {
+          // Auto-execute memory saves — no approval needed
+          try {
+            await saveMemory(block.input.category, block.input.content);
+          } catch (e) {
+            console.error('Memory save failed:', e.message);
+          }
+        } else {
+          pendingActions.push({
+            id: block.id,
+            tool: block.name,
+            input: block.input
+          });
+        }
+      }
+    }
 
     let detectedAgent = agent || 'compass';
     const agentMatch = text.match(/\[(DOLLAR|PULSE|SCOUT|COMPASS|HYPE|LEDGER)\]/i);
@@ -147,7 +317,8 @@ Never use bullet points or numbered lists in conversation.`;
 
     return res.status(200).json({
       reply: text.replace(/\[(DOLLAR|PULSE|SCOUT|COMPASS|HYPE|LEDGER)\]\s*/gi, ''),
-      agent: detectedAgent
+      agent: detectedAgent,
+      pendingActions: pendingActions.length ? pendingActions : undefined
     });
 
   } catch (err) {

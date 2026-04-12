@@ -1083,6 +1083,40 @@ body{display:flex;justify-content:center;}
     if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
   });
 
+  // ── Deep link context messages ──
+  // When MAWD texts you a prep message with a link like
+  // ?context=prep_tomorrow, the chat opens with that context loaded.
+  // Add new contexts here as needed.
+  var DEEP_LINK_CONTEXTS = {
+    'prep_tomorrow': {
+      agent: 'compass',
+      // The iMessage text — shown as MAWD's opening message
+      mawdOpening: "Here's your prep for tomorrow. Tell me which ones to run and I'll get started.",
+      // Items shown as quick-reply buttons so Travis can approve each
+      quickReplies: [
+        'Draft the Jason Sparks reply',
+        'Confirm Max Diez Thursday',
+        'Pull my top 15 whale fans',
+        'Draft the Shawn Xu email'
+      ],
+      // Hidden system context so MAWD knows what's happening
+      systemContext: 'Travis tapped the PREP FOR TOMORROW link from your iMessage. You texted him these 4 items: (1) Draft reply to Jason Sparks explaining the $1.56M ARR math (1,000 creator accounts x $130/mo avg) so it\'s ready to send Monday. (2) Draft reply to Max Diez confirming Thursday after 4:30pm + send calendar invite. (3) Pull top 15 whale fans from fan_scores_ranked.csv and draft personal outreach message for Songs From Dad pre-launch. (4) Draft the materials email to send Shawn Xu at Lower Carbon (deck + MAWD demo link). He\'s now choosing which ones to approve. When he picks one, execute it immediately. Be short — he already knows the context from the text.'
+    },
+    'morning_briefing': {
+      agent: 'compass',
+      mawdOpening: null, // null = use the live API opening like normal
+      quickReplies: [],
+      systemContext: 'Travis opened MAWD from his morning briefing text. Give him today\'s priorities based on what day it is.'
+    }
+  };
+
+  function getDeepLinkContext(){
+    var params = new URLSearchParams(window.location.search);
+    var ctx = params.get('context');
+    if(ctx && DEEP_LINK_CONTEXTS[ctx]) return DEEP_LINK_CONTEXTS[ctx];
+    return null;
+  }
+
   // ── Opening sequence ──
   function startMAWD(){
     var now = new Date();
@@ -1092,20 +1126,37 @@ body{display:flex;justify-content:center;}
     var h = hours % 12 || 12;
     addTimestamp('Today, ' + h + ':' + mins + ' ' + ampm);
 
-    showThinking('compass');
+    var deepLink = getDeepLinkContext();
 
-    // First message — MAWD introduces herself via API
-    callMAWD(
-      [{role:'user', content:'Morning. What\'s up today?'}],
-      'compass',
-      function(reply, detectedAgent){
+    if(deepLink && deepLink.mawdOpening){
+      // Deep link mode — show the pre-built opening, no API call needed
+      showThinking(deepLink.agent);
+      setTimeout(function(){
         hideThinking();
-        // Don't add the hidden prompt to visible history
-        conversationHistory.push({role:'assistant', content:reply});
-        var qr = generateQuickReplies(reply);
-        typeMessage(detectedAgent || 'compass', reply, qr, null);
-      }
-    );
+        // Inject the system context into conversation history so the API
+        // knows what happened when Travis replies
+        conversationHistory.push({role:'user', content: deepLink.systemContext});
+        conversationHistory.push({role:'assistant', content: deepLink.mawdOpening});
+        typeMessage(deepLink.agent, deepLink.mawdOpening, deepLink.quickReplies, null);
+      }, 800);
+    } else {
+      // Normal mode or deep link without preset opening — call API
+      showThinking('compass');
+      var openingPrompt = (deepLink && deepLink.systemContext)
+        ? deepLink.systemContext
+        : 'Morning. What\'s up today?';
+
+      callMAWD(
+        [{role:'user', content: openingPrompt}],
+        deepLink ? deepLink.agent : 'compass',
+        function(reply, detectedAgent){
+          hideThinking();
+          conversationHistory.push({role:'assistant', content:reply});
+          var qr = (deepLink && deepLink.quickReplies.length) ? deepLink.quickReplies : generateQuickReplies(reply);
+          typeMessage(detectedAgent || 'compass', reply, qr, null);
+        }
+      );
+    }
   }
 
   setTimeout(startMAWD, 600);

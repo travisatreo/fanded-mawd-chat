@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MAWD (by Fanded)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#09090B;
+  --surface:#111113;
+  --surface-2:#18181B;
+  --border:#27272A;
+  --border-hover:#3F3F46;
+  --text:#FAFAFA;
+  --text-2:#A1A1AA;
+  --text-3:#71717A;
+  --gold:#C4953A;
+  --gold-dim:rgba(196,149,58,0.15);
+  --gold-glow:rgba(196,149,58,0.08);
+  --dollar:#C4953A;
+  --pulse:#8B5CF6;
+  --scout:#14B8A6;
+  --compass:#3B82F6;
+  --hype:#EC4899;
+  --ledger:#22C55E;
+  --radius:12px;
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'Space Grotesk','DM Sans',monospace;
+  --sidebar-w:56px;
+  --sidebar-w-open:220px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+/* ── LAYOUT ── */
+#app{display:flex;height:100%;position:relative;}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:0;height:100%;
+  background:var(--bg);
+  border-right:1px solid transparent;
+  display:flex;flex-direction:column;
+  padding:12px 0;
+  transition:width 0.2s cubic-bezier(0.4,0,0.2,1),border-color 0.2s;
+  overflow:hidden;flex-shrink:0;
+  z-index:20;position:absolute;left:0;top:0;bottom:0;
+}
+#sidebar.peek{width:var(--sidebar-w);border-right-color:var(--border);}
+#sidebar.open{width:var(--sidebar-w-open);border-right-color:var(--border);box-shadow:20px 0 60px rgba(0,0,0,0.4);}
+
+.sidebar-top{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 8px;}
+.sidebar-bottom{display:flex;flex-direction:column;gap:2px;padding:0 8px;padding-bottom:max(8px,env(safe-area-inset-bottom));}
+
+/* Logo */
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:8px;margin-bottom:12px;cursor:pointer;
+  border-radius:8px;transition:background 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.sidebar-logo:hover{background:var(--surface);}
+.sidebar-logo .logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--gold),#E8B84B);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;color:var(--bg);flex-shrink:0;
+}
+.sidebar-logo .logo-text{
+  font-weight:600;font-size:15px;color:var(--text);
+  white-space:nowrap;opacity:0;transition:opacity 0.15s;
+}
+#sidebar.open .logo-text{opacity:1;}
+
+/* Nav items */
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:8px;
+  cursor:pointer;transition:background 0.15s;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+}
+.nav-item:hover{background:var(--surface);}
+.nav-item.active{background:var(--surface-2);}
+.nav-item .nav-icon{
+  width:20px;height:20px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.nav-item .nav-icon svg{width:18px;height:18px;}
+.nav-item .nav-label{
+  font-size:13px;font-weight:500;color:var(--text-2);
+  white-space:nowrap;opacity:0;transition:opacity 0.15s;
+}
+#sidebar.open .nav-label{opacity:1;}
+.nav-item.active .nav-label{color:var(--text);}
+.nav-item .nav-badge{
+  position:absolute;top:-2px;right:-4px;
+  min-width:14px;height:14px;border-radius:7px;
+  background:var(--gold);color:var(--bg);
+  font-size:9px;font-weight:700;
+  display:none;align-items:center;justify-content:center;padding:0 3px;
+}
+.nav-item .nav-badge.has{display:flex;}
+/* Drag handle for reorderable modules */
+.nav-grip{
+  font-size:12px;color:var(--text-3);opacity:0;transition:opacity 0.15s;
+  margin-left:auto;cursor:grab;user-select:none;-webkit-user-select:none;
+}
+#sidebar.open .nav-grip{opacity:0.4;}
+#sidebar.open .nav-draggable:hover .nav-grip{opacity:0.8;}
+.nav-draggable.dragging{opacity:0.4;background:var(--surface-2);border-radius:8px;}
+.nav-draggable.drag-over{border-top:2px solid var(--gold);margin-top:-2px;}
+
+/* Agent dot indicator */
+.nav-item .agent-indicator{
+  width:6px;height:6px;border-radius:50%;
+  position:absolute;bottom:-1px;right:-1px;
+  opacity:0;transition:opacity 0.3s;
+}
+.nav-item.agent-active .agent-indicator{opacity:1;animation:agentPulse 2s ease-in-out infinite;}
+@keyframes agentPulse{0%,100%{box-shadow:0 0 0 0 currentColor;}50%{box-shadow:0 0 6px 2px currentColor;}}
+
+/* Divider */
+.nav-divider{height:1px;background:var(--border);margin:8px 12px;}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+/* Top bar */
+#topbar{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid var(--border);
+  padding-top:max(12px,env(safe-area-inset-top));
+}
+#topbar .agent-name{
+  font-family:var(--font-mono);font-size:13px;font-weight:500;
+  color:var(--text-3);letter-spacing:0.5px;
+  display:flex;align-items:center;gap:8px;
+}
+#topbar .agent-name .agent-dot{
+  width:10px;height:10px;border-radius:50%;
+}
+#topbar .status{font-size:12px;color:var(--text-2);}
+/* Gradient accent line */
+#gradLine{height:2px;width:100%;background:linear-gradient(90deg,var(--gold),var(--pulse));flex-shrink:0;}
+
+/* ── QUEUE BAR ── */
+#queueBar{
+  flex-shrink:0;border-bottom:1px solid var(--border);
+  padding:0 20px;overflow:hidden;
+  max-height:0;transition:max-height 0.3s ease,padding 0.3s ease;
+}
+#queueBar.has-items{max-height:200px;padding:12px 20px;}
+#queueBar .queue-header{
+  font-size:11px;font-weight:600;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;
+}
+#queueBar .queue-items{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+#queueBar .queue-items::-webkit-scrollbar{display:none;}
+.queue-card{
+  flex-shrink:0;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;cursor:pointer;
+  transition:all 0.15s;max-width:220px;
+  -webkit-tap-highlight-color:transparent;
+}
+.queue-card:hover{border-color:var(--gold);background:var(--gold-glow);}
+.queue-card .qc-agent{font-size:10px;font-weight:600;letter-spacing:0.3px;margin-bottom:4px;}
+.queue-card .qc-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.3;}
+.queue-card .qc-action{font-size:11px;color:var(--gold);margin-top:6px;font-weight:500;}
+
+/* ── CHAT ── */
+#chatArea{
+  flex:1;overflow-y:auto;padding:20px;
+  scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
+}
+#chatArea::-webkit-scrollbar{width:4px;}
+#chatArea::-webkit-scrollbar-track{background:transparent;}
+#chatArea::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* Messages */
+.msg{margin-bottom:20px;opacity:0;transform:translateY(8px);animation:msgIn 0.25s ease-out forwards;}
+@keyframes msgIn{to{opacity:1;transform:translateY(0);}}
+
+.msg-mawd{display:flex;gap:12px;align-items:flex-start;max-width:640px;flex-wrap:wrap;}
+.msg-mawd .msg-content{display:flex;flex-direction:column;flex:1;min-width:0;}
+.msg-mawd .avatar{
+  width:24px;height:24px;border-radius:6px;flex-shrink:0;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--bg);
+}
+.msg-mawd .bubble{
+  font-size:15px;line-height:1.7;color:var(--text);
+  padding:0;
+}
+.msg-mawd .bubble strong{font-weight:600;color:var(--text);}
+.msg-mawd .bubble em{font-style:italic;color:var(--text-2);}
+.msg-mawd .bubble .typing-cursor{
+  display:inline-block;width:2px;height:16px;background:var(--gold);
+  margin-left:1px;vertical-align:text-bottom;
+  animation:blink 0.6s step-end infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+.msg-user{display:flex;justify-content:flex-end;max-width:720px;margin-left:auto;}
+.msg-user .bubble{
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:16px 4px 16px 16px;padding:10px 16px;
+  font-size:15px;color:var(--text);max-width:80%;line-height:1.5;
+}
+
+/* Thinking */
+.thinking{display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;opacity:0;animation:msgIn 0.25s ease-out forwards;}
+.thinking .dots{display:flex;gap:4px;padding-top:6px;}
+.thinking .dots span{width:6px;height:6px;border-radius:50%;animation:bounce 1.2s ease-in-out infinite;}
+.thinking .dots span:nth-child(2){animation-delay:0.15s;}
+.thinking .dots span:nth-child(3){animation-delay:0.3s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
+
+/* Quick replies — stacked vertically like Claude */
+.quick-replies{display:flex;flex-direction:column;gap:8px;margin-top:16px;max-width:400px;}
+.qr-btn{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font);font-size:14px;font-weight:500;
+  padding:12px 16px;border-radius:12px;cursor:pointer;
+  transition:all 0.15s;-webkit-tap-highlight-color:transparent;
+  text-align:left;min-height:44px;
+  display:flex;align-items:center;
+}
+.qr-btn:hover{border-color:var(--gold);background:var(--gold-glow);color:var(--gold);}
+.qr-btn:active,.qr-btn.selected{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+
+/* ── ACTION CARDS ── */
+.action-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-top:12px;max-width:400px;
+}
+.action-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;}
+.action-card-icon{font-size:16px;}
+.action-card-label{color:var(--gold);}
+.action-card-field{margin-bottom:6px;font-size:13px;color:var(--text-2);line-height:1.5;}
+.action-card-field strong{color:var(--text);font-weight:500;}
+.action-card-body{font-size:14px;color:var(--text);line-height:1.6;margin:10px 0;padding:10px;background:var(--bg);border-radius:8px;max-height:120px;overflow-y:auto;}
+.action-card-buttons{display:flex;gap:8px;margin-top:12px;}
+.action-card-buttons button{
+  flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
+  font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;
+  transition:all 0.15s;min-height:44px;
+}
+.action-approve{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+.action-approve:hover{background:var(--gold);color:var(--bg);}
+.action-copy{background:var(--surface-2);color:var(--text-2);border-color:var(--border);}
+.action-copy:hover{color:var(--text);border-color:var(--text-2);}
+.action-skip{background:transparent;color:var(--text-2);}
+.action-skip:hover{border-color:var(--text-2);color:var(--text);}
+.action-card.executed{opacity:0.5;pointer-events:none;}
+.action-card.executed .action-card-label{color:var(--ledger);}
+
+/* ── AGENT DASHBOARD ── */
+.dash-header{margin-bottom:24px;}
+.dash-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.dash-subtitle{font-size:13px;color:var(--text-3);}
+.dash-section-label{font-size:11px;font-weight:600;letter-spacing:0.06em;color:var(--text-3);margin-bottom:10px;text-transform:uppercase;}
+.dash-stat-row{display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;}
+.dash-stat{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.dash-stat-value{font-size:20px;font-weight:600;font-family:var(--font-mono);margin-bottom:2px;}
+.dash-stat-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;}
+.dash-action-btn{
+  display:flex;align-items:center;gap:12px;width:100%;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-bottom:8px;cursor:pointer;
+  font-family:var(--font);text-align:left;color:var(--text);
+  transition:border-color 0.15s,background 0.15s;min-height:60px;
+  -webkit-tap-highlight-color:transparent;
+}
+.dash-action-btn:hover,.dash-action-btn:active{border-color:var(--border-hover);background:var(--surface-2);}
+.dash-action-icon{font-size:22px;flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;}
+.dash-action-text{flex:1;min-width:0;}
+.dash-action-title{font-size:14px;font-weight:500;}
+.dash-action-desc{font-size:12px;color:var(--text-3);margin-top:2px;}
+.dash-action-arrow{color:var(--text-3);font-size:18px;flex-shrink:0;}
+.dash-action-btn.generating{pointer-events:none;opacity:0.6;}
+.dash-action-btn.generating .dash-action-arrow{animation:spin 1s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.dash-status{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;}
+.dash-status-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.dash-status-title{font-size:13px;font-weight:500;color:var(--text-2);}
+.dash-status-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;letter-spacing:0.04em;}
+.dash-status-detail{font-size:13px;color:var(--text-3);line-height:1.5;}
+.dash-chat-btn{
+  display:block;width:100%;text-align:center;margin-top:20px;
+  background:transparent;border:1px solid var(--border);border-radius:12px;
+  padding:14px;font-family:var(--font);font-size:14px;color:var(--text-2);
+  cursor:pointer;transition:all 0.15s;
+}
+.dash-chat-btn:hover{border-color:var(--text-3);color:var(--text);}
+
+/* ── DOC DOWNLOAD BAR ── */
+.doc-dl-bar{
+  display:flex;gap:8px;margin-top:12px;padding:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+}
+.doc-dl-btn{
+  flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
+  font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all 0.15s;min-height:44px;background:var(--surface-2);color:var(--text-2);
+}
+.doc-dl-btn:hover{border-color:var(--text-3);color:var(--text);}
+.doc-dl-btn.primary{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+.doc-dl-btn.primary:hover{background:var(--gold);color:var(--bg);}
+
+/* ── INPUT ── */
+#inputArea{
+  flex-shrink:0;border-top:1px solid var(--border);
+  padding:12px 20px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  background:var(--bg);
+}
+#inputWrap{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:4px 4px 4px 16px;
+  transition:border-color 0.2s;
+}
+#inputWrap:focus-within{border-color:var(--border-hover);}
+#inputWrap input{
+  flex:1;background:none;border:none;color:var(--text);
+  font-family:var(--font);font-size:15px;outline:none;
+  padding:10px 0;min-height:44px;
+}
+#inputWrap input::placeholder{color:var(--text-3);}
+#inputWrap .send{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--gold);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity 0.15s;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+#inputWrap .send:hover{opacity:0.85;}
+#inputWrap .send svg{width:16px;height:16px;}
+.input-hint{
+  font-size:11px;color:var(--text-3);margin-top:6px;
+  text-align:center;
+}
+@media(max-width:640px){.input-hint{display:none;}}
+
+/* ── JOURNAL VIEW ── */
+#journalView{
+  flex:1;overflow-y:auto;padding:0;
+  -webkit-overflow-scrolling:touch;
+}
+.journal-container{max-width:640px;margin:0 auto;padding:24px 20px 120px;}
+.journal-header{margin-bottom:24px;}
+.journal-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.journal-subtitle{font-size:13px;color:var(--text-3);}
+
+.journal-record-section{margin-bottom:32px;}
+.journal-record-btn{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:16px 20px;border-radius:var(--radius);
+  background:var(--gold-dim);border:1px dashed var(--gold);
+  color:var(--gold);font-family:var(--font);font-size:15px;font-weight:500;
+  cursor:pointer;transition:all 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.journal-record-btn:hover{background:var(--gold-glow);border-style:solid;}
+.journal-record-btn:active{transform:scale(0.98);}
+
+.journal-record-active{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;
+}
+.journal-waveform{
+  height:48px;background:var(--surface-2);border-radius:8px;
+  margin-bottom:12px;overflow:hidden;position:relative;
+}
+.journal-waveform::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,var(--gold) 0%,var(--gold) var(--progress,0%),var(--border) var(--progress,0%));
+  opacity:0.3;border-radius:8px;
+  animation:waveformPulse 1.5s ease-in-out infinite;
+}
+@keyframes waveformPulse{0%,100%{opacity:0.2;}50%{opacity:0.4;}}
+.journal-record-time{
+  text-align:center;font-family:var(--font-mono);font-size:24px;
+  font-weight:600;color:var(--text);margin-bottom:16px;
+}
+.journal-record-controls{display:flex;gap:12px;justify-content:center;}
+.journal-cancel-btn{
+  padding:10px 24px;border-radius:8px;background:var(--surface-2);
+  border:1px solid var(--border);color:var(--text-2);
+  font-family:var(--font);font-size:14px;cursor:pointer;
+}
+.journal-send-btn{
+  padding:10px 24px;border-radius:8px;background:var(--gold);
+  border:none;color:var(--bg);font-family:var(--font);font-size:14px;
+  font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;
+}
+.journal-send-btn:active{transform:scale(0.97);}
+
+.journal-section-label{
+  font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:0.05em;color:var(--text-3);margin-bottom:12px;
+}
+.journal-entry{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;margin-bottom:12px;
+}
+.journal-entry-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;
+}
+.journal-entry-date{font-size:13px;font-weight:500;color:var(--text);}
+.journal-entry-stats{font-size:11px;color:var(--text-3);}
+.journal-entry-preview{display:flex;align-items:flex-start;gap:12px;}
+.journal-play-btn{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:var(--gold-dim);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.journal-play-btn:hover{background:var(--gold-glow);}
+.journal-entry-text{flex:1;min-width:0;}
+.journal-entry-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;}
+.journal-entry-summary{font-size:12px;color:var(--text-3);line-height:1.4;}
+.journal-entry-duration{font-size:12px;color:var(--text-3);font-family:var(--font-mono);flex-shrink:0;}
+.journal-fan-responses{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+}
+.journal-responses-label{
+  font-size:11px;color:var(--text-3);display:flex;align-items:center;gap:6px;
+  margin-bottom:8px;
+}
+.journal-ai-summary{
+  font-size:13px;color:var(--text-2);line-height:1.5;
+  font-style:italic;padding-left:12px;
+  border-left:2px solid var(--gold-dim);
+}
+
+/* ── MENU TOGGLE ── */
+.menu-toggle{
+  display:flex;background:none;border:none;cursor:pointer;
+  color:var(--text-3);padding:8px;
+  -webkit-tap-highlight-color:transparent;
+  transition:color 0.15s;
+  min-width:44px;min-height:44px;
+  align-items:center;justify-content:center;
+}
+.menu-toggle:hover{color:var(--text);}
+.menu-toggle svg{width:20px;height:20px;}
+
+/* ── HOVER EDGE — invisible trigger on left edge ── */
+#hoverEdge{
+  position:fixed;left:0;top:0;bottom:0;width:6px;z-index:19;
+}
+@media(max-width:640px){#hoverEdge{display:none;}}
+
+/* ── BACKDROP ── */
+#backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:15;
+}
+@media(max-width:640px){
+  #sidebar.open ~ #backdrop{display:block;}
+  #sidebar{width:0 !important;}
+  #sidebar.peek{width:0 !important;border-right-color:transparent !important;}
+  #sidebar.open{width:85vw !important;border-right-color:var(--border) !important;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo" id="sidebarToggle">
+        <div class="logo-icon">M</div>
+        <span class="logo-text">MAWD <span style="font-weight:400;color:var(--text-3);font-size:12px;">by Fanded</span></span>
+      </div>
+
+      <!-- Home -->
+      <div class="nav-item active" data-view="chat" id="navChat">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span class="nav-badge" id="queueBadge">0</span>
+        </div>
+        <span class="nav-label">Home</span>
+      </div>
+
+      <div class="nav-divider"></div>
+
+      <!-- Agents (reorderable) -->
+      <div id="agentModules">
+      <div class="nav-item nav-draggable" data-agent="compass" id="navCompass">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--compass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span class="agent-indicator" style="background:var(--compass);color:var(--compass)"></span>
+        </div>
+        <span class="nav-label">Strategy</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+
+      <div class="nav-item nav-draggable" data-agent="pulse" id="navPulse">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--pulse)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="agent-indicator" style="background:var(--pulse);color:var(--pulse)"></span>
+        </div>
+        <span class="nav-label">Fans</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+
+      <div class="nav-item nav-draggable" data-agent="hype" id="navHype">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--hype)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="agent-indicator" style="background:var(--hype);color:var(--hype)"></span>
+        </div>
+        <span class="nav-label">Content</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+
+      <div class="nav-item nav-draggable" data-agent="dollar" id="navDollar">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--dollar)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="agent-indicator" style="background:var(--dollar);color:var(--dollar)"></span>
+        </div>
+        <span class="nav-label">Money</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+
+      <div class="nav-item nav-draggable" data-agent="ledger" id="navLedger">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--ledger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span class="agent-indicator" style="background:var(--ledger);color:var(--ledger)"></span>
+        </div>
+        <span class="nav-label">Books</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+      </div>
+
+      <div class="nav-divider"></div>
+
+      <div class="nav-item" data-view="journal" id="navJournal">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          <span class="nav-badge" id="journalBadge">0</span>
+        </div>
+        <span class="nav-label">Journal</span>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-view="settings">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <span class="nav-label">Settings</span>
+      </div>
+    </div>
+  </nav>
+
+  <div id="backdrop"></div>
+  <div id="hoverEdge"></div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="menu-toggle" id="menuToggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="agent-name">
+          <span class="agent-dot" id="activeAgentDot" style="background:var(--gold)"></span>
+          <span id="activeAgentLabel">MAWD</span>
+        </div>
+      </div>
+      <div class="status" id="statusText">listening</div>
+    </div>
+
+    <div id="gradLine"></div>
+    <!-- Queue bar — slides down when MAWD has prepared items -->
+    <div id="queueBar">
+      <div class="queue-header">Ready for your approval</div>
+      <div class="queue-items" id="queueItems"></div>
+    </div>
+
+    <div id="chatArea"></div>
+
+    <!-- JOURNAL VIEW -->
+    <div id="journalView" style="display:none;">
+      <div class="journal-container">
+        <div class="journal-header">
+          <h2 class="journal-title">Journal</h2>
+          <p class="journal-subtitle">Your fans are the heroes. You're the guide. Talk to them.</p>
+        </div>
+
+        <div class="journal-record-section">
+          <button class="journal-record-btn" id="journalRecordBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <span>Record a voice note</span>
+          </button>
+          <div class="journal-record-active" id="journalRecordActive" style="display:none;">
+            <div class="journal-waveform" id="journalWaveform"></div>
+            <div class="journal-record-time" id="journalRecordTime">0:00</div>
+            <div class="journal-record-controls">
+              <button class="journal-cancel-btn" id="journalCancelBtn">Cancel</button>
+              <button class="journal-send-btn" id="journalSendBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Send to fans
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAWD Suggested Topics -->
+        <div class="journal-sent-list" id="journalSentList">
+          <div class="journal-section-label" style="display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--gold);"></span>
+            MAWD suggests
+          </div>
+          <p style="font-size:12px;color:var(--text-3);margin:-8px 0 14px;line-height:1.5;">Topics that help your fans survive and thrive. You're Yoda. They're Luke. Guide them.</p>
+
+          <!-- SURVIVE: Help them feel less alone -->
+          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
+            <div class="journal-entry-header">
+              <span style="font-size:10px;font-weight:600;color:var(--pulse);letter-spacing:0.05em;">SURVIVE</span>
+              <span class="journal-entry-stats">Helps fans feel less alone</span>
+            </div>
+            <div class="journal-entry-preview">
+              <div class="journal-play-btn" style="background:var(--pulse);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              </div>
+              <div class="journal-entry-text">
+                <div class="journal-entry-title">The song I almost didn't finish</div>
+                <div class="journal-entry-summary">Talk about a moment writing Songs From Dad where you almost gave up. Your fans are fighting their own battles. Hearing you struggle makes them feel seen.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SURVIVE: Give them permission -->
+          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
+            <div class="journal-entry-header">
+              <span style="font-size:10px;font-weight:600;color:var(--pulse);letter-spacing:0.05em;">SURVIVE</span>
+              <span class="journal-entry-stats">Gives fans permission to feel</span>
+            </div>
+            <div class="journal-entry-preview">
+              <div class="journal-play-btn" style="background:var(--pulse);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              </div>
+              <div class="journal-entry-text">
+                <div class="journal-entry-title">What my dad never said out loud</div>
+                <div class="journal-entry-summary">Share the emotion behind Songs From Dad. Ask fans: what's the thing YOUR parent never said but you knew they felt? This opens the door to real connection.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- THRIVE: Invite them into the journey -->
+          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
+            <div class="journal-entry-header">
+              <span style="font-size:10px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">THRIVE</span>
+              <span class="journal-entry-stats">Turns listeners into members</span>
+            </div>
+            <div class="journal-entry-preview">
+              <div class="journal-play-btn" style="background:var(--gold);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              </div>
+              <div class="journal-entry-text">
+                <div class="journal-entry-title">You're hearing this before the world does</div>
+                <div class="journal-entry-summary">Play 20 seconds of an unreleased Songs From Dad track. Tell them this is theirs first. Members get the album 2 weeks early. This is why being inside matters.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- THRIVE: Make them part of something bigger -->
+          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
+            <div class="journal-entry-header">
+              <span style="font-size:10px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">THRIVE</span>
+              <span class="journal-entry-stats">Makes fans feel like insiders</span>
+            </div>
+            <div class="journal-entry-preview">
+              <div class="journal-play-btn" style="background:var(--gold);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              </div>
+              <div class="journal-entry-text">
+                <div class="journal-entry-title">I need your help picking the tracklist</div>
+                <div class="journal-entry-summary">Ask members to vote on song order for Songs From Dad. When they shape the album, it becomes THEIRS. They'll tell everyone about it because they built it with you.</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
+            <div style="font-size:12px;color:var(--text-3);line-height:1.6;">
+              <strong style="color:var(--text-2);">How this works:</strong> MAWD studies your fans, your content, and your release calendar. It suggests topics that move listeners from <span style="color:var(--pulse);">surviving</span> (feeling seen, less alone) to <span style="color:var(--gold);">thriving</span> (belonging, building with you, becoming members). You record. MAWD handles the rest.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREPARED FOR YOU VIEW -->
+    <div id="queueView" style="display:none;">
+      <div style="padding:24px 20px;">
+        <h2 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Prepared for you</h2>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Items MAWD has ready for your approval.</p>
+        <div id="queueViewItems"></div>
+        <div id="queueViewEmpty" style="display:none;text-align:center;padding:40px 20px;">
+          <div style="font-size:32px;margin-bottom:12px;">✓</div>
+          <div style="font-size:15px;color:var(--text-2);margin-bottom:16px;">All caught up. Nothing pending.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.6;max-width:280px;margin:0 auto;">MAWD prepares emails, calendar invites, and action items as you chat. They'll show up here for your one-tap approval.</div>
+          <button onclick="showView('chat');userInput.focus();" style="margin-top:20px;background:var(--compass);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;">Ask MAWD something</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCUMENTS VIEW -->
+    <div id="docsView" style="display:none;">
+      <div style="padding:24px 20px;">
+        <h2 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Documents</h2>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Reports and files MAWD has generated.</p>
+        <div id="docsViewList">
+          <div class="doc-item" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="window.open('https://fanded-investor-narrative.vercel.app/deck.html','_blank')">
+            <div style="font-size:14px;font-weight:500;color:var(--text);">Investor Deck</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:4px;">fanded-investor-narrative.vercel.app/deck.html</div>
+          </div>
+          <div class="doc-item" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="window.open('https://fanded-investor-narrative.vercel.app/memo.html','_blank')">
+            <div style="font-size:14px;font-weight:500;color:var(--text);">Investor Memo</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:4px;">fanded-investor-narrative.vercel.app/memo.html</div>
+          </div>
+          <div class="doc-item" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;" onclick="window.open('https://fanded-mawd-chat.vercel.app/v2.html?demo','_blank')">
+            <div style="font-size:14px;font-weight:500;color:var(--text);">MAWD Demo</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:4px;">fanded-mawd-chat.vercel.app/v2.html?demo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT DASHBOARD VIEWS -->
+    <div id="agentDashView" style="display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div style="padding:24px 20px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 40px);" id="agentDashContent"></div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="settingsView" style="display:none;">
+      <div style="padding:24px 20px;">
+        <h2 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Settings</h2>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Configure MAWD.</p>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;">NOTIFICATIONS</div>
+          <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;">
+            <span style="font-size:14px;color:var(--text);">Morning briefing (7 AM)</span>
+            <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--gold);">
+          </label>
+          <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;">
+            <span style="font-size:14px;color:var(--text);">Evening recap (9 PM)</span>
+            <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--gold);">
+          </label>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;">DATA</div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;">
+            <div style="font-size:14px;color:var(--text);">Learning data</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:4px;" id="settingsLearnCount">0 approvals · 0 skips</div>
+          </div>
+          <button onclick="localStorage.removeItem('mawd_learning');document.getElementById('settingsLearnCount').textContent='Cleared';" style="background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px 16px;color:var(--text-2);font-family:var(--font);font-size:13px;cursor:pointer;width:100%;">Reset learning data</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="inputArea">
+      <div id="inputWrap">
+        <input type="text" id="userInput" placeholder="Tell MAWD what you need..." autocomplete="off">
+        <button class="send" id="sendBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <div class="input-hint">MAWD learns what you approve, skip, and ask for. It gets better every week.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── Config ──
+  var AGENTS = {
+    dollar:{color:'var(--dollar)',hex:'#C4953A',label:'DOLLAR',thinking:'checking the numbers...'},
+    pulse:{color:'var(--pulse)',hex:'#8B5CF6',label:'PULSE',thinking:'reading your fans...'},
+    scout:{color:'var(--scout)',hex:'#14B8A6',label:'SCOUT',thinking:'reviewing the deal...'},
+    compass:{color:'var(--compass)',hex:'#3B82F6',label:'COMPASS',thinking:'thinking...'},
+    hype:{color:'var(--hype)',hex:'#EC4899',label:'HYPE',thinking:'drafting...'},
+    ledger:{color:'var(--ledger)',hex:'#22C55E',label:'LEDGER',thinking:'organizing...'}
+  };
+
+  // ── Elements ──
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('backdrop');
+  var sidebarToggle = document.getElementById('sidebarToggle');
+  var menuToggle = document.getElementById('menuToggle');
+  var chatArea = document.getElementById('chatArea');
+  var userInput = document.getElementById('userInput');
+  var sendBtn = document.getElementById('sendBtn');
+  var activeAgentDot = document.getElementById('activeAgentDot');
+  var activeAgentLabel = document.getElementById('activeAgentLabel');
+  var statusText = document.getElementById('statusText');
+  var queueBar = document.getElementById('queueBar');
+  var queueItems = document.getElementById('queueItems');
+  var queueBadge = document.getElementById('queueBadge');
+  var inboxBadge = document.getElementById('inboxBadge'); // may be null after redesign
+
+  var isTyping = false;
+  var conversationHistory = [];
+  var currentAgent = 'compass';
+
+  // ── Learning Store ──
+  // Tracks what Travis approves, skips, and asks for so MAWD gets smarter
+  var LEARN_KEY = 'mawd_learning';
+  function loadLearning(){ try{return JSON.parse(localStorage.getItem(LEARN_KEY))||{approved:[],skipped:[],patterns:[],lastSession:null};}catch(e){return {approved:[],skipped:[],patterns:[],lastSession:null};}}
+  function saveLearning(data){localStorage.setItem(LEARN_KEY,JSON.stringify(data));}
+
+  function logAction(type, item){
+    var learn = loadLearning();
+    var entry = {type:type, item:item, time:Date.now()};
+    if(type==='approve') learn.approved.push(entry);
+    else if(type==='skip') learn.skipped.push(entry);
+    else learn.patterns.push(entry);
+    learn.lastSession = Date.now();
+    // Keep last 200 entries
+    if(learn.approved.length > 200) learn.approved = learn.approved.slice(-200);
+    if(learn.skipped.length > 200) learn.skipped = learn.skipped.slice(-200);
+    saveLearning(learn);
+  }
+
+  // ── Sidebar — collapsed by default, like Claude ──
+  var hoverEdge = document.getElementById('hoverEdge');
+
+  function openSidebar(){
+    sidebar.classList.remove('peek');
+    sidebar.classList.add('open');
+  }
+  function closeSidebar(){
+    sidebar.classList.remove('open');
+    sidebar.classList.remove('peek');
+  }
+  function peekSidebar(){
+    if(!sidebar.classList.contains('open')){
+      sidebar.classList.add('peek');
+    }
+  }
+  function unpeekSidebar(){
+    sidebar.classList.remove('peek');
+  }
+  function toggleSidebar(){
+    if(sidebar.classList.contains('open')) closeSidebar();
+    else openSidebar();
+  }
+
+  sidebarToggle.addEventListener('click', toggleSidebar);
+  menuToggle.addEventListener('click', toggleSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+
+  // Desktop: hover left edge to peek icons, hover sidebar to fully open
+  if(window.innerWidth > 640){
+    hoverEdge.addEventListener('mouseenter', peekSidebar);
+    sidebar.addEventListener('mouseenter', function(){
+      sidebar.classList.remove('peek');
+      sidebar.classList.add('open');
+    });
+    sidebar.addEventListener('mouseleave', function(){
+      closeSidebar();
+    });
+  }
+
+  // Nav item clicks — open agent dashboard views
+  document.querySelectorAll('.nav-item[data-agent]').forEach(function(el){
+    el.addEventListener('click', function(){
+      var agent = el.getAttribute('data-agent');
+      closeSidebar();
+      showView('agent-'+agent);
+    });
+  });
+
+  // ── Journal View ──
+  var journalView = document.getElementById('journalView');
+  var inputArea = document.getElementById('inputArea');
+  var navJournal = document.getElementById('navJournal');
+  var navChat = document.getElementById('navChat');
+  var journalRecordBtn = document.getElementById('journalRecordBtn');
+  var journalRecordActive = document.getElementById('journalRecordActive');
+  var journalCancelBtn = document.getElementById('journalCancelBtn');
+  var journalSendBtn = document.getElementById('journalSendBtn');
+  var journalRecordTime = document.getElementById('journalRecordTime');
+  var recordTimer = null;
+  var recordSeconds = 0;
+  var mediaRecorder = null;
+  var audioChunks = [];
+
+  var queueView = document.getElementById('queueView');
+  var docsView = document.getElementById('docsView');
+  var settingsView = document.getElementById('settingsView');
+  var agentDashView = document.getElementById('agentDashView');
+  var agentDashContent = document.getElementById('agentDashContent');
+  var navQueue = document.getElementById('navQueue'); // may be null after redesign
+  var allViews = ['chat','queue','journal','docs','settings'];
+
+  function showView(view){
+    // Hide all views
+    chatArea.style.display = 'none';
+    queueBar.style.display = 'none';
+    journalView.style.display = 'none';
+    queueView.style.display = 'none';
+    docsView.style.display = 'none';
+    settingsView.style.display = 'none';
+    agentDashView.style.display = 'none';
+    inputArea.style.display = 'none';
+
+    // Clear active states on nav
+    document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
+
+    if(view === 'journal'){
+      journalView.style.display = 'block';
+      navJournal.classList.add('active');
+      activeAgentLabel.textContent = 'JOURNAL';
+      activeAgentDot.style.background = 'var(--gold)';
+    } else if(view === 'queue'){
+      queueView.style.display = 'block';
+      if(navQueue) navQueue.classList.add('active');
+      activeAgentLabel.textContent = 'PREPARED';
+      activeAgentDot.style.background = 'var(--gold)';
+      populateQueueView();
+    } else if(view === 'settings'){
+      settingsView.style.display = 'block';
+      document.querySelector('[data-view="settings"]').classList.add('active');
+      activeAgentLabel.textContent = 'SETTINGS';
+      activeAgentDot.style.background = 'var(--text-2)';
+      // Update learn count
+      var learn = loadLearning();
+      var el = document.getElementById('settingsLearnCount');
+      if(el) el.textContent = learn.approved.length + ' approvals · ' + learn.skipped.length + ' skips';
+    } else if(view.startsWith('agent-')){
+      // Agent dashboard view
+      var agentKey = view.replace('agent-','');
+      var ag = AGENTS[agentKey] || AGENTS.compass;
+      agentDashView.style.display = 'block';
+      inputArea.style.display = '';
+      var navEl = document.getElementById('nav' + agentKey.charAt(0).toUpperCase() + agentKey.slice(1));
+      if(navEl) navEl.classList.add('active');
+      activeAgentLabel.textContent = ag.label;
+      activeAgentDot.style.background = ag.color;
+      currentAgent = agentKey;
+      renderAgentDash(agentKey);
+    } else {
+      // Home view
+      chatArea.style.display = '';
+      queueBar.style.display = '';
+      inputArea.style.display = '';
+      navChat.classList.add('active');
+      activeAgentLabel.textContent = 'MAWD';
+      activeAgentDot.style.background = 'var(--gold)';
+    }
+  }
+
+  function populateQueueView(){
+    var container = document.getElementById('queueViewItems');
+    var emptyMsg = document.getElementById('queueViewEmpty');
+    var items = queueItems.querySelectorAll('.queue-card');
+    container.innerHTML = '';
+    if(items.length === 0){
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    emptyMsg.style.display = 'none';
+    items.forEach(function(card){
+      var clone = document.createElement('div');
+      clone.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;';
+      var agentLabel = (card.querySelector('.qc-agent') || card.querySelector('.queue-agent'));
+      agentLabel = agentLabel ? agentLabel.textContent : '';
+      var title = (card.querySelector('.qc-title') || card.querySelector('.queue-title'));
+      title = title ? title.textContent : '';
+      var action = (card.querySelector('.qc-action') || card.querySelector('.queue-action'));
+      action = action ? action.textContent : '';
+      clone.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--gold);margin-bottom:6px;">'+agentLabel+'</div>' +
+        '<div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;">'+title+'</div>' +
+        '<div style="font-size:13px;color:var(--text-3);">'+action+'</div>';
+      clone.addEventListener('click', function(){
+        showView('chat');
+        sendMessage(title);
+      });
+      container.appendChild(clone);
+    });
+  }
+
+  // ── Nav click handlers for all views ──
+  navJournal.addEventListener('click', function(){
+    closeSidebar();
+    showView('journal');
+  });
+  navChat.addEventListener('click', function(){
+    closeSidebar();
+    showView('chat');
+  });
+  if(navQueue) navQueue.addEventListener('click', function(){
+    closeSidebar();
+    showView('queue');
+  });
+  document.querySelector('[data-view="settings"]').addEventListener('click', function(){
+    closeSidebar();
+    showView('settings');
+  });
+
+  // ── Agent dashboard content ──
+  var AGENT_DASHBOARDS = {
+    ledger: {
+      title: 'Books',
+      subtitle: 'Your financials, ready when you are.',
+      statuses: [
+        {title:'2025 Tax Return',badge:'IN PROGRESS',badgeColor:'var(--gold)',detail:'Schedule C filed as Travis Atreo Productions. Operating loss: ($25,342). Citrine CPAs handling.'},
+        {title:'Ingrooves Recoupment',badge:'TRACKING',badgeColor:'var(--compass)',detail:'$105,432 still unrecouped. At current rate, full recoupment ~mid-2028. You receive $0 until then.'},
+        {title:'Q1 2026 Revenue',badge:'$4,771',badgeColor:'var(--ledger)',detail:'YouTube $1,851 · Soundrop $927 · Fanded $912 · Songtrust $804 · BMI $223 · Twitch $55'}
+      ],
+      stats: [
+        {value:'$4,771',label:'YTD Revenue'},
+        {value:'($25.3K)',label:'Net P&L'},
+        {value:'~6 wk',label:'Runway'}
+      ],
+      actions: [
+        {icon:'📋',title:'Generate Tax Package',desc:'Full Schedule C package for Citrine CPAs',prompt:'Generate my complete 2025 tax package for Citrine CPAs. Include Schedule C categories, all income sources with amounts, all deductions organized by category, quarterly estimated tax calculation for 2026, and any flags or questions for my CPA. Format as a downloadable document.', docType:'tax'},
+        {icon:'📊',title:'Generate P&L Report',desc:'Profit & Loss for any period',prompt:'Generate a detailed Profit & Loss statement for Travis Atreo Productions for 2025. Include all revenue by source, all expenses by category, net income, and comparison notes. Format as a downloadable document.', docType:'pnl'},
+        {icon:'💳',title:'Categorize Expenses',desc:'Review and tag recent transactions',prompt:'Review my recent AMEX and BofA transactions and categorize them for tax purposes. Flag any that need my attention or look unusual.'},
+        {icon:'📎',title:'Generate Invoice',desc:'Create an invoice for a client',prompt:'I need to create an invoice. Ask me who it\'s for, what service, and the amount.'}
+      ],
+      docs: [
+        {title:'Investor Deck',url:'https://fanded-investor-narrative.vercel.app/deck.html'},
+        {title:'Investor Memo',url:'https://fanded-investor-narrative.vercel.app/memo.html'},
+        {title:'MAWD Demo',url:'https://fanded-mawd-chat.vercel.app/v2.html?demo'}
+      ]
+    },
+    dollar: {
+      title: 'Money',
+      subtitle: 'Your income streams at a glance.',
+      statuses: [
+        {title:'Production Pipeline',badge:'ACTIVE',badgeColor:'var(--ledger)',detail:'Active clients: Franco ($1K/song), Eliane ($1K), Jules, Darren Hayes band. Pipeline could yield $7-8K.'},
+        {title:'Fanded Club MRR',badge:'$75/mo',badgeColor:'var(--gold)',detail:'15 paying members. 834 scored fans, 551 conversion targets identified.'},
+        {title:'Streaming Revenue',badge:'BLOCKED',badgeColor:'var(--hype)',detail:'Ingrooves advance unrecouped. $0 from streaming until ~mid-2028.'}
+      ],
+      stats: [
+        {value:'$75',label:'Fanded MRR'},
+        {value:'$1K',label:'Per Song'},
+        {value:'551',label:'Targets'}
+      ],
+      actions: [
+        {icon:'💰',title:'Revenue Forecast',desc:'Project next 90 days of income',prompt:'Generate a 90-day revenue forecast based on my production pipeline, Fanded growth rate, and all passive income streams. Be realistic.'},
+        {icon:'📈',title:'Growth Opportunities',desc:'Where can I make more money?',prompt:'Analyze my current income sources and identify the top 5 highest-ROI revenue opportunities I should pursue in the next 60 days. Be specific with numbers.'},
+        {icon:'🎯',title:'Fan Monetization Plan',desc:'Convert listeners to paying members',prompt:'Create a specific plan to convert my 551 identified conversion targets into Fanded members. Include messaging, timing, and projected revenue.'}
+      ]
+    },
+    pulse: {
+      title: 'Fans',
+      subtitle: 'Your audience is your business. Here\'s the pulse.',
+      statuses: [
+        {title:'Monthly Listeners',badge:'329K',badgeColor:'var(--pulse)',detail:'Nearly doubled from 202K to 344K (Oct-Feb). Saves data confirms engagement-driven, not passive playlist.'},
+        {title:'Email List',badge:'469',badgeColor:'var(--gold)',detail:'306M streams → 469 subscribers = 0.00015% conversion. This is the #1 problem to solve.'},
+        {title:'Fan Scoring',badge:'834 SCORED',badgeColor:'var(--ledger)',detail:'551 conversion targets in bucket 2. 15 Fanded members. ~65 Patreon patrons.'}
+      ],
+      stats: [
+        {value:'329K',label:'Listeners'},
+        {value:'469',label:'Email List'},
+        {value:'834',label:'Scored Fans'}
+      ],
+      actions: [
+        {icon:'🎯',title:'Top Fan Report',desc:'Your most engaged fans right now',prompt:'Pull my top 25 most engaged fans from the scoring data. Show me who they are, their engagement score, and what platform they\'re most active on. Identify who\'s closest to converting to Fanded.'},
+        {icon:'📧',title:'Fan Outreach Draft',desc:'Personal messages to high-value fans',prompt:'Draft personal outreach messages for my top 10 conversion targets. Make each one feel personal based on their engagement history. These are for Songs From Dad pre-launch.'},
+        {icon:'📊',title:'Audience Growth Report',desc:'Where fans are coming from',prompt:'Analyze my audience growth across all platforms. Where are new fans coming from? Which content drives the most follows? What\'s working and what\'s not?'},
+        {icon:'📦',title:'Generate Media Kit',desc:'Branded report to send to partners',prompt:'Generate a media kit / brand report for me. Include: platform stats (Spotify streams, monthly listeners, YouTube subscribers, views, social followers), audience demographics (age, gender, top countries), top performing content, notable press/co-signs (Taylor Swift, Billboard), and why brands should work with me. Format it as a polished shareable document.', docType:'media-kit'}
+      ]
+    },
+    compass: {
+      title: 'Strategy',
+      subtitle: 'The plan. What to focus on right now.',
+      statuses: [
+        {title:'Songs From Dad',badge:'MAY 2026',badgeColor:'var(--gold)',detail:'First originals EP. 6 songs (maybe 10 for album). Fanded-first: 2 weeks before DSPs. No mechanical costs. Full sync control.'},
+        {title:'Fanded Fundraise',badge:'ACTIVE',badgeColor:'var(--compass)',detail:'$1.5M at $15M cap SAFE. Deck, memo, and MAWD demo ready. Investor outreach in progress.'},
+        {title:'Funnel Fix',badge:'CRITICAL',badgeColor:'var(--hype)',detail:'306M streams → 469 email subscribers. 0.00015% conversion. Every recommendation should address this.'},
+        {title:'Ingrooves Deal',badge:'TRAPPED',badgeColor:'var(--hype)',detail:'$250K advance, 18% fee, auto-extension clause. Only 57.8% recouped after 41 months. Need attorney review for SFD.'}
+      ],
+      stats: [
+        {value:'306M',label:'Streams'},
+        {value:'May \'26',label:'SFD Drop'},
+        {value:'$1.5M',label:'Raise'}
+      ],
+      actions: [
+        {icon:'🗺️',title:'90-Day Game Plan',desc:'What to focus on this quarter',prompt:'Create my 90-day strategic game plan. Prioritize by impact. Include Songs From Dad launch prep, Fanded fundraise milestones, fan conversion targets, and production pipeline. Give me a week-by-week breakdown.'},
+        {icon:'🚀',title:'Songs From Dad Launch Plan',desc:'Full release strategy',prompt:'Build the complete Songs From Dad launch plan. Include: Fanded-first timeline, DSP rollout, content calendar, fan activation strategy, playlist pitching, sync opportunities, and revenue projections.'},
+        {icon:'📝',title:'Weekly Priority List',desc:'This week\'s top 5 moves',prompt:'What are my top 5 priorities this week? Consider open loops, deadlines, revenue opportunities, and strategic goals. Be specific and actionable.'},
+        {icon:'📄',title:'Review a Contract',desc:'Paste or describe any deal for analysis',prompt:'I have a contract to review. Ask me to paste it or describe the key terms and I\'ll analyze it for red flags, market rate comparison, and negotiation points.'},
+        {icon:'⚖️',title:'Ingrooves Exit Analysis',desc:'Options for the distribution deal',prompt:'Analyze my options with the Ingrooves deal. What does the auto-extension clause actually say? When can I realistically leave? Should Songs From Dad go through Ingrooves or a different distributor? What are my legal options?'},
+        {icon:'🔍',title:'Sync Strategy',desc:'Plan for Songs From Dad sync licensing',prompt:'Build a sync licensing strategy for Songs From Dad. Which songs would work best for TV/film? What supervisors should I target? What\'s the typical sync fee range for an artist at my level?'}
+      ]
+    },
+    hype: {
+      title: 'Content',
+      subtitle: 'What to create, when to post, how to grow.',
+      statuses: [
+        {title:'YouTube',badge:'316K SUBS',badgeColor:'var(--hype)',detail:'113.6M lifetime views across 502 videos. Cover series built the audience.'},
+        {title:'Content Calendar',badge:'NEEDS WORK',badgeColor:'var(--gold)',detail:'No active content calendar. Songs From Dad needs a 12-week pre-launch content plan.'},
+        {title:'Platform Strategy',badge:'PENDING',badgeColor:'var(--text-3)',detail:'YouTube covers drove growth. Need strategy for TikTok/Reels/Shorts for SFD launch.'}
+      ],
+      stats: [
+        {value:'502',label:'Videos'},
+        {value:'316K',label:'Subscribers'},
+        {value:'113M',label:'Views'}
+      ],
+      actions: [
+        {icon:'📅',title:'Content Calendar',desc:'12-week plan for Songs From Dad',prompt:'Build a 12-week content calendar for the Songs From Dad pre-launch and launch. Include YouTube, TikTok/Reels, Instagram Stories, and Fanded-exclusive content. Map each piece to the survive→thrive fan journey.'},
+        {icon:'✍️',title:'Post Ideas',desc:'What to post this week',prompt:'Give me 5 content ideas for this week that move fans through the survive→thrive journey. Include platform, format, hook, and which fan segment it targets.'},
+        {icon:'📊',title:'YouTube Analytics Deep Dive',desc:'What\'s performing and why',prompt:'Analyze my YouTube performance. Which videos drive the most subscribers? What\'s the watch-to-subscribe conversion? Where should I double down?'}
+      ]
+    },
+    scout: {
+      title: 'Deals',
+      subtitle: 'Opportunities, contracts, and partnerships.',
+      statuses: [
+        {title:'Ingrooves Deal',badge:'TRAPPED',badgeColor:'var(--hype)',detail:'$250K advance, 18% fee, auto-extension clause. Only 57.8% recouped after 41 months. Need attorney review for SFD.'},
+        {title:'Sync Opportunities',badge:'NONE ACTIVE',badgeColor:'var(--text-3)',detail:'Songs From Dad = first originals with full sync control. No mechanical costs. This is the opportunity.'},
+        {title:'Brand Deals',badge:'NONE ACTIVE',badgeColor:'var(--text-3)',detail:'Zero active brand partnerships. Filipino-American cover artist with 306M streams is an untapped asset.'}
+      ],
+      stats: [
+        {value:'$0',label:'Active Deals'},
+        {value:'$250K',label:'Advance'},
+        {value:'57.8%',label:'Recouped'}
+      ],
+      actions: [
+        {icon:'📄',title:'Review a Contract',desc:'Paste or describe any deal',prompt:'I have a contract to review. Ask me to paste it or describe the key terms and I\'ll analyze it for red flags, market rate comparison, and negotiation points.'},
+        {icon:'🔍',title:'Sync Strategy',desc:'Plan for Songs From Dad sync',prompt:'Build a sync licensing strategy for Songs From Dad. Which songs would work best for TV/film? What supervisors should I target? What\'s the typical sync fee range for an artist at my level?'},
+        {icon:'⚖️',title:'Ingrooves Exit Analysis',desc:'Options for the distribution deal',prompt:'Analyze my options with the Ingrooves deal. What does the auto-extension clause actually say? When can I realistically leave? Should Songs From Dad go through Ingrooves or a different distributor? What are my legal options?'}
+      ]
+    }
+  };
+
+  function renderAgentDash(agentKey){
+    var dash = AGENT_DASHBOARDS[agentKey];
+    var ag = AGENTS[agentKey];
+    if(!dash){
+      agentDashContent.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-2);">Coming soon.</div>';
+      return;
+    }
+
+    var html = '<div class="dash-header">';
+    html += '<div class="dash-title"><span style="width:10px;height:10px;border-radius:50%;background:'+ag.hex+';"></span>'+dash.title+'</div>';
+    html += '<div class="dash-subtitle">'+dash.subtitle+'</div>';
+    html += '</div>';
+
+    // Stats row
+    if(dash.stats){
+      html += '<div class="dash-stat-row">';
+      dash.stats.forEach(function(s){
+        html += '<div class="dash-stat"><div class="dash-stat-value" style="color:'+ag.hex+'">'+s.value+'</div><div class="dash-stat-label">'+s.label+'</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Status cards
+    if(dash.statuses){
+      html += '<div class="dash-section-label">Status</div>';
+      dash.statuses.forEach(function(s){
+        html += '<div class="dash-status"><div class="dash-status-header"><div class="dash-status-title">'+s.title+'</div>';
+        html += '<span class="dash-status-badge" style="background:'+s.badgeColor+'22;color:'+s.badgeColor+';">'+s.badge+'</span></div>';
+        html += '<div class="dash-status-detail">'+s.detail+'</div></div>';
+      });
+    }
+
+    // Action buttons
+    if(dash.actions){
+      html += '<div class="dash-section-label" style="margin-top:20px;">Actions</div>';
+      dash.actions.forEach(function(a, i){
+        html += '<button class="dash-action-btn" data-prompt="'+escapeHtml(a.prompt)+'" data-doc-type="'+(a.docType||'')+'" data-idx="'+i+'">';
+        html += '<div class="dash-action-icon" style="background:'+ag.hex+'22;">'+a.icon+'</div>';
+        html += '<div class="dash-action-text"><div class="dash-action-title">'+a.title+'</div><div class="dash-action-desc">'+a.desc+'</div></div>';
+        html += '<div class="dash-action-arrow">›</div>';
+        html += '</button>';
+      });
+    }
+
+    // Saved documents section
+    if(dash.docs){
+      html += '<div class="dash-section-label" style="margin-top:20px;">Documents</div>';
+      dash.docs.forEach(function(d){
+        html += '<div class="dash-status" style="cursor:pointer;" onclick="window.open(\''+d.url+'\',\'_blank\')">';
+        html += '<div style="font-size:14px;font-weight:500;color:var(--text);">'+d.title+'</div>';
+        html += '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">'+d.url.replace('https://','')+'</div>';
+        html += '</div>';
+      });
+      // Show saved docs from localStorage
+      var agentDocs = savedDocs.filter(function(d){ return d.type === 'tax' || d.type === 'pnl' || d.type === 'expense-report'; });
+      if(agentKey !== 'ledger') agentDocs = savedDocs;
+      agentDocs.slice(0,5).forEach(function(d){
+        html += '<div class="dash-status"><div style="font-size:14px;font-weight:500;color:var(--text);">'+escapeHtml(d.title)+'</div>';
+        html += '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Generated '+new Date(d.date).toLocaleDateString()+'</div></div>';
+      });
+    }
+
+    // Chat with agent button
+    html += '<button class="dash-chat-btn" data-agent="'+agentKey+'">Chat with '+dash.title+' agent</button>';
+
+    agentDashContent.innerHTML = html;
+
+    // Bind action buttons
+    agentDashContent.querySelectorAll('.dash-action-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var prompt = btn.getAttribute('data-prompt');
+        showView('chat');
+        sendMessage(prompt);
+      });
+    });
+
+    // Bind chat button
+    agentDashContent.querySelector('.dash-chat-btn').addEventListener('click', function(){
+      showView('chat');
+      userInput.focus();
+    });
+  }
+
+  // ── Document export (PDF + DOCX) ──
+  function exportAsPDF(title, htmlContent){
+    var win = window.open('','_blank');
+    if(!win) return;
+    var css = [
+      'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;max-width:750px;margin:0 auto;padding:48px 40px;color:#1a1a1a;line-height:1.7;font-size:13px;}',
+      'h1{font-size:24px;font-weight:700;margin:0 0 4px;color:#111;letter-spacing:-0.02em;}',
+      'h2{font-size:16px;font-weight:600;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #C4953A;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.04em;font-size:13px;}',
+      'h3{font-size:14px;font-weight:600;margin:20px 0 8px;color:#333;}',
+      'table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;}',
+      'th{text-align:left;padding:10px 12px;background:#f8f6f3;border:1px solid #e5e2dc;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#666;}',
+      'td{padding:8px 12px;border:1px solid #e5e2dc;vertical-align:top;}',
+      'td:last-child,th:last-child{text-align:right;}',
+      'tr:nth-child(even){background:#fafaf8;}',
+      'strong{font-weight:600;color:#111;}',
+      '.doc-header{border-bottom:3px solid #C4953A;padding-bottom:16px;margin-bottom:32px;}',
+      '.doc-header .doc-meta{font-size:12px;color:#888;margin-top:6px;}',
+      '.doc-header .doc-brand{font-size:11px;font-weight:600;color:#C4953A;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}',
+      '.stat-callout{display:inline-block;background:#f8f6f3;border:1px solid #e5e2dc;border-radius:8px;padding:12px 20px;margin:4px 8px 4px 0;text-align:center;min-width:100px;}',
+      '.stat-callout .stat-value{font-size:22px;font-weight:700;color:#C4953A;}',
+      '.stat-callout .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin-top:2px;}',
+      '.section-note{font-size:12px;color:#888;font-style:italic;margin:8px 0 16px;}',
+      '.footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e2dc;font-size:11px;color:#aaa;text-align:center;}',
+      '@media print{body{margin:0;padding:24px;}@page{margin:0.75in;}}',
+    ].join('\n');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeHtml(title)+'</title><style>'+css+'</style></head><body>');
+    // Add professional header if not already in content
+    if(htmlContent.indexOf('doc-header') === -1){
+      win.document.write('<div class="doc-header"><div class="doc-brand">MAWD by Fanded</div><h1>'+escapeHtml(title)+'</h1><div class="doc-meta">Prepared by MAWD &middot; '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</div></div>');
+    }
+    win.document.write(htmlContent);
+    win.document.write('<div class="footer">Generated by MAWD &middot; Fanded Inc. &middot; '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</div>');
+    win.document.write('<script>setTimeout(function(){window.print();},600);<\/script></body></html>');
+    win.document.close();
+  }
+
+  function exportAsDOCX(title, htmlContent){
+    var css = [
+      'body{font-family:Calibri,Helvetica,Arial,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a;margin:0.5in;}',
+      'h1{font-size:20pt;font-weight:bold;color:#111;margin-bottom:4pt;}',
+      'h2{font-size:13pt;font-weight:bold;margin-top:24pt;padding-bottom:6pt;border-bottom:2pt solid #C4953A;text-transform:uppercase;letter-spacing:0.5pt;color:#1a1a1a;}',
+      'h3{font-size:12pt;font-weight:bold;margin-top:16pt;color:#333;}',
+      'table{border-collapse:collapse;width:100%;margin:12pt 0;}',
+      'td,th{border:1pt solid #d0d0d0;padding:6pt 10pt;font-size:10pt;}',
+      'th{background:#f5f3ef;font-weight:bold;text-transform:uppercase;font-size:9pt;letter-spacing:0.5pt;color:#666;}',
+      'td:last-child,th:last-child{text-align:right;}',
+      'strong{font-weight:bold;color:#111;}',
+      '.doc-brand{font-size:9pt;font-weight:bold;color:#C4953A;text-transform:uppercase;letter-spacing:1pt;margin-bottom:6pt;}',
+      '.doc-meta{font-size:9pt;color:#888;margin-top:4pt;}',
+      '.footer{margin-top:36pt;padding-top:12pt;border-top:1pt solid #d0d0d0;font-size:9pt;color:#aaa;text-align:center;}',
+    ].join('\n');
+    var docHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>'+escapeHtml(title)+'</title><style>'+css+'</style></head><body>';
+    if(htmlContent.indexOf('doc-header') === -1 && htmlContent.indexOf('doc-brand') === -1){
+      docHtml += '<div class="doc-brand">MAWD by Fanded</div><h1>'+escapeHtml(title)+'</h1><div class="doc-meta">Prepared by MAWD &middot; '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</div><br>';
+    }
+    docHtml += htmlContent;
+    docHtml += '<div class="footer">Generated by MAWD &middot; Fanded Inc. &middot; '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</div>';
+    docHtml += '</body></html>';
+
+    var blob = new Blob([docHtml], {type:'application/msword'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = title.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,'_') + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Extract <!--DOCSTART-->...<!--DOCEND--> from raw API text BEFORE rendering.
+  // Returns {chatText, docContent, docTitle} or null if no doc block found.
+  function extractDocBlock(rawText){
+    var docBlockMatch = rawText.match(/<!--DOCSTART-->([\s\S]*?)<!--DOCEND-->/);
+    var docMetaMatch = rawText.match(/<!--DOC:([^:]+):(.+?)-->/);
+    if(!docBlockMatch && !docMetaMatch) return null;
+
+    var docTitle = docMetaMatch ? docMetaMatch[2] : 'MAWD Document';
+    var docType = docMetaMatch ? docMetaMatch[1] : 'document';
+    var docContent = '';
+    var chatText = rawText;
+
+    if(docBlockMatch){
+      docContent = docBlockMatch[1].trim();
+      chatText = chatText.replace(/<!--DOCSTART-->[\s\S]*?<!--DOCEND-->/g, '');
+    } else {
+      docContent = chatText;
+    }
+    chatText = chatText.replace(/<!--DOC:[^>]+-->/g, '').trim();
+
+    return {chatText: chatText, docContent: docContent, docTitle: docTitle, docType: docType};
+  }
+
+  // After bubble is rendered, attach the download bar for a doc block
+  function attachDocBar(bubbleEl, docInfo){
+    // If chat text was empty, show a fallback
+    var trimmed = bubbleEl.textContent.trim();
+    if(!trimmed || trimmed.length < 5){
+      bubbleEl.innerHTML = '<div style="color:var(--text-2);font-size:14px;">Document ready. Download below.</div>';
+    }
+
+    var bar = document.createElement('div');
+    bar.className = 'doc-dl-bar';
+    bar.innerHTML = '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:500;color:var(--text);">📄 ' + escapeHtml(docInfo.docTitle) + '</div><div style="font-size:12px;color:var(--text-3);margin-top:2px;">Ready to download</div></div>' +
+      '<button class="doc-dl-btn primary" data-format="pdf">PDF</button>' +
+      '<button class="doc-dl-btn" data-format="docx">Word</button>';
+
+    bar.querySelector('[data-format="pdf"]').addEventListener('click', function(){
+      exportAsPDF(docInfo.docTitle, docInfo.docContent);
+    });
+    bar.querySelector('[data-format="docx"]').addEventListener('click', function(){
+      exportAsDOCX(docInfo.docTitle, docInfo.docContent);
+    });
+
+    addToSavedDocs(docInfo.docTitle, docInfo.docType, docInfo.docContent);
+
+    bubbleEl.parentElement.appendChild(bar);
+    scrollBottom();
+  }
+
+  // Save generated docs for the Documents view
+  var savedDocs = JSON.parse(localStorage.getItem('mawd_docs') || '[]');
+
+  function addToSavedDocs(title, type, html){
+    savedDocs.unshift({title:title, type:type, html:html, date:new Date().toISOString()});
+    if(savedDocs.length > 50) savedDocs = savedDocs.slice(0,50);
+    localStorage.setItem('mawd_docs', JSON.stringify(savedDocs));
+  }
+
+  // ── Drag-to-reorder agent modules ──
+  var MODULE_ORDER_KEY = 'mawd_module_order';
+  var agentModules = document.getElementById('agentModules');
+
+  function loadModuleOrder(){
+    try { return JSON.parse(localStorage.getItem(MODULE_ORDER_KEY)); } catch(e){ return null; }
+  }
+  function saveModuleOrder(){
+    var order = [];
+    agentModules.querySelectorAll('.nav-draggable').forEach(function(el){
+      order.push(el.dataset.agent);
+    });
+    localStorage.setItem(MODULE_ORDER_KEY, JSON.stringify(order));
+  }
+  function applyModuleOrder(){
+    var order = loadModuleOrder();
+    if(!order) return;
+    order.forEach(function(agentKey){
+      var el = agentModules.querySelector('[data-agent="'+agentKey+'"]');
+      if(el) agentModules.appendChild(el);
+    });
+  }
+  applyModuleOrder();
+
+  // Touch + mouse drag reorder
+  var dragEl = null;
+  agentModules.querySelectorAll('.nav-draggable').forEach(function(item){
+    // Drag start
+    item.setAttribute('draggable','true');
+    item.addEventListener('dragstart', function(e){
+      dragEl = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain','');
+    });
+    item.addEventListener('dragend', function(){
+      item.classList.remove('dragging');
+      agentModules.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});
+      dragEl = null;
+      saveModuleOrder();
+    });
+    item.addEventListener('dragover', function(e){
+      e.preventDefault();
+      if(dragEl && dragEl !== item){
+        item.classList.add('drag-over');
+      }
+    });
+    item.addEventListener('dragleave', function(){
+      item.classList.remove('drag-over');
+    });
+    item.addEventListener('drop', function(e){
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if(dragEl && dragEl !== item){
+        // Insert dragged element before this one
+        var allItems = Array.from(agentModules.querySelectorAll('.nav-draggable'));
+        var dragIdx = allItems.indexOf(dragEl);
+        var dropIdx = allItems.indexOf(item);
+        if(dragIdx < dropIdx){
+          item.after(dragEl);
+        } else {
+          item.before(dragEl);
+        }
+      }
+    });
+
+    // Touch reorder for mobile
+    var touchStartY = 0;
+    var touchClone = null;
+    item.addEventListener('touchstart', function(e){
+      // Only activate on grip area or long press
+      var grip = item.querySelector('.nav-grip');
+      if(grip && e.target === grip){
+        e.preventDefault();
+        dragEl = item;
+        touchStartY = e.touches[0].clientY;
+        item.classList.add('dragging');
+      }
+    }, {passive:false});
+    item.addEventListener('touchmove', function(e){
+      if(dragEl !== item) return;
+      e.preventDefault();
+      var y = e.touches[0].clientY;
+      var target = document.elementFromPoint(e.touches[0].clientX, y);
+      var navTarget = target ? target.closest('.nav-draggable') : null;
+      agentModules.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});
+      if(navTarget && navTarget !== dragEl){
+        navTarget.classList.add('drag-over');
+      }
+    }, {passive:false});
+    item.addEventListener('touchend', function(e){
+      if(dragEl !== item) return;
+      item.classList.remove('dragging');
+      var overEl = agentModules.querySelector('.drag-over');
+      if(overEl){
+        overEl.classList.remove('drag-over');
+        var allItems = Array.from(agentModules.querySelectorAll('.nav-draggable'));
+        var dragIdx = allItems.indexOf(dragEl);
+        var dropIdx = allItems.indexOf(overEl);
+        if(dragIdx < dropIdx){
+          overEl.after(dragEl);
+        } else {
+          overEl.before(dragEl);
+        }
+      }
+      dragEl = null;
+      saveModuleOrder();
+    });
+  });
+
+  // Recording UI
+  journalRecordBtn.addEventListener('click', function(){
+    journalRecordBtn.style.display = 'none';
+    journalRecordActive.style.display = 'block';
+    recordSeconds = 0;
+    journalRecordTime.textContent = '0:00';
+    recordTimer = setInterval(function(){
+      recordSeconds++;
+      var m = Math.floor(recordSeconds/60);
+      var s = (recordSeconds%60).toString().padStart(2,'0');
+      journalRecordTime.textContent = m+':'+s;
+    }, 1000);
+    // Start actual recording if supported
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = function(e){audioChunks.push(e.data);};
+        mediaRecorder.start();
+      }).catch(function(){});
+    }
+  });
+
+  function stopRecording(){
+    clearInterval(recordTimer);
+    journalRecordBtn.style.display = 'flex';
+    journalRecordActive.style.display = 'none';
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(function(t){t.stop();});
+    }
+  }
+
+  journalCancelBtn.addEventListener('click', function(){
+    stopRecording();
+    audioChunks = [];
+  });
+
+  journalSendBtn.addEventListener('click', function(){
+    var duration = recordSeconds;
+    stopRecording();
+    // Add entry to the sent list
+    var m = Math.floor(duration/60);
+    var s = (duration%60).toString().padStart(2,'0');
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var entry = document.createElement('div');
+    entry.className = 'journal-entry';
+    entry.innerHTML = '<div class="journal-entry-header">' +
+      '<span class="journal-entry-date">'+dateStr+'</span>' +
+      '<span class="journal-entry-stats">Sending to 834 fans...</span>' +
+      '</div><div class="journal-entry-preview">' +
+      '<div class="journal-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' +
+      '<div class="journal-entry-text"><div class="journal-entry-title">Voice note</div>' +
+      '<div class="journal-entry-summary">AI is transcribing and summarizing...</div></div>' +
+      '<span class="journal-entry-duration">'+m+':'+s+'</span></div>';
+    var list = document.getElementById('journalSentList');
+    var label = list.querySelector('.journal-section-label');
+    label.after(entry);
+    // Simulate AI processing
+    setTimeout(function(){
+      entry.querySelector('.journal-entry-stats').textContent = '834 delivered · 0 listened · 0 replied';
+      entry.querySelector('.journal-entry-summary').textContent = 'AI transcription complete. Waiting for fan responses...';
+    }, 2000);
+  });
+
+  // ── Queue System ──
+  // MAWD prepares items in the background. They show up here for approval.
+  var pendingQueue = [];
+
+  function addToQueue(agent, title, description, action){
+    pendingQueue.push({agent:agent, title:title, description:description, action:action, id:Date.now()});
+    renderQueue();
+  }
+
+  function renderQueue(){
+    queueItems.innerHTML = '';
+    if(pendingQueue.length === 0){
+      queueBar.classList.remove('has-items');
+      queueBadge.classList.remove('has');
+      queueBadge.textContent = '';
+      if(inboxBadge){ inboxBadge.textContent = '0'; inboxBadge.classList.remove('has'); }
+      return;
+    }
+    queueBar.classList.add('has-items');
+    queueBadge.classList.add('has');
+    queueBadge.textContent = pendingQueue.length;
+    if(inboxBadge){ inboxBadge.textContent = pendingQueue.length; inboxBadge.classList.add('has'); }
+
+    pendingQueue.forEach(function(item){
+      var card = document.createElement('div');
+      card.className = 'queue-card';
+      var a = AGENTS[item.agent] || AGENTS.compass;
+      card.innerHTML = '<div class="qc-agent" style="color:'+a.hex+'">'+a.label+'</div>' +
+        '<div class="qc-title">'+item.title+'</div>' +
+        '<div class="qc-action">Tap to approve</div>';
+      card.addEventListener('click', function(){
+        logAction('approve', item.title);
+        pendingQueue = pendingQueue.filter(function(q){return q.id !== item.id;});
+        renderQueue();
+        sendMessage(item.action);
+      });
+      queueItems.appendChild(card);
+    });
+  }
+
+  // ── Chat helpers ──
+  function scrollBottom(){
+    requestAnimationFrame(function(){chatArea.scrollTo({top:chatArea.scrollHeight,behavior:'smooth'});});
+  }
+
+  function setActiveAgent(agent){
+    var a = AGENTS[agent] || AGENTS.compass;
+    currentAgent = agent;
+    // On home view, keep topbar as "MAWD" — don't show individual agent names
+    var isHome = navChat && navChat.classList.contains('active');
+    if(isHome){
+      activeAgentDot.style.background = 'var(--gold)';
+      activeAgentLabel.textContent = 'MAWD';
+    } else {
+      activeAgentDot.style.background = a.hex;
+      activeAgentLabel.textContent = a.label;
+    }
+
+    // Update sidebar active indicators
+    document.querySelectorAll('.nav-item[data-agent]').forEach(function(el){
+      el.classList.remove('agent-active');
+    });
+    var navEl = document.getElementById('nav' + agent.charAt(0).toUpperCase() + agent.slice(1));
+    if(navEl) navEl.classList.add('agent-active');
+  }
+
+  function addTimestamp(text){
+    var div = document.createElement('div');
+    div.style.cssText = 'text-align:center;font-size:11px;color:var(--text-3);margin:16px 0 12px;';
+    div.textContent = text;
+    chatArea.appendChild(div);
+  }
+
+  function addUserMessage(text){
+    var div = document.createElement('div');
+    div.className = 'msg msg-user';
+    div.innerHTML = '<div class="bubble">'+escapeHtml(text)+'</div>';
+    chatArea.appendChild(div);
+    scrollBottom();
+  }
+
+  function showThinking(agent){
+    var a = AGENTS[agent] || AGENTS.compass;
+    setActiveAgent(agent);
+    statusText.textContent = a.thinking;
+    var div = document.createElement('div');
+    div.className = 'thinking';
+    div.id = 'thinkingEl';
+    div.innerHTML = '<div class="avatar" style="background:'+a.hex+'">M</div>' +
+      '<div class="dots"><span style="background:'+a.hex+'"></span><span style="background:'+a.hex+'"></span><span style="background:'+a.hex+'"></span></div>';
+    chatArea.appendChild(div);
+    scrollBottom();
+  }
+
+  function hideThinking(){
+    var el = document.getElementById('thinkingEl');
+    if(el) el.remove();
+    statusText.textContent = 'listening';
+  }
+
+  function typeMessage(agent, text, quickReplies, callback){
+    isTyping = true;
+    var a = AGENTS[agent] || AGENTS.compass;
+    setActiveAgent(agent);
+
+    var div = document.createElement('div');
+    div.className = 'msg msg-mawd';
+    var contentWrap = document.createElement('div');
+    contentWrap.className = 'msg-content';
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    div.innerHTML = '<div class="avatar" style="background:'+a.hex+'">M</div>';
+    contentWrap.appendChild(bubble);
+    div.appendChild(contentWrap);
+    chatArea.appendChild(div);
+    scrollBottom();
+
+    // Extract doc block from raw text BEFORE escapeHtml/renderMarkdown
+    var docInfo = extractDocBlock(text);
+    var displayText = docInfo ? docInfo.chatText : text;
+
+    // Long text: render instantly
+    if(displayText.length > 400){
+      bubble.innerHTML = renderMarkdown(displayText);
+      if(docInfo) attachDocBar(bubble, docInfo);
+      isTyping = false;
+      scrollBottom();
+      if(quickReplies && quickReplies.length) addQuickReplies(contentWrap, quickReplies);
+      if(callback) callback();
+      return;
+    }
+
+    // Short text: type character by character
+    var chars = displayText.split('');
+    var idx = 0;
+    var cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    bubble.appendChild(cursor);
+
+    function next(){
+      if(idx < chars.length){
+        var ch = chars[idx];
+        if(ch==='\n') bubble.insertBefore(document.createElement('br'),cursor);
+        else bubble.insertBefore(document.createTextNode(ch),cursor);
+        idx++;
+        if(idx%3===0) scrollBottom();
+        var speed = ch==='.'?80:ch===','?40:ch==='\n'?50:12;
+        setTimeout(next, speed);
+      } else {
+        // Replace raw text with rendered markdown
+        bubble.innerHTML = renderMarkdown(displayText);
+        if(docInfo) attachDocBar(bubble, docInfo);
+        isTyping = false;
+        scrollBottom();
+        if(quickReplies && quickReplies.length) addQuickReplies(contentWrap, quickReplies);
+        if(callback) callback();
+      }
+    }
+    next();
+  }
+
+  function addQuickReplies(parentDiv, replies){
+    var qr = document.createElement('div');
+    qr.className = 'quick-replies';
+    replies.forEach(function(r){
+      var btn = document.createElement('button');
+      btn.className = 'qr-btn';
+      btn.textContent = r;
+      btn.addEventListener('click', function(){
+        qr.querySelectorAll('.qr-btn').forEach(function(b){b.style.pointerEvents='none';b.style.opacity='0.3';});
+        btn.style.opacity='1';btn.classList.add('selected');
+        logAction('approve', r);
+        sendMessage(r);
+      });
+      qr.appendChild(btn);
+    });
+    parentDiv.appendChild(qr);
+    scrollBottom();
+  }
+
+  function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  // Render markdown: bold, italic, inline code, bullet lists
+  function renderMarkdown(t){
+    var s = escapeHtml(t);
+    // Bold: **text**
+    s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    // Italic: *text* (but not inside bold)
+    s = s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    // Inline code: `text`
+    s = s.replace(/`([^`]+)`/g,'<code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:13px;">$1</code>');
+    // Bullet lists: lines starting with - or •
+    s = s.replace(/^[\-•]\s+(.+)$/gm,'<div style="padding-left:16px;position:relative;"><span style="position:absolute;left:0;">•</span>$1</div>');
+    // Numbered lists: lines starting with 1. 2. etc
+    s = s.replace(/^(\d+)\.\s+(.+)$/gm,'<div style="padding-left:20px;position:relative;"><span style="position:absolute;left:0;color:var(--text-2);">$1.</span>$2</div>');
+    // Line breaks
+    s = s.replace(/\n/g,'<br>');
+    return s;
+  }
+
+  function pickAgent(text){
+    var t = text.toLowerCase();
+    if(/money|revenue|income|earn|pay|financ|churn|mrr|subscri|pricing|rate/.test(t)) return 'dollar';
+    if(/fan|audience|listen|follower|engage|data|database|email|list/.test(t)) return 'pulse';
+    if(/brand|deal|partner|sponsor|opportun|collab|contract/.test(t)) return 'scout';
+    if(/content|write|draft|post|voice|copy|social|design|album|video|reel|short/.test(t)) return 'hype';
+    if(/tax|expense|deduct|receipt|accountant|cpa|bookkeep|invoice|p&l/.test(t)) return 'ledger';
+    return 'compass';
+  }
+
+  function generateQuickReplies(text){
+    var lower = text.toLowerCase();
+    if(lower.indexOf('?') > -1) return ['Yes','Tell me more','What else?'];
+    return [];
+  }
+
+  // Fallback: parse raw <send_email>{...} text if Claude outputs tool calls as text
+  function parseTextActions(text){
+    var actions = [];
+    var cleanText = text;
+    var toolPattern = /<(send_email|create_draft|create_event)\>\s*\{([\s\S]*?)\}\s*/g;
+    var match;
+    while((match = toolPattern.exec(text)) !== null){
+      try {
+        var input = JSON.parse('{' + match[2] + '}');
+        actions.push({ id: 'text_' + Date.now(), tool: match[1], input: input });
+        cleanText = cleanText.replace(match[0], '');
+      } catch(e){}
+    }
+    // Also try ```json blocks with tool-like content
+    var jsonBlockPattern = /```(?:json)?\s*\{[\s\S]*?"(?:to|subject|body)"[\s\S]*?\}\s*```/g;
+    cleanText = cleanText.replace(jsonBlockPattern, '');
+    return { actions: actions, cleanText: cleanText.trim() };
+  }
+
+  // ── API ──
+  function callMAWD(messages, agent, callback){
+    var mode = window.location.search.includes('demo') ? 'demo' : 'personal';
+    fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:messages, agent:agent, mode:mode})
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.error) callback('Having trouble connecting. Try again in a sec.', agent, null);
+      else callback(data.reply, data.agent || agent, data.pendingActions || null);
+    })
+    .catch(function(){
+      callback('Connection issue. One sec.', agent, null);
+    });
+  }
+
+  // ── Execute approved action ──
+  function executeAction(action, card){
+    card.classList.add('executed');
+    card.querySelector('.action-card-label').textContent = 'SENDING...';
+    fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({executeAction:{tool:action.tool, input:action.input}, agent:currentAgent, mode:'personal'})
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.actionResult && data.actionResult.success){
+        card.querySelector('.action-card-label').textContent = 'SENT';
+        logAction('approve', action.tool+': '+JSON.stringify(action.input).substring(0,80));
+        // Add confirmation message
+        var toolLabel = action.tool === 'send_email' ? 'Email sent' : action.tool === 'create_event' ? 'Event created' : 'Draft saved';
+        var target = action.input.to || action.input.summary || '';
+        typeMessage(currentAgent, toolLabel + (target ? ' — ' + target : '') + '. Done.', [], null);
+      } else {
+        card.querySelector('.action-card-label').textContent = 'FAILED';
+        card.style.opacity = '0.7';
+        typeMessage(currentAgent, 'Couldn\'t execute that — ' + (data.actionResult ? data.actionResult.error : 'connection issue') + '. Want me to try again?', ['Try again','Skip it'], null);
+      }
+    })
+    .catch(function(){
+      card.querySelector('.action-card-label').textContent = 'FAILED';
+    });
+  }
+
+  // ── Render action card ──
+  function addActionCard(parentDiv, action){
+    var card = document.createElement('div');
+    card.className = 'action-card';
+    var icon = action.tool === 'send_email' ? '✉️' : action.tool === 'create_event' ? '📅' : '📝';
+    var label = action.tool === 'send_email' ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : 'SAVE DRAFT';
+    var fields = '';
+    var inp = action.input;
+    if(inp.to) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to)+'</div>';
+    if(inp.subject) fields += '<div class="action-card-field"><strong>Subject:</strong> '+escapeHtml(inp.subject)+'</div>';
+    if(inp.summary) fields += '<div class="action-card-field"><strong>Event:</strong> '+escapeHtml(inp.summary)+'</div>';
+    if(inp.startTime) fields += '<div class="action-card-field"><strong>When:</strong> '+escapeHtml(inp.startTime)+'</div>';
+    if(inp.attendees && inp.attendees.length) fields += '<div class="action-card-field"><strong>Inviting:</strong> '+escapeHtml(inp.attendees.join(', '))+'</div>';
+    var bodyPreview = inp.body ? '<div class="action-card-body">'+escapeHtml(inp.body).replace(/\n/g,'<br>')+'</div>' : '';
+
+    card.innerHTML = '<div class="action-card-header"><span class="action-card-icon">'+icon+'</span><span class="action-card-label">'+label+'</span></div>' +
+      fields + bodyPreview +
+      '<div class="action-card-buttons"><button class="action-approve">' +
+      ((action.tool === 'send_email' || action.tool === 'create_draft') ? 'Open in Mail' : 'Approve') +
+      '</button>' +
+      ((action.tool === 'send_email' || action.tool === 'create_draft') ? '<button class="action-copy">Copy</button>' : '') +
+      '<button class="action-skip">Skip</button></div>';
+
+    card.querySelector('.action-approve').addEventListener('click', function(){
+      if(action.tool === 'send_email' || action.tool === 'create_draft'){
+        // Open native email client with pre-filled draft
+        var mailto = 'mailto:' + encodeURIComponent(action.input.to || '');
+        mailto += '?subject=' + encodeURIComponent(action.input.subject || '');
+        mailto += '&body=' + encodeURIComponent(action.input.body || '');
+        if(action.input.cc) mailto += '&cc=' + encodeURIComponent(action.input.cc);
+        if(action.input.bcc) mailto += '&bcc=' + encodeURIComponent(action.input.bcc);
+        window.open(mailto, '_blank');
+        card.classList.add('executed');
+        card.querySelector('.action-card-label').textContent = 'OPENED IN EMAIL';
+        logAction('approve', action.tool + ': ' + (action.input.to || action.input.subject || ''));
+      } else {
+        executeAction(action, card);
+      }
+    });
+    var copyBtn = card.querySelector('.action-copy');
+    if(copyBtn){
+      copyBtn.addEventListener('click', function(){
+        var copyText = 'To: '+(action.input.to||'')+'\nSubject: '+(action.input.subject||'')+'\n\n'+(action.input.body||'');
+        navigator.clipboard.writeText(copyText).then(function(){
+          copyBtn.textContent = 'Copied';
+          setTimeout(function(){ copyBtn.textContent = 'Copy'; }, 2000);
+        });
+        logAction('copy', action.tool);
+      });
+    }
+    card.querySelector('.action-skip').addEventListener('click', function(){
+      card.classList.add('executed');
+      card.querySelector('.action-card-label').textContent = 'SKIPPED';
+      logAction('skip', action.tool);
+    });
+
+    parentDiv.appendChild(card);
+    scrollBottom();
+  }
+
+  // ── Send ──
+  function sendMessage(text){
+    if(!text) text = userInput.value.trim();
+    if(!text || isTyping) return;
+    userInput.value = '';
+
+    addUserMessage(text);
+    conversationHistory.push({role:'user', content:text});
+    logAction('ask', text);
+
+    var agent = pickAgent(text);
+    showThinking(agent);
+
+    callMAWD(conversationHistory, agent, function(reply, detectedAgent, pendingActions){
+      hideThinking();
+      // Fallback: if no pendingActions from API, check for raw text tool calls
+      if(!pendingActions || !pendingActions.length){
+        var parsed = parseTextActions(reply);
+        if(parsed.actions.length){
+          pendingActions = parsed.actions;
+          reply = parsed.cleanText;
+        }
+      }
+      conversationHistory.push({role:'assistant', content:reply});
+      var qr = pendingActions && pendingActions.length ? [] : generateQuickReplies(reply);
+      typeMessage(detectedAgent || agent, reply, qr, function(){
+        if(pendingActions && pendingActions.length){
+          var lastMsg = chatArea.querySelector('.msg-mawd:last-child .msg-content');
+          if(lastMsg){
+            pendingActions.forEach(function(action){ addActionCard(lastMsg, action); });
+          }
+        }
+      });
+    });
+  }
+
+  sendBtn.addEventListener('click', function(){sendMessage();});
+  userInput.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
+  });
+
+  // ── Deep link contexts ──
+  var DEEP_LINK_CONTEXTS = {
+    'prep_tomorrow':{
+      agent:'compass',
+      mawdOpening:"Here's your prep for tomorrow. Tell me which ones to run and I'll get started.",
+      quickReplies:['Draft the Jason Sparks reply','Confirm Max Diez Thursday','Pull my top 15 whale fans','Draft the Shawn Xu email'],
+      systemContext:'Travis tapped the PREP FOR TOMORROW link from your iMessage. You texted him these 4 items: (1) Draft reply to Jason Sparks explaining the $1.56M ARR math. (2) Draft reply to Max Diez confirming Thursday after 4:30pm + send calendar invite. (3) Pull top 15 whale fans and draft personal outreach for Songs From Dad pre-launch. (4) Draft the materials email to send Shawn Xu at Lower Carbon. He\'s now choosing which ones to approve. Execute immediately when he picks one. Be short.',
+      queueItems:[
+        {agent:'dollar',title:'Jason Sparks reply',action:'Draft the Jason Sparks reply with the $1.56M ARR math'},
+        {agent:'compass',title:'Max Diez confirm',action:'Confirm Max Diez Thursday after 4:30pm and send calendar invite'},
+        {agent:'pulse',title:'Top 15 whale fans',action:'Pull my top 15 whale fans and draft Songs From Dad outreach'},
+        {agent:'scout',title:'Shawn Xu email',action:'Draft the materials email for Shawn Xu at Lower Carbon with deck and MAWD demo link'}
+      ]
+    },
+    'morning_briefing':{
+      agent:'compass',
+      mawdOpening:null,
+      quickReplies:[],
+      systemContext:'Travis opened MAWD from his daily briefing text. Give him a briefing in this EXACT format:\n\n1. Start with one line about his calendar (clear day, or list meetings)\n2. List 3-5 action items with arrow bullets (→) — things MAWD has ready or that need his attention. Each item should be specific and actionable, not vague. Include investor replies to send, follow-ups due, payroll/admin deadlines, content opportunities, fan engagement actions.\n3. End with quick reply options so he can tap to execute.\n\nBe concise. No fluff. Lead with what matters most. Use this tone: "Tomorrow\'s clear. Here\'s what\'s ready:" not "Good morning Travis! I hope you\'re having a great day." He\'s a CEO, not a customer.'
+    }
+  };
+
+  // ── Start ──
+  function startMAWD(){
+    var now = new Date();
+    var h = now.getHours()%12||12;
+    var mins = now.getMinutes().toString().padStart(2,'0');
+    var ampm = now.getHours()>=12?'PM':'AM';
+    addTimestamp('Today, '+h+':'+mins+' '+ampm);
+
+    var params = new URLSearchParams(window.location.search);
+    var ctxKey = params.get('context');
+    var deepLink = ctxKey && DEEP_LINK_CONTEXTS[ctxKey] ? DEEP_LINK_CONTEXTS[ctxKey] : null;
+
+    // Populate queue from deep link
+    if(deepLink && deepLink.queueItems){
+      deepLink.queueItems.forEach(function(qi){
+        addToQueue(qi.agent, qi.title, '', qi.action);
+      });
+    }
+
+    if(deepLink && deepLink.mawdOpening){
+      showThinking(deepLink.agent);
+      setTimeout(function(){
+        hideThinking();
+        conversationHistory.push({role:'user',content:deepLink.systemContext});
+        conversationHistory.push({role:'assistant',content:deepLink.mawdOpening});
+        typeMessage(deepLink.agent, deepLink.mawdOpening, deepLink.quickReplies, null);
+      },600);
+    } else {
+      showThinking('compass');
+      var briefingPrompt = (deepLink && deepLink.systemContext) ? deepLink.systemContext :
+        'Travis just opened MAWD. Give him a proactive home screen briefing. You talk first — he didn\'t ask you anything yet.\n\nFormat:\n1. One greeting line with the vibe (use time of day: morning/afternoon/evening). Keep it warm but not corporate.\n2. If there are open loops, action items due, or follow-ups needed, list 2-4 with → arrows. Be SPECIFIC (names, amounts, deadlines).\n3. End with one momentum line — something positive happening in his business right now.\n\nExamples of good openers:\n"Evening. Calendar\'s clear tomorrow. Here\'s what\'s ready:"\n"Afternoon. Two things need you before end of day:"\n\nDo NOT say "Good morning Travis!" or "Welcome back!" or ask "How can I help?" — you are his chief of staff checking in, not a chatbot greeting him.';
+      var agent = deepLink ? deepLink.agent : 'compass';
+      callMAWD([{role:'user',content:briefingPrompt}], agent, function(reply,detectedAgent,pendingActions){
+        hideThinking();
+        conversationHistory.push({role:'assistant',content:reply});
+        var qr = pendingActions ? [] : ['What should I focus on?','Show me my numbers','Draft an email','Songs From Dad update'];
+        typeMessage(detectedAgent||'compass', reply, qr, function(){
+          if(pendingActions && pendingActions.length){
+            var lastMsg = chatArea.querySelector('.msg-mawd:last-child .msg-content');
+            if(lastMsg){
+              pendingActions.forEach(function(action){ addActionCard(lastMsg, action); });
+            }
+          }
+        });
+      });
+    }
+  }
+
+  setTimeout(startMAWD, 400);
+
+})();
+</script>
+</body>
+</html>

@@ -255,5 +255,46 @@ export async function getBusinessSnapshot(clubId) {
   }
 }
 
+// ── MAWD Memory System ──
+// Stores learnings, preferences, and context that persists across conversations
+// Uses a simple key-value table: mawd_memory
+
+export async function getMemories(limit = 50) {
+  if (!SUPABASE_KEY) return [];
+  try {
+    return await supabaseQuery(
+      `mawd_memory?select=id,category,content,created_at&order=created_at.desc&limit=${limit}`
+    );
+  } catch (e) {
+    console.error('Memory read error:', e.message);
+    return [];
+  }
+}
+
+export async function saveMemory(category, content) {
+  if (!SUPABASE_KEY) return null;
+  try {
+    return await supabaseQuery('mawd_memory', {
+      method: 'POST',
+      body: { category, content, created_at: new Date().toISOString() },
+      headers: { 'Prefer': 'return=representation' }
+    });
+  } catch (e) {
+    console.error('Memory write error:', e.message);
+    return null;
+  }
+}
+
+export async function getMemoriesByCategory(category) {
+  if (!SUPABASE_KEY) return [];
+  try {
+    return await supabaseQuery(
+      `mawd_memory?category=eq.${category}&select=id,content,created_at&order=created_at.desc&limit=20`
+    );
+  } catch (e) {
+    return [];
+  }
+}
+
 // Export for use by other API routes
 export { supabaseQuery, CLUB_ID };
