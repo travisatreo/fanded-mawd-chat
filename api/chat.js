@@ -1,6 +1,6 @@
 import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from './brain.js';
-import { getBusinessSnapshot, getMemories, saveMemory } from './supabase.js';
-import { executeTool } from './google.js';
+import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from './supabase.js';
+import { executeTool, sendEmail } from './google.js';
 
 // ── Tool definitions for Anthropic tool_use ──
 const TOOLS = [
@@ -50,6 +50,29 @@ const TOOLS = [
     }
   },
   {
+    name: 'send_fan_blast',
+    description: 'Send a bulk email blast to all fans in the fan_contacts database. Emails go out from travis@travisatreo.com via Gmail. Only fans with do_not_email=false receive it. Use {{name}} in the body to personalize with the fan\'s name. ALWAYS confirm the subject, body, and fan count with Travis before sending. Show him the draft first and wait for approval.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        subject: { type: 'string', description: 'Email subject line' },
+        body: { type: 'string', description: 'Email body text. Use {{name}} for personalization.' },
+        testOnly: { type: 'boolean', description: 'If true, only sends to Travis as a test. Default false.' },
+        limit: { type: 'number', description: 'Max number of fans to email (optional, for testing smaller batches)' }
+      },
+      required: ['subject', 'body']
+    }
+  },
+  {
+    name: 'get_fan_stats',
+    description: 'Get current fan contact database stats: total contacts, emailable count, top fans, platform breakdown. Use this when Travis asks about his fan base, email list size, or before sending a blast.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
     name: 'save_memory',
     description: 'Save something important to MAWD\'s persistent memory so you remember it in future conversations. Use this to remember: preferences Travis expresses, decisions he makes, people he mentions, deadlines, context about his business that isn\'t in your brain data. Do NOT save obvious or trivial things.',
     input_schema: {
@@ -86,7 +109,14 @@ export default async function handler(req, res) {
     // ── Direct action execution (from approval card) ──
     if (executeAction) {
       try {
-        const result = await executeTool(executeAction.tool, executeAction.input);
+        let result;
+        if (executeAction.tool === 'send_fan_blast') {
+          result = await executeFanBlast(executeAction.input);
+        } else if (executeAction.tool === 'get_fan_stats') {
+          result = await getFanStats();
+        } else {
+          result = await executeTool(executeAction.tool, executeAction.input);
+        }
         return res.status(200).json({
           reply: null,
           agent: agent || 'compass',
@@ -233,6 +263,14 @@ KNOWN CONTACTS (use these for email drafts):
 
 ALWAYS show a brief text message BEFORE the tool use explaining what you're doing. Keep it to one sentence like "Drafting the reply to Max now." then use the tool.
 
+FAN BLAST:
+You have send_fan_blast and get_fan_stats tools. Travis has 797 fan contacts in his database (693 emailable). When he asks to send a fan blast or email his fans:
+1. Draft the email copy and show it to him
+2. Use send_fan_blast with testOnly=true first so he can check his inbox
+3. Once he approves, use send_fan_blast to send to all fans
+The blast respects CAN-SPAM: fans who unsubscribed (do_not_email=true) are automatically excluded.
+Use {{name}} in the body to personalize with each fan's name.
+
 MEMORY:
 You have a save_memory tool. Use it to remember important things Travis tells you:
 - When he expresses a preference ("I prefer X" or "don't do Y") → save as 'preference'
@@ -294,7 +332,15 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
       if (block.type === 'text') {
         text += block.text;
       } else if (block.type === 'tool_use') {
-        if (block.name === 'save_memory') {
+        if (block.name === 'get_fan_stats') {
+          // Auto-execute fan stats query — no approval needed
+          try {
+            const stats = await getFanStats();
+            text += `\n\n📊 Fan database: ${stats.total} contacts, ${stats.emailable} emailable, ${stats.top_fans} top fans (score 60+), ${stats.with_phone} with phone.`;
+          } catch (e) {
+            text += '\n\n(Could not load fan stats: ' + e.message + ')';
+          }
+        } else if (block.name === 'save_memory') {
           // Auto-execute memory saves — no approval needed
           try {
             await saveMemory(block.input.category, block.input.content);
@@ -325,6 +371,60 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     console.error('Chat error:', err);
     return res.status(500).json({ error: 'Failed to reach MAWD: ' + err.message });
   }
+}
+
+// ── Fan blast execution ──
+async function getFanStats() {
+  const fans = await supabaseQuery(
+    'fan_contacts?select=email,do_not_email,fan_score,phone,source&limit=1000'
+  );
+  return {
+    total: fans.length,
+    emailable: fans.filter(f => !f.do_not_email && f.email).length,
+    do_not_email: fans.filter(f => f.do_not_email).length,
+    with_phone: fans.filter(f => f.phone).length,
+    top_fans: fans.filter(f => f.fan_score >= 60).length,
+    sources: {
+      fan_scores: fans.filter(f => f.source === 'fan_scores').length,
+      mailchimp: fans.filter(f => f.source === 'mailchimp').length,
+      fanded_club: fans.filter(f => f.source === 'fanded_club').length
+    }
+  };
+}
+
+async function executeFanBlast({ subject, body, testOnly, limit }) {
+  if (!subject || !body) throw new Error('subject and body are required');
+
+  let fans;
+  if (testOnly) {
+    fans = [{ email: 'travis@travisatreo.com', name: 'Travis Atreo' }];
+  } else {
+    let path = 'fan_contacts?do_not_email=eq.false&email=not.is.null&select=email,name,fan_score&order=fan_score.desc.nullslast';
+    if (limit) path += `&limit=${limit}`;
+    fans = await supabaseQuery(path);
+  }
+
+  const results = { sent: 0, failed: 0, errors: [], total: fans.length };
+
+  for (const fan of fans) {
+    try {
+      await sendEmail({
+        to: fan.email,
+        subject,
+        body: body.replace(/\{\{name\}\}/g, fan.name || 'there')
+      });
+      results.sent++;
+    } catch (err) {
+      results.failed++;
+      if (results.errors.length < 10) {
+        results.errors.push({ email: fan.email, error: (err.message || '').substring(0, 100) });
+      }
+    }
+    // Rate limit: 500ms between sends
+    if (fans.length > 1) await new Promise(r => setTimeout(r, 500));
+  }
+
+  return results;
 }
 
 function buildDemoPrompt(agent) {
