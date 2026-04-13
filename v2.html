@@ -300,6 +300,121 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .blast-cancel{background:transparent;color:var(--text-2);}
 .blast-status{font-size:13px;text-align:center;padding:8px;color:var(--gold);font-weight:500;}
 
+/* ── VOICE NOTE PREVIEW OVERLAY ── */
+.vn-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;
+  background:var(--bg);display:flex;flex-direction:column;
+  animation:blastSlideUp 0.25s ease;
+}
+.vn-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.vn-header-title{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--gold);}
+.vn-steps{display:flex;gap:6px;align-items:center;}
+.vn-step{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.2s;}
+.vn-step.active{background:var(--gold);width:24px;border-radius:4px;}
+.vn-step.done{background:var(--gold);opacity:0.4;}
+.vn-body{flex:1;overflow-y:auto;padding:24px 20px;}
+.vn-footer{
+  padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;flex-direction:column;gap:10px;
+}
+.vn-footer-actions{display:flex;gap:10px;}
+.vn-footer-actions button{
+  flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);
+  font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;min-height:50px;
+}
+.vn-btn-back{background:transparent;color:var(--text-2);border-color:var(--border);}
+.vn-btn-next{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+.vn-btn-next:disabled{opacity:0.4;cursor:not-allowed;}
+.vn-btn-test{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+.vn-btn-send{background:var(--surface);border-color:var(--border);color:var(--text-2);}
+.vn-btn-send.ready{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+.vn-status{font-size:13px;text-align:center;padding:8px;color:var(--gold);font-weight:500;}
+
+/* Preview player */
+.vn-player{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:24px;margin-bottom:20px;
+}
+.vn-player-title-input{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;color:var(--text);font-family:var(--font);font-size:16px;font-weight:500;
+  margin-bottom:16px;outline:none;
+}
+.vn-player-title-input:focus{border-color:var(--gold);}
+.vn-waveform{display:flex;align-items:end;justify-content:center;gap:2px;height:48px;margin-bottom:12px;}
+.vn-waveform-bar{width:3px;border-radius:3px;transition:all 0.15s;cursor:pointer;}
+.vn-player-controls{display:flex;align-items:center;gap:12px;}
+.vn-play-btn{
+  width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+}
+.vn-play-btn:active{transform:scale(0.95);}
+.vn-time{font-family:var(--font-mono);font-size:13px;color:var(--text-2);}
+.vn-progress-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;cursor:pointer;}
+.vn-progress-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 0.1s linear;}
+
+/* Fan preview card */
+.vn-fan-preview{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:20px;
+}
+.vn-fan-preview-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:16px;}
+.vn-email-preview{
+  background:#1A1A1A;border-radius:12px;padding:24px;border:1px solid var(--border);
+}
+.vn-email-from{font-size:12px;color:var(--text-3);margin-bottom:4px;}
+.vn-email-subject{font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;}
+.vn-email-waveform{
+  display:flex;align-items:end;justify-content:center;gap:2px;height:40px;
+  padding:16px 20px;background:var(--surface-2);border-radius:12px;margin-bottom:16px;cursor:pointer;
+}
+.vn-email-cta{
+  display:block;width:100%;padding:14px;border-radius:12px;background:var(--gold);
+  color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;text-align:center;
+  border:none;cursor:pointer;
+}
+
+/* Upload button */
+.journal-upload-btn{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:14px 20px;border-radius:var(--radius);
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-2);font-family:var(--font);font-size:14px;font-weight:500;
+  cursor:pointer;transition:all 0.15s;margin-top:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.journal-upload-btn:hover{border-color:var(--gold);color:var(--gold);}
+.journal-upload-btn:active{transform:scale(0.98);}
+
+/* Sent letters */
+.journal-sent-letter{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;
+}
+.journal-sent-letter:hover{border-color:var(--border-hover);}
+.journal-sent-letter-header{display:flex;align-items:center;justify-content:space-between;}
+.journal-sent-letter-title{font-size:14px;font-weight:500;color:var(--text);}
+.journal-sent-letter-meta{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.journal-sent-letter-date{font-size:12px;color:var(--text-3);}
+.journal-sent-letter-dur{font-size:12px;color:var(--text-3);font-family:var(--font-mono);}
+.journal-sent-letter-badge{
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;
+  padding:4px 10px;border-radius:6px;
+}
+.journal-sent-letter-badge.sent{background:var(--gold-dim);color:var(--gold);}
+.journal-sent-letter-badge.draft{background:var(--surface-2);color:var(--text-3);}
+
+/* Mini stats on sent letter */
+.journal-sent-stats{
+  display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+}
+.journal-sent-stat{text-align:center;flex:1;}
+.journal-sent-stat-value{font-size:16px;font-weight:600;color:var(--gold);font-family:var(--font-mono);}
+.journal-sent-stat-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;}
+
 /* ── AGENT DASHBOARD ── */
 .dash-header{margin-bottom:24px;}
 .dash-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -397,6 +512,28 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .journal-header{margin-bottom:24px;}
 .journal-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px;}
 .journal-subtitle{font-size:13px;color:var(--text-3);}
+
+/* Journal view toggle */
+.journal-view-toggle{
+  display:flex;gap:4px;margin-top:12px;background:var(--surface);border-radius:10px;padding:3px;
+  border:1px solid var(--border);
+}
+.journal-toggle-btn{
+  flex:1;padding:8px 12px;border-radius:8px;border:none;
+  font-family:var(--font);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all 0.15s;color:var(--text-3);background:transparent;
+  -webkit-tap-highlight-color:transparent;
+}
+.journal-toggle-btn.active{background:var(--surface-2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.journal-toggle-btn:hover:not(.active){color:var(--text-2);}
+
+/* Fan preview letter cards */
+.fan-letter-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;
+}
+.fan-letter-card:hover{border-color:var(--border-hover);}
+.fan-letter-card.has-audio{border-left:3px solid var(--gold);}
 
 .journal-record-section{margin-bottom:32px;}
 .journal-record-btn{
@@ -633,8 +770,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <div class="journal-header">
           <h2 class="journal-title">Journal</h2>
           <p class="journal-subtitle">Your fans are the heroes. You're the guide. Talk to them.</p>
+          <!-- Artist / Fan toggle -->
+          <div class="journal-view-toggle" id="journalViewToggle">
+            <button class="journal-toggle-btn active" data-mode="artist" id="journalToggleArtist">Your View</button>
+            <button class="journal-toggle-btn" data-mode="fan" id="journalToggleFan">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Fan Preview
+            </button>
+          </div>
         </div>
 
+        <!-- ARTIST VIEW -->
+        <div id="journalArtistView">
         <div class="journal-record-section">
           <button class="journal-record-btn" id="journalRecordBtn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -647,10 +793,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               <button class="journal-cancel-btn" id="journalCancelBtn">Cancel</button>
               <button class="journal-send-btn" id="journalSendBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                Send to fans
+                Preview &amp; Send
               </button>
             </div>
           </div>
+
+          <!-- Upload button -->
+          <button class="journal-upload-btn" id="journalUploadBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Upload MP3, voice memo, or audio file</span>
+          </button>
+          <input type="file" id="journalFileInput" accept="audio/*,.mp3,.m4a,.wav,.aac,.caf,.ogg,.webm,.mp4" style="display:none;">
+        </div>
+
+        <!-- Sent Letters -->
+        <div id="journalSentLetters" style="display:none;margin-bottom:24px;">
+          <div class="journal-section-label">Sent Letters</div>
+          <div id="journalSentLettersList"></div>
         </div>
 
         <!-- MAWD Suggested Topics -->
@@ -720,6 +879,31 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             <button onclick="refreshSuggestions()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 20px;color:var(--text-2);font-family:var(--font);font-size:13px;cursor:pointer;">Ask MAWD for ideas</button>
           </div>
         </div>
+        </div><!-- /journalArtistView -->
+
+        <!-- FAN PREVIEW VIEW -->
+        <div id="journalFanView" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);opacity:0.6;animation:waveformPulse 1.5s ease-in-out infinite;"></div>
+            <span style="font-size:10px;font-weight:600;color:var(--gold);opacity:0.6;text-transform:uppercase;letter-spacing:0.2em;">Fan Preview Mode</span>
+          </div>
+          <p style="font-size:12px;color:var(--text-3);text-align:center;margin-bottom:24px;">This is what your fans see when they open the app</p>
+
+          <!-- Active voice note hero -->
+          <div id="fanPreviewHero">
+            <div style="text-align:center;margin-bottom:24px;">
+              <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--surface-2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold);opacity:0.3;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>
+              </div>
+              <div style="font-size:15px;color:var(--text-2);margin-bottom:4px;">No voice notes sent yet</div>
+              <div style="font-size:12px;color:var(--text-3);">Record or upload a voice note and send it to see the fan experience here</div>
+            </div>
+          </div>
+
+          <!-- Previous letters (fan view) -->
+          <div id="fanPreviewLetters"></div>
+        </div><!-- /journalFanView -->
+
       </div>
     </div>
 
@@ -1607,98 +1791,572 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     audioChunks = [];
   });
 
+  // ── Upload handler ──
+  var journalUploadBtn = document.getElementById('journalUploadBtn');
+  var journalFileInput = document.getElementById('journalFileInput');
+
+  journalUploadBtn.addEventListener('click', function(){
+    journalFileInput.click();
+  });
+
+  journalFileInput.addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    journalFileInput.value = '';
+
+    // Read file as data URL
+    var reader = new FileReader();
+    reader.onloadend = function(){
+      var dataUrl = reader.result;
+      // Get duration from audio element
+      var tempAudio = new Audio(dataUrl);
+      tempAudio.addEventListener('loadedmetadata', function(){
+        var dur = Math.round(tempAudio.duration) || 0;
+        openVoiceNotePreview(dataUrl, dur, file.name);
+      });
+      // Fallback if metadata doesn't load
+      tempAudio.addEventListener('error', function(){
+        openVoiceNotePreview(dataUrl, 0, file.name);
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ── Recording → Preview (instead of direct send) ──
   journalSendBtn.addEventListener('click', function(){
     var duration = recordSeconds;
     stopRecording();
-    var m = Math.floor(duration/60);
-    var s = (duration%60).toString().padStart(2,'0');
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
-    // Show entry immediately with processing state
-    var entry = document.createElement('div');
-    entry.className = 'journal-entry';
-    entry.innerHTML = '<div class="journal-entry-header">' +
-      '<span class="journal-entry-date">'+dateStr+'</span>' +
-      '<span class="journal-entry-stats" id="journalEntryStatus">MAWD is listening...</span>' +
-      '</div><div class="journal-entry-preview">' +
-      '<div class="journal-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' +
-      '<div class="journal-entry-text"><div class="journal-entry-title">Voice note</div>' +
-      '<div class="journal-entry-summary" id="journalEntrySummary">Transcribing and generating MAWD summary...</div></div>' +
-      '<span class="journal-entry-duration">'+m+':'+s+'</span></div>';
-    var list = document.getElementById('journalSentList');
-    var label = list.querySelector('.journal-section-label');
-    label.after(entry);
+    if(audioChunks.length === 0){
+      return; // nothing recorded
+    }
 
-    // Convert recorded audio to base64 and send to backend
-    if(audioChunks.length > 0){
-      var blob = new Blob(audioChunks, {type:'audio/webm'});
-      var reader = new FileReader();
-      reader.onloadend = function(){
-        var base64 = reader.result.split(',')[1]; // strip data:audio/webm;base64,
-        fetch('/api/journal', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({audio: base64, title: 'Voice note'})
-        })
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          if(data.error){
-            entry.querySelector('#journalEntryStatus').textContent = 'Processing failed';
-            entry.querySelector('#journalEntrySummary').textContent = data.error;
+    var blob = new Blob(audioChunks, {type:'audio/webm'});
+    audioChunks = [];
+    var reader = new FileReader();
+    reader.onloadend = function(){
+      openVoiceNotePreview(reader.result, duration, null);
+    };
+    reader.readAsDataURL(blob);
+  });
+
+  // ── Sent Letters (localStorage) ──
+  function loadSentLetters(){
+    try {
+      var letters = JSON.parse(localStorage.getItem('mawd_sent_letters') || '[]');
+      var container = document.getElementById('journalSentLettersList');
+      var section = document.getElementById('journalSentLetters');
+      if(letters.length === 0){ section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      container.innerHTML = '';
+      letters.forEach(function(letter){
+        var m = Math.floor((letter.duration||0)/60);
+        var s = ((letter.duration||0)%60).toString().padStart(2,'0');
+        var div = document.createElement('div');
+        div.className = 'journal-sent-letter';
+        div.innerHTML =
+          '<div class="journal-sent-letter-header">' +
+            '<div>' +
+              '<div class="journal-sent-letter-title">'+escapeHtml(letter.title)+'</div>' +
+              '<div class="journal-sent-letter-meta">' +
+                '<span class="journal-sent-letter-date">'+escapeHtml(letter.date)+'</span>' +
+                '<span class="journal-sent-letter-dur">'+m+':'+s+'</span>' +
+              '</div>' +
+            '</div>' +
+            '<span class="journal-sent-letter-badge '+(letter.blastSent?'sent':'draft')+'">'+(letter.blastSent?'Sent':'Draft')+'</span>' +
+          '</div>' +
+          (letter.blastSent ? '<div class="journal-sent-stats">' +
+            '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.sent:'-')+'</div><div class="journal-sent-stat-label">Sent</div></div>' +
+            '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.opened:'-')+'</div><div class="journal-sent-stat-label">Opened</div></div>' +
+            '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.listened:'-')+'</div><div class="journal-sent-stat-label">Listened</div></div>' +
+          '</div>' : '');
+        // Click to reopen preview for drafts, or show stats for sent
+        div.addEventListener('click', function(){
+          if(!letter.blastSent && letter.audioDataUrl){
+            openVoiceNotePreview(letter.audioDataUrl, letter.duration, null, letter);
+          }
+        });
+        container.appendChild(div);
+      });
+    } catch(e){}
+  }
+
+  function saveSentLetter(letter){
+    try {
+      var letters = JSON.parse(localStorage.getItem('mawd_sent_letters') || '[]');
+      // Update existing or add new
+      var idx = letters.findIndex(function(l){ return l.id === letter.id; });
+      if(idx >= 0) letters[idx] = letter;
+      else letters.unshift(letter);
+      localStorage.setItem('mawd_sent_letters', JSON.stringify(letters));
+      loadSentLetters();
+    } catch(e){}
+  }
+
+  // Load on init
+  loadSentLetters();
+
+  // ── Journal View Toggle (Artist / Fan Preview) ──
+  var journalToggleArtist = document.getElementById('journalToggleArtist');
+  var journalToggleFan = document.getElementById('journalToggleFan');
+  var journalArtistView = document.getElementById('journalArtistView');
+  var journalFanView = document.getElementById('journalFanView');
+
+  journalToggleArtist.addEventListener('click', function(){
+    journalToggleArtist.classList.add('active');
+    journalToggleFan.classList.remove('active');
+    journalArtistView.style.display = 'block';
+    journalFanView.style.display = 'none';
+  });
+
+  journalToggleFan.addEventListener('click', function(){
+    journalToggleFan.classList.add('active');
+    journalToggleArtist.classList.remove('active');
+    journalArtistView.style.display = 'none';
+    journalFanView.style.display = 'block';
+    renderFanPreview();
+  });
+
+  function renderFanPreview(){
+    var hero = document.getElementById('fanPreviewHero');
+    var lettersList = document.getElementById('fanPreviewLetters');
+    var letters = [];
+    try { letters = JSON.parse(localStorage.getItem('mawd_sent_letters') || '[]'); } catch(e){}
+
+    var sentLetters = letters.filter(function(l){ return l.blastSent; });
+
+    // Hero: most recent sent letter
+    if(sentLetters.length > 0){
+      var latest = sentLetters[0];
+      var durStr = formatVNDuration(latest.duration);
+      hero.innerHTML =
+        '<div style="text-align:center;margin-bottom:24px;">' +
+          '<div id="fanHeroPlay" style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--surface-2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold);cursor:pointer;transition:transform 0.15s;">' +
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>' +
+          '</div>' +
+          '<div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">'+escapeHtml(latest.title)+'</div>' +
+          '<div style="font-size:12px;color:var(--text-3);">'+durStr+' · A new letter from Travis</div>' +
+          '<div style="margin-top:16px;display:flex;align-items:end;justify-content:center;gap:2px;height:40px;" id="fanHeroWaveform"></div>' +
+        '</div>';
+
+      // Waveform bars
+      var wf = document.getElementById('fanHeroWaveform');
+      for(var i=0; i<35; i++){
+        var seed = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+        var h = 20 + (seed - Math.floor(seed)) * 70;
+        var bar = document.createElement('div');
+        bar.style.cssText = 'width:3px;border-radius:3px;height:'+h+'%;background:var(--border);opacity:0.3;transition:all 0.15s;';
+        wf.appendChild(bar);
+      }
+
+      // Playback on hero
+      if(latest.audioDataUrl){
+        var fanAudio = new Audio(latest.audioDataUrl);
+        var fanPlaying = false;
+        var playEl = document.getElementById('fanHeroPlay');
+        playEl.addEventListener('click', function(){
+          if(fanPlaying){ fanAudio.pause(); } else { fanAudio.play(); }
+          fanPlaying = !fanPlaying;
+          playEl.style.transform = fanPlaying ? 'scale(1.05)' : '';
+          playEl.innerHTML = fanPlaying ?
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><rect x="5" y="3" width="5" height="18" rx="1"/><rect x="14" y="3" width="5" height="18" rx="1"/></svg>' :
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>';
+        });
+        fanAudio.addEventListener('timeupdate', function(){
+          if(!fanAudio.duration) return;
+          var pct = (fanAudio.currentTime / fanAudio.duration) * 100;
+          var bars = wf.children;
+          for(var b=0; b<bars.length; b++){
+            var barPct = (b / bars.length) * 100;
+            bars[b].style.background = barPct <= pct ? 'var(--gold)' : 'var(--border)';
+            bars[b].style.opacity = barPct <= pct ? '0.8' : '0.3';
+          }
+        });
+        fanAudio.addEventListener('ended', function(){
+          fanPlaying = false;
+          playEl.style.transform = '';
+          playEl.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>';
+          var bars = wf.children;
+          for(var b=0; b<bars.length; b++){ bars[b].style.background='var(--border)'; bars[b].style.opacity='0.3'; }
+        });
+      }
+    } else {
+      hero.innerHTML =
+        '<div style="text-align:center;margin-bottom:24px;">' +
+          '<div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--surface-2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold);opacity:0.3;">' +
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>' +
+          '</div>' +
+          '<div style="font-size:15px;color:var(--text-2);margin-bottom:4px;">No voice notes sent yet</div>' +
+          '<div style="font-size:12px;color:var(--text-3);">Record or upload a voice note and send it to see the fan experience here</div>' +
+        '</div>';
+    }
+
+    // Previous letters list
+    lettersList.innerHTML = '';
+    if(letters.length > 0){
+      var label = document.createElement('div');
+      label.className = 'journal-section-label';
+      label.textContent = 'Previous letters';
+      label.style.marginTop = '8px';
+      lettersList.appendChild(label);
+
+      letters.forEach(function(letter, i){
+        var durStr = formatVNDuration(letter.duration);
+        var card = document.createElement('div');
+        card.className = 'fan-letter-card' + (letter.audioDataUrl ? ' has-audio' : '');
+        card.style.marginLeft = (i * 2) + 'px';
+        card.style.marginRight = (i * 2) + 'px';
+        card.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+            '<div>' +
+              '<div style="font-size:14px;font-weight:500;color:var(--text);">' +
+                (letter.blastSent ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:8px;"></span>' : '') +
+                escapeHtml(letter.title) +
+              '</div>' +
+              '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">'+escapeHtml(letter.date)+'</div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="font-size:12px;color:var(--text-3);font-family:var(--font-mono);">'+durStr+'</span>' +
+              '<div style="width:28px;height:28px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;">' +
+                '<svg width="10" height="10" viewBox="0 0 10 10" fill="var(--gold)"><polygon points="2,0 2,10 9,5"/></svg>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        lettersList.appendChild(card);
+      });
+    }
+  }
+
+  function formatVNDuration(s){
+    if(!s) return '0:00';
+    return Math.floor(s/60)+':'+((s%60).toString().padStart(2,'0'));
+  }
+
+  // ── Voice Note Preview Overlay ──
+  function openVoiceNotePreview(audioDataUrl, duration, fileName, existingLetter){
+    var step = 1; // 1=preview, 2=fan view, 3=send
+    var testSent = false;
+    var previewAudio = new Audio(audioDataUrl);
+    var isPlaying = false;
+    var vnTitle = existingLetter ? existingLetter.title : (fileName ? fileName.replace(/\.[^.]+$/,'') : 'Voice note — ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    var letterId = existingLetter ? existingLetter.id : 'vn_' + Date.now();
+    var formatDur = function(s){
+      if(!s) return '0:00';
+      return Math.floor(s/60)+':'+((s%60).toString().padStart(2,'0'));
+    };
+
+    var overlay = document.createElement('div');
+    overlay.className = 'vn-overlay';
+
+    function render(){
+      isPlaying = false;
+      if(previewAudio){ previewAudio.pause(); previewAudio.currentTime = 0; }
+
+      var headerTitle = step === 1 ? 'Preview' : step === 2 ? 'Fan View' : 'Send to Club';
+      overlay.innerHTML =
+        '<div class="vn-header">' +
+          '<span class="vn-header-title">'+headerTitle+'</span>' +
+          '<div class="vn-steps">' +
+            '<div class="vn-step '+(step===1?'active':step>1?'done':'')+'"></div>' +
+            '<div class="vn-step '+(step===2?'active':step>2?'done':'')+'"></div>' +
+            '<div class="vn-step '+(step===3?'active':'')+'"></div>' +
+          '</div>' +
+          '<button class="blast-close" id="vnClose">&times;</button>' +
+        '</div>' +
+        '<div class="vn-body" id="vnBody"></div>' +
+        '<div class="vn-footer" id="vnFooter"></div>';
+
+      document.body.appendChild(overlay);
+      overlay.querySelector('#vnClose').addEventListener('click', function(){ cleanup(); });
+      renderStep();
+    }
+
+    function generateWaveformBars(count, seedOffset){
+      var html = '';
+      for(var i=0; i<count; i++){
+        var seed = Math.sin((i + (seedOffset||0)) * 12.9898 + 78.233) * 43758.5453;
+        var h = 20 + (seed - Math.floor(seed)) * 70;
+        html += '<div class="vn-waveform-bar" data-idx="'+i+'" style="height:'+h+'%;background:var(--border);opacity:0.3;"></div>';
+      }
+      return html;
+    }
+
+    function renderStep(){
+      var body = overlay.querySelector('#vnBody');
+      var footer = overlay.querySelector('#vnFooter');
+
+      if(step === 1){
+        // STEP 1: Preview — listen, edit title
+        body.innerHTML =
+          '<div class="vn-player">' +
+            '<input class="vn-player-title-input" id="vnTitleInput" value="'+escapeHtml(vnTitle)+'" placeholder="Title for your fans...">' +
+            (fileName ? '<div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">📎 '+escapeHtml(fileName)+'</div>' : '') +
+            '<div class="vn-waveform" id="vnWaveform">'+generateWaveformBars(40, letterId.length)+'</div>' +
+            '<div class="vn-player-controls">' +
+              '<button class="vn-play-btn" id="vnPlayBtn">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>' +
+              '</button>' +
+              '<span class="vn-time" id="vnTimeDisplay">0:00 / '+formatDur(duration)+'</span>' +
+              '<div class="vn-progress-bar" id="vnProgressBar"><div class="vn-progress-fill" id="vnProgressFill" style="width:0%"></div></div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:center;padding:8px;"><span style="font-size:12px;color:var(--text-3);">Listen back before your fans hear it</span></div>';
+
+        footer.innerHTML =
+          '<div class="vn-footer-actions">' +
+            '<button class="vn-btn-back" id="vnDiscard">Discard</button>' +
+            '<button class="vn-btn-next" id="vnNext">See Fan Preview →</button>' +
+          '</div>';
+
+        // Wire playback
+        wirePlayback();
+
+        // Wire title edit
+        overlay.querySelector('#vnTitleInput').addEventListener('input', function(e){ vnTitle = e.target.value; });
+
+        // Wire buttons
+        overlay.querySelector('#vnDiscard').addEventListener('click', function(){ cleanup(); });
+        overlay.querySelector('#vnNext').addEventListener('click', function(){ step = 2; renderStep(); });
+
+      } else if(step === 2){
+        // STEP 2: Fan view — what the email + web app look like
+        body.innerHTML =
+          '<div class="vn-fan-preview">' +
+            '<div class="vn-fan-preview-label">What fans see in their inbox</div>' +
+            '<div class="vn-email-preview">' +
+              '<div class="vn-email-from">From: Travis Atreo &lt;travis@travisatreo.com&gt;</div>' +
+              '<div class="vn-email-subject">New letter from Travis: '+escapeHtml(vnTitle)+'</div>' +
+              '<div style="font-size:14px;color:var(--text-2);line-height:1.7;margin-bottom:16px;">' +
+                'Hey <em style="color:var(--gold)">[fan name]</em>,<br><br>' +
+                'I just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.' +
+              '</div>' +
+              '<div class="vn-email-waveform" id="vnFanWaveform">'+generateWaveformBars(30, 99)+'</div>' +
+              '<button class="vn-email-cta">▶ Listen Now</button>' +
+              '<div style="font-size:11px;color:var(--text-3);text-align:center;margin-top:12px;">Talk soon,<br>Travis</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="vn-fan-preview">' +
+            '<div class="vn-fan-preview-label">What fans see in the app</div>' +
+            '<div style="background:var(--surface-2);border-radius:12px;padding:20px;text-align:center;">' +
+              '<div style="width:80px;height:80px;border-radius:50%;background:var(--gold-dim);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">' +
+                '<svg width="24" height="24" viewBox="0 0 24 24" fill="var(--gold)"><polygon points="6,3 20,12 6,21"/></svg>' +
+              '</div>' +
+              '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px;">'+escapeHtml(vnTitle)+'</div>' +
+              '<div style="font-size:12px;color:var(--text-3);">'+formatDur(duration)+' · A new letter from Travis</div>' +
+              '<div style="margin-top:16px;display:flex;align-items:end;justify-content:center;gap:2px;height:40px;">'+generateWaveformBars(30, 42)+'</div>' +
+            '</div>' +
+          '</div>';
+
+        footer.innerHTML =
+          '<div class="vn-status" id="vnTestStatus"></div>' +
+          '<div class="vn-footer-actions">' +
+            '<button class="vn-btn-back" id="vnBack">← Back</button>' +
+            '<button class="vn-btn-test" id="vnTestBtn" style="flex:2;">Send Test to Me First</button>' +
+          '</div>' +
+          '<div class="vn-footer-actions">' +
+            '<button class="vn-btn-send" id="vnSendToFans"'+(testSent?' class="ready"':'')+'>'+
+              (testSent ? 'Send to All 693 Fans' : 'Send to All 693 Fans') +
+            '</button>' +
+          '</div>';
+
+        overlay.querySelector('#vnBack').addEventListener('click', function(){ step = 1; renderStep(); });
+
+        // Test send from fan preview
+        var testStatusEl = overlay.querySelector('#vnTestStatus');
+        var testBtnFan = overlay.querySelector('#vnTestBtn');
+        if(testSent){
+          testBtnFan.textContent = '✓ Test Sent — Check Your Inbox';
+          testBtnFan.disabled = true;
+          testStatusEl.textContent = 'Test delivered to travis@travisatreo.com';
+          overlay.querySelector('#vnSendToFans').classList.add('ready');
+        }
+
+        testBtnFan.addEventListener('click', function(){
+          testBtnFan.textContent = 'Sending test...';
+          testBtnFan.disabled = true;
+          testStatusEl.textContent = '';
+          var subject = 'New letter from Travis: ' + vnTitle;
+          var emailBody = 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.\n\n[Listen Now]\n\nTalk soon,\nTravis';
+          var testAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody, testOnly:true}};
+          fetch('/api/chat',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({executeAction:testAction, agent:currentAgent, mode:'personal'})
+          })
+          .then(function(r){return r.json();})
+          .then(function(data){
+            if(data.actionResult && data.actionResult.success){
+              testBtnFan.textContent = '✓ Test Sent — Check Your Inbox';
+              testStatusEl.textContent = 'Test delivered to travis@travisatreo.com';
+              testSent = true;
+              overlay.querySelector('#vnSendToFans').classList.add('ready');
+            } else {
+              testBtnFan.textContent = 'Test Failed — Retry';
+              testStatusEl.textContent = (data.actionResult ? data.actionResult.error : 'Connection issue');
+              testBtnFan.disabled = false;
+            }
+          })
+          .catch(function(){ testBtnFan.textContent = 'Test Failed — Retry'; testBtnFan.disabled = false; });
+        });
+
+        // Send to all fans — with confirmation popup
+        overlay.querySelector('#vnSendToFans').addEventListener('click', function(){
+          if(!testSent){
+            testStatusEl.textContent = 'Send a test to yourself first so you can check it looks right.';
+            testStatusEl.style.color = 'var(--pulse)';
             return;
           }
-          // Update with real data
-          entry.querySelector('#journalEntryStatus').textContent = '695 fans · Ready to send';
-          entry.querySelector('#journalEntrySummary').innerHTML =
-            '<strong style="color:var(--gold);font-size:11px;letter-spacing:0.04em;">MAWD SUMMARY</strong><br>' +
-            escapeHtml(data.mawd_summary);
-          entry.querySelector('.journal-entry-title').textContent = data.title || 'Voice note';
+          // Show confirmation overlay
+          showSendConfirmation();
+        });
 
-          // Store entry data for blast
-          entry.dataset.entryId = data.id;
-          entry.dataset.dropUrl = data.dropUrl;
-          entry.dataset.summary = data.mawd_summary;
+      } else if(step === 3){
+        // STEP 3: Sending state (shown after confirmation)
+        body.innerHTML =
+          '<div style="text-align:center;padding:40px 20px;">' +
+            '<div style="font-size:48px;margin-bottom:16px;">📬</div>' +
+            '<div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px;" id="vnSendingTitle">Sending to all fans...</div>' +
+            '<div style="font-size:13px;color:var(--text-3);" id="vnSendingStatus">This may take a few minutes</div>' +
+          '</div>';
+        footer.innerHTML = '';
 
-          // Add "Send to Fans" button
-          var blastBtn = document.createElement('button');
-          blastBtn.style.cssText = 'margin-top:12px;width:100%;padding:12px;border-radius:10px;border:1px solid var(--gold);background:var(--gold-dim);color:var(--gold);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;';
-          blastBtn.textContent = 'Send to Fans';
-          blastBtn.addEventListener('click', function(){
-            // Open blast preview with the drop link
-            var blastAction = {
-              tool: 'send_fan_blast',
-              input: {
-                subject: 'New voice note from Travis',
-                body: 'Hey {{name}},\\n\\nI just recorded something for you. Tap the link to listen:\\n\\n' + data.dropUrl + '\\n\\nTalk soon,\\nTravis'
-              }
-            };
-            openBlastPreview(blastAction, entry);
-          });
-          entry.appendChild(blastBtn);
-
-          // Add playback
-          var playBtn = entry.querySelector('.journal-play-btn');
-          var audioEl = new Audio(data.audio_url || data.audioUrl);
-          playBtn.addEventListener('click', function(e){
-            e.stopPropagation();
-            if(audioEl.paused){ audioEl.play(); playBtn.style.background='var(--gold)'; }
-            else { audioEl.pause(); playBtn.style.background=''; }
-          });
-          audioEl.addEventListener('ended', function(){ playBtn.style.background=''; });
+        // Execute the send
+        var subject = 'New letter from Travis: ' + vnTitle;
+        var emailBody = 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.\n\n[Listen Now]\n\nTalk soon,\nTravis';
+        var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody}};
+        fetch('/api/chat',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({executeAction:blastAction, agent:currentAgent, mode:'personal'})
         })
-        .catch(function(err){
-          entry.querySelector('#journalEntryStatus').textContent = 'Error';
-          entry.querySelector('#journalEntrySummary').textContent = 'Could not process: ' + err.message;
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(data.actionResult && data.actionResult.success){
+            var r = data.actionResult.result;
+            overlay.querySelector('#vnSendingTitle').textContent = 'Sent!';
+            overlay.querySelector('#vnSendingStatus').textContent = r.sent + ' emails delivered' + (r.failed ? ', ' + r.failed + ' failed' : '');
+            saveSentLetter({
+              id: letterId,
+              title: vnTitle,
+              date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+              duration: duration,
+              audioDataUrl: audioDataUrl,
+              blastSent: true,
+              stats: { sent: r.sent, opened: '-', listened: '-' }
+            });
+            typeMessage(currentAgent, 'Voice note "'+vnTitle+'" sent to ' + r.sent + ' fans!', [], null);
+            setTimeout(function(){ cleanup(); }, 2500);
+          } else {
+            overlay.querySelector('#vnSendingTitle').textContent = 'Failed';
+            overlay.querySelector('#vnSendingStatus').textContent = (data.actionResult ? data.actionResult.error : 'Connection issue');
+            footer.innerHTML = '<div class="vn-footer-actions"><button class="vn-btn-back" onclick="this.closest(\'.vn-overlay\').remove()">Close</button></div>';
+          }
+        })
+        .catch(function(){
+          overlay.querySelector('#vnSendingTitle').textContent = 'Failed';
+          overlay.querySelector('#vnSendingStatus').textContent = 'Connection error';
+        });
+      }
+    }
+
+    // Confirmation popup before sending to all fans
+    function showSendConfirmation(){
+      var confirmEl = document.createElement('div');
+      confirmEl.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;animation:blastSlideUp 0.15s ease;';
+      confirmEl.innerHTML =
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:340px;width:90%;text-align:center;">' +
+          '<div style="font-size:32px;margin-bottom:12px;">⚠️</div>' +
+          '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">Are you sure?</div>' +
+          '<div style="font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:20px;">This will send <strong style="color:var(--gold);">"'+escapeHtml(vnTitle)+'"</strong> to <strong style="color:var(--gold);">693 fans</strong> via email. This cannot be undone.</div>' +
+          '<div style="display:flex;gap:10px;">' +
+            '<button id="confirmCancel" style="flex:1;padding:14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;">Cancel</button>' +
+            '<button id="confirmSend" style="flex:1;padding:14px;border-radius:12px;background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;">Yes, Send to All</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(confirmEl);
+
+      confirmEl.querySelector('#confirmCancel').addEventListener('click', function(){ confirmEl.remove(); });
+      confirmEl.querySelector('#confirmSend').addEventListener('click', function(){
+        confirmEl.remove();
+        step = 3;
+        renderStep();
+      });
+    }
+
+    function wirePlayback(){
+      var playBtn = overlay.querySelector('#vnPlayBtn');
+      var progressBar = overlay.querySelector('#vnProgressBar');
+      var progressFill = overlay.querySelector('#vnProgressFill');
+      var timeDisplay = overlay.querySelector('#vnTimeDisplay');
+      var waveformBars = overlay.querySelectorAll('#vnWaveform .vn-waveform-bar');
+
+      if(!playBtn) return;
+
+      // Need fresh audio listeners since we recreate the DOM on step changes
+      previewAudio.removeEventListener('timeupdate', previewAudio._onTimeUpdate);
+      previewAudio.removeEventListener('ended', previewAudio._onEnded);
+
+      previewAudio._onTimeUpdate = function(){
+        if(!previewAudio.duration) return;
+        var pct = (previewAudio.currentTime / previewAudio.duration) * 100;
+        progressFill.style.width = pct + '%';
+        var cur = Math.floor(previewAudio.currentTime);
+        timeDisplay.textContent = formatDur(cur) + ' / ' + formatDur(Math.round(previewAudio.duration));
+        waveformBars.forEach(function(bar){
+          var idx = parseInt(bar.dataset.idx);
+          var barPct = (idx / waveformBars.length) * 100;
+          if(barPct <= pct){
+            bar.style.background = 'var(--gold)';
+            bar.style.opacity = '0.8';
+          } else {
+            bar.style.background = 'var(--border)';
+            bar.style.opacity = '0.3';
+          }
         });
       };
-      reader.readAsDataURL(blob);
-    } else {
-      entry.querySelector('#journalEntryStatus').textContent = 'No audio recorded';
-      entry.querySelector('#journalEntrySummary').textContent = 'Try recording again.';
+      previewAudio._onEnded = function(){
+        isPlaying = false;
+        playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>';
+      };
+      previewAudio.addEventListener('timeupdate', previewAudio._onTimeUpdate);
+      previewAudio.addEventListener('ended', previewAudio._onEnded);
+
+      playBtn.addEventListener('click', function(){
+        if(isPlaying){
+          previewAudio.pause();
+          playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>';
+        } else {
+          previewAudio.play();
+          playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--bg)"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>';
+        }
+        isPlaying = !isPlaying;
+      });
+
+      // Click on progress bar to seek
+      progressBar.addEventListener('click', function(e){
+        var rect = progressBar.getBoundingClientRect();
+        var pct = (e.clientX - rect.left) / rect.width;
+        previewAudio.currentTime = pct * previewAudio.duration;
+      });
     }
-    audioChunks = [];
-  });
+
+    function cleanup(){
+      if(previewAudio){ previewAudio.pause(); previewAudio = null; }
+      overlay.remove();
+    }
+
+    // Save as draft immediately
+    saveSentLetter({
+      id: letterId,
+      title: vnTitle,
+      date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+      duration: duration,
+      audioDataUrl: audioDataUrl,
+      blastSent: false
+    });
+
+    render();
+  }
 
   // ── Queue System ──
   // MAWD prepares items in the background. They show up here for approval.
@@ -1911,9 +2569,69 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   }
 
   function generateQuickReplies(text){
+    var replies = [];
     var lower = text.toLowerCase();
-    if(lower.indexOf('?') > -1) return ['Yes','Tell me more','What else?'];
-    return [];
+
+    // 1. Extract numbered options like (1) Do X ... (2) Do Y or 1. Do X ... 2. Do Y
+    var numberedPattern = /\((\d)\)\s+([^\n(]+)/g;
+    var dotPattern = /(?:^|\n)\s*(\d)\.\s+([^\n]+)/g;
+    var numbered = [];
+    var m;
+    while((m = numberedPattern.exec(text)) !== null){
+      var label = m[2].trim().replace(/\s*[-—–:].*/,'');
+      if(label.length > 50) label = label.substring(0, 47) + '...';
+      numbered.push(label);
+    }
+    if(numbered.length === 0){
+      while((m = dotPattern.exec(text)) !== null){
+        var label = m[2].trim().replace(/\s*[-—–:].*/,'');
+        if(label.length > 50) label = label.substring(0, 47) + '...';
+        numbered.push(label);
+      }
+    }
+    if(numbered.length >= 2) return numbered.slice(0, 4);
+
+    // 2. "Which of..." — look for quoted or bold options
+    if((lower.indexOf('which') > -1 || lower.indexOf('what should') > -1) && lower.indexOf('?') > -1){
+      var optPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
+      var opts = [];
+      while((m = optPattern.exec(text)) !== null){
+        opts.push(m[1] || m[2] || m[3]);
+      }
+      if(opts.length >= 2) return opts.slice(0, 4);
+    }
+
+    // 3. Confirmation questions
+    if(lower.indexOf('should i') > -1 || lower.indexOf('shall i') > -1 || lower.indexOf('want me to') > -1){
+      var actionMatch = text.match(/(?:should I|shall I|want me to)\s+(.{10,60}?)(?:\?|$)/i);
+      if(actionMatch){
+        var action = actionMatch[1].replace(/\?.*$/,'').trim();
+        if(action.length > 40) action = action.substring(0, 37) + '...';
+        replies = ['Yes, ' + action, 'Not yet', 'Something else first'];
+      } else {
+        replies = ['Yes, do it', 'Not yet', 'Something else first'];
+      }
+      return replies;
+    }
+
+    // 4. Specific patterns
+    if(lower.indexOf('what do you do') > -1 || lower.indexOf('what kind of') > -1){
+      return ["I'm a musician","I'm an actor","I'm a creator","I manage talent"];
+    }
+    if(lower.indexOf('want me to show') > -1 || lower.indexOf('want to see') > -1){
+      return ['Show me','Tell me more','What else can you do?'];
+    }
+
+    // 5. "Ready?" / approval
+    if(/ready\s*\?|good to go\?|sound good\?|make sense\?|approve/i.test(text)){
+      return ['Let\'s go', 'Hold on', 'Show me first'];
+    }
+
+    // 6. Generic fallback
+    if(lower.indexOf('?') > -1){
+      replies = ['Yes','Tell me more','What else?'];
+    }
+    return replies;
   }
 
   // Fallback: parse raw <send_email>{...} text if Claude outputs tool calls as text

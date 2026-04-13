@@ -979,26 +979,71 @@ body{display:flex;justify-content:center;}
 
   // ── Suggest quick replies based on response ──
   function generateQuickReplies(text){
-    // If the message ends with a question, generate contextual replies
     var replies = [];
     var lower = text.toLowerCase();
 
-    if(lower.indexOf('what do you do') > -1 || lower.indexOf('what kind of') > -1 || lower.indexOf('what type') > -1){
-      replies = ["I'm a musician","I'm an actor","I'm a creator","I manage talent"];
-    } else if(lower.indexOf('want me to show') > -1 || lower.indexOf('want to see') > -1){
-      replies = ['Show me','Tell me more','What else can you do?'];
-    } else if(lower.indexOf('should i') > -1 || lower.indexOf('shall i') > -1){
-      replies = ['Yes, do it','Tell me more first','What else?'];
-    } else if(lower.indexOf('connect') > -1 && lower.indexOf('?') > -1){
-      replies = ['What happens when I connect?','Show me an example','What data do you need?'];
-    } else if(lower.indexOf('which') > -1 && lower.indexOf('first') > -1){
-      replies = ['The money stuff','My fans','The biggest opportunity'];
-    } else if(lower.indexOf('want') > -1 && lower.indexOf('?') > -1){
-      replies = ['Yes','Tell me more','What else can you do?'];
-    } else if(lower.indexOf('?') > -1){
-      replies = ['Yes','Tell me more','What else?'];
+    // 1. Extract numbered options like (1) Do X ... (2) Do Y or 1. Do X ... 2. Do Y
+    var numberedPattern = /\((\d)\)\s+([^\n(]+)/g;
+    var dotPattern = /(?:^|\n)\s*(\d)\.\s+([^\n]+)/g;
+    var numbered = [];
+    var m;
+    while((m = numberedPattern.exec(text)) !== null){
+      var label = m[2].trim().replace(/\s*[-—–:].*/,'');
+      if(label.length > 50) label = label.substring(0, 47) + '...';
+      numbered.push(label);
+    }
+    if(numbered.length === 0){
+      while((m = dotPattern.exec(text)) !== null){
+        var label = m[2].trim().replace(/\s*[-—–:].*/,'');
+        if(label.length > 50) label = label.substring(0, 47) + '...';
+        numbered.push(label);
+      }
+    }
+    if(numbered.length >= 2) return numbered.slice(0, 4);
+
+    // 2. "Which of..." — look for quoted or bold options
+    if((lower.indexOf('which') > -1 || lower.indexOf('what should') > -1) && lower.indexOf('?') > -1){
+      var optPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
+      var opts = [];
+      while((m = optPattern.exec(text)) !== null){
+        opts.push(m[1] || m[2] || m[3]);
+      }
+      if(opts.length >= 2) return opts.slice(0, 4);
     }
 
+    // 3. Confirmation questions
+    if(lower.indexOf('should i') > -1 || lower.indexOf('shall i') > -1 || lower.indexOf('want me to') > -1){
+      var actionMatch = text.match(/(?:should I|shall I|want me to)\s+(.{10,60}?)(?:\?|$)/i);
+      if(actionMatch){
+        var action = actionMatch[1].replace(/\?.*$/,'').trim();
+        if(action.length > 40) action = action.substring(0, 37) + '...';
+        replies = ['Yes, ' + action, 'Not yet', 'Something else first'];
+      } else {
+        replies = ['Yes, do it', 'Not yet', 'Something else first'];
+      }
+      return replies;
+    }
+
+    // 4. Specific patterns
+    if(lower.indexOf('what do you do') > -1 || lower.indexOf('what kind of') > -1 || lower.indexOf('what type') > -1){
+      return ["I'm a musician","I'm an actor","I'm a creator","I manage talent"];
+    }
+    if(lower.indexOf('want me to show') > -1 || lower.indexOf('want to see') > -1){
+      return ['Show me','Tell me more','What else can you do?'];
+    }
+    if(lower.indexOf('connect') > -1 && lower.indexOf('?') > -1){
+      return ['What happens when I connect?','Show me an example','What data do you need?'];
+    }
+
+    // 5. "Ready?" / approval
+    if(/ready\s*\?|good to go\?|sound good\?|make sense\?|approve/i.test(text)){
+      return ['Let\'s go', 'Hold on', 'Show me first'];
+    }
+
+    // 6. Generic fallback
+    if(lower.indexOf('?') > -1){
+      replies = ['Yes','Tell me more','What else?'];
+    }
     return replies;
   }
 
