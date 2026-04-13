@@ -548,14 +548,37 @@ Josh Cooley (Oscar-winning Toy Story 4 director) is an existing investor.
 OFFICIAL INVESTOR BLURB (use this EXACT language, no em dashes):
 "Fanded is an agentic AI chief of staff for musicians, athletes, and actors. 150+ talent live, 29K superfans unified, $1.4M tracked fan LTV, zero paid marketing. Jason Kwon (CSO, OpenAI) and Dave Lu (Hyphen Capital) are in the round. Dr Chris Mattman (Head of AI at UCLA) advising. Raising $1.5M at $15M cap SAFE."
 
+### FANDED'S MARKET POSITION (THE BIG PICTURE)
+65% of Gen Z are creators. 62% want to make it their living. There is no school, no infrastructure, no institution for this. The knowledge exists but it's locked inside the heads of artists who learned it the hard way. Fanded is building that institution.
+
+Fanded is THREE things:
+1. THE COUNSELOR: MAWD carries the accumulated wisdom of every artist on the platform. When a new artist uploads their first song, MAWD teaches them what Travis learned after 306M streams, what Anna learned about replacing merch with memberships, what 50 other artists learned about pricing and survival. It's a mentor you could never afford.
+2. THE NETWORK: The Artistpreneur podcast is Fanded's content arm. Not marketing, curriculum. Real artists teaching real business. Episodes distributed through Fanded's own podcast distribution. Every lesson feeds back into MAWD's brain.
+3. THE COMMUNITY: Artists on Fanded are a cohort. They see each other's wins. A 22-year-old sees that an artist with 10K followers converted 200 fans to $5/month using voice memos. She doesn't need a course. She needs proof it works and the tool to do it.
+
+THE STORYBRAND FOR ARTISTS ON FANDED:
+Fanded/MAWD = the guide. The artist = the hero. SURVIVE = help them stop drowning (take weight off, handle admin, show them the one thing to do today). THRIVE = help them build (fan relationships, distribution, income they control).
+
+THE STORYBRAND FOR FANS:
+The artist = the guide. The fan = the hero. SURVIVE = the artist's voice/music reduces anxiety, makes fans feel less alone, gets them through hard moments. THRIVE = fans belong to something, shape the album, become insiders, find community. Music is a functional utility for anxiety, not just entertainment. 306M streams = 306M moments someone chose Travis's voice to feel better.
+
+FANDED AS DISTRIBUTOR:
+Fanded distributes music (via Symphonic white-label) and podcasts (via native RSS feeds) directly. This closes the data loop: streaming behavior + fan engagement + purchase data + direct communication, all in one platform. Nobody else has this.
+- Podcast distribution: already built. RSS feed generator, episode upload, Apple/Spotify compliant.
+- Music distribution: white-label through Symphonic. Travis's old manager works there. Start with Anna's catalog and AAGC podcast, Travis's catalog moves over when Virgin deal recoups.
+- Exclusivity windows (early access for members) become a native feature toggle, not a workaround.
+
 ### TAM / PITCH STRATEGY (for investor conversations)
 Don't defend the TAM number. Reframe from "talent today" to "talent in 10 years" (Veeva comp: started with pharma CRM, tiny TAM, expanded into $50B+ market).
 
 Expansion story: talent is the WEDGE. Once Fanded has 10K+ fan relationships aggregated across artists, the real TAM is the $26B influencer marketing industry. Brands don't just want impressions, they want consent-based audience intelligence. Fanded becomes the data layer between talent and brands.
 
-This is the DATA BROKERING income stream: Fanded aggregates anonymized fan behavior data across all artists on the platform. When a brand wants to reach "fans of indie artists aged 25-34 who purchased merch in the last 90 days," Fanded is the ONLY platform with that consent-based data. This is the $26B play.
+This is the DATA BROKERING income stream: Fanded aggregates anonymized fan behavior data across all artists on the platform. When a brand wants to reach "fans of indie artists aged 25-34 who purchased merch in the last 90 days," Fanded is the ONLY platform with that consent-based data. This is the $26B play. With distribution added, Fanded also aggregates STREAMING data, making the intelligence layer 10x more valuable.
 
-Supporting data: independent artists market $160B growing to $233B by 2031 (6.42% CAGR). Small focused markets = best vertical SaaS.
+Supporting data: independent artists market $160B growing to $233B by 2031 (6.42% CAGR). 65% of Gen Z are creators, 62% want to make it a living. Small focused markets = best vertical SaaS.
+
+MACRO PITCH (the big swing version):
+"65% of Gen Z are creators. 62% want to make it their living. There is no infrastructure for this. Fanded is the operating system for the creator middle class: AI-powered business management, direct fan distribution, and the accumulated wisdom of every artist on the platform. We're not building a tool. We're building the institution that raises the next generation of independent artists."
 
 ARR MATH (for Jason Sparks and similar conversations):
 $1.56M ARR projection based on: 150 artists x avg $867/mo platform fee = $1.56M. With data brokering layer added, each artist relationship is worth 3-5x the SaaS fee because of the aggregated audience data.
