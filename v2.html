@@ -1993,12 +1993,20 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   // Wire up the refresh button
   document.getElementById('journalRefreshBtn').addEventListener('click', refreshSuggestions);
 
+  // Detect multi-MAWD slug from URL
+  var mawdSlug = (function() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('mawd') || null;
+  })();
+
   function callMAWD(messages, agent, callback){
     var mode = window.location.search.includes('demo') ? 'demo' : 'personal';
+    var payload = {messages:messages, agent:agent, mode:mode};
+    if (mawdSlug) payload.mawd = mawdSlug;
     fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:messages, agent:agent, mode:mode})
+      body:JSON.stringify(payload)
     })
     .then(function(r){return r.json();})
     .then(function(data){
@@ -2014,10 +2022,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   function executeAction(action, card){
     card.classList.add('executed');
     card.querySelector('.action-card-label').textContent = 'SENDING...';
+    var execPayload = {executeAction:{tool:action.tool, input:action.input}, agent:currentAgent, mode:'personal'};
+    if (mawdSlug) execPayload.mawd = mawdSlug;
     fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({executeAction:{tool:action.tool, input:action.input}, agent:currentAgent, mode:'personal'})
+      body:JSON.stringify(execPayload)
     })
     .then(function(r){return r.json();})
     .then(function(data){

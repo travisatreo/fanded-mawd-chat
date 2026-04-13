@@ -2,6 +2,18 @@ import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from './brain.js';
 import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from './supabase.js';
 import { executeTool, sendEmail } from './google.js';
 
+// ── Load MAWD brain by slug (multi-MAWD support) ──
+async function loadMawdBrain(slug) {
+  try {
+    const results = await supabaseQuery(`mawd_instances?slug=eq.${slug}&select=*`);
+    if (results.length === 0) return null;
+    return results[0];
+  } catch (e) {
+    console.error('Failed to load MAWD brain:', e.message);
+    return null;
+  }
+}
+
 // ── Tool definitions for Anthropic tool_use ──
 const TOOLS = [
   {
@@ -104,7 +116,7 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   try {
-    const { messages, agent, mode, executeAction } = req.body;
+    const { messages, agent, mode, executeAction, mawd } = req.body;
 
     // ── Direct action execution (from approval card) ──
     if (executeAction) {
@@ -135,9 +147,43 @@ export default async function handler(req, res) {
 
     // ── Build system prompt ──
     let systemPrompt;
+    let mawdInstance = null;
 
     if (isDemo) {
       systemPrompt = buildDemoPrompt(agent);
+    } else if (mawd) {
+      // Multi-MAWD: load brain from Supabase by slug
+      mawdInstance = await loadMawdBrain(mawd);
+      if (mawdInstance) {
+        systemPrompt = mawdInstance.full_brain;
+
+        // Add chat voice for multi-MAWD instances
+        systemPrompt += `\n\nCHAT VOICE:
+You are in the MAWD chat app. Real-time text conversation.
+BE SHORT. 1-3 sentences default. Like a text from your smartest friend.
+Only go longer when BUILDING something (drafts, plans, documents).
+Never use em dashes. Use commas, periods, colons, or parentheses.
+You already know ${mawdInstance.name}. Don't introduce yourself. Just brief them.
+Always end with ONE question or action to approve.`;
+
+        // Load memories for this MAWD instance
+        try {
+          const memories = await supabaseQuery(
+            `mawd_memory?mawd_slug=eq.${mawd}&select=id,category,content,created_at&order=created_at.desc&limit=30`
+          );
+          if (memories.length > 0) {
+            systemPrompt += `\n\nMAWD MEMORY:\n`;
+            memories.forEach(m => {
+              systemPrompt += `- [${m.category}] ${m.content}\n`;
+            });
+          }
+        } catch (e) {
+          // No per-MAWD memory table yet, that's fine
+        }
+      } else {
+        // Fallback to default if slug not found
+        systemPrompt = MAWD_SYSTEM_PROMPT;
+      }
     } else {
       systemPrompt = MAWD_SYSTEM_PROMPT;
 

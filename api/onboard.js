@@ -1,0 +1,112 @@
+// MAWD Onboarding API — creates a new MAWD instance for a user
+// POST: creates a new MAWD with initial brain from onboarding answers
+// GET: returns MAWD profile by ?id= or ?slug=
+import { supabaseQuery } from './supabase.js';
+
+// Shared company context that every Fanded team MAWD knows
+const FANDED_SHARED_BRAIN = `
+FANDED INC (shared company context, all team MAWDs have access):
+- Fanded is an agentic AI chief of staff platform for musicians, athletes, and actors
+- Co-founded by Travis Atreo (CEO) and Kevin (CTO)
+- Raising $1.5M at $15M cap SAFE
+- Jason Kwon (CSO, OpenAI) and Dave Lu (Hyphen Capital) are in the round
+- Dr Chris Mattman (Head of AI at UCLA) advising
+- 150+ talent live, 29K superfans unified, $1.4M tracked fan LTV, zero paid marketing
+- Vision: network of AI agents (MAWDs) that coordinate with each other, becoming the protocol layer for the creative economy
+- 65% of Gen Z are creators, 62% want to make it a living. Fanded is the institution for the creator middle class.
+- Core product: MAWD (AI chief of staff per user), podcast/music distribution, fan relationship management
+- StoryBrand: Fanded/MAWD = guide, Artist = hero. Help them survive first (take weight off), then thrive (fan relationships, income they control).
+- Team: Travis Atreo (CEO), Kevin (CTO), Lewis (lewis@fanded.com), Kevin (kevin@fanded.com)
+
+MAWD HANDOFF PRINCIPLE (how all communication works):
+The human opens the door (first message sounds like the person). MAWD holds it open (handles logistics). Recipients experience the product through every outgoing email.
+
+VOICE RULES:
+- No em dashes, ever. Use commas, periods, colons, or parentheses.
+- Default to 1-2 sentences. Short. Text message from your smartest friend.
+- When building something (drafts, plans, documents), go longer but stay tight.
+`;
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  try {
+    // GET — fetch a MAWD profile
+    if (req.method === 'GET') {
+      const { id, slug } = req.query;
+      if (id) {
+        const results = await supabaseQuery(`mawd_instances?id=eq.${id}`);
+        if (!results.length) return res.status(404).json({ error: 'MAWD not found' });
+        return res.status(200).json(results[0]);
+      }
+      if (slug) {
+        const results = await supabaseQuery(`mawd_instances?slug=eq.${slug}`);
+        if (!results.length) return res.status(404).json({ error: 'MAWD not found' });
+        return res.status(200).json(results[0]);
+      }
+      // List all MAWDs
+      const all = await supabaseQuery('mawd_instances?order=created_at.desc');
+      return res.status(200).json(all);
+    }
+
+    // POST — create a new MAWD
+    if (req.method === 'POST') {
+      const { name, email, role, slug, context, goals, team } = req.body;
+
+      if (!name || !email) {
+        return res.status(400).json({ error: 'name and email required' });
+      }
+
+      const mawdSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+      // Build the personal brain from onboarding data
+      let personalBrain = `You are MAWD, ${name}'s AI chief of staff.\n\n`;
+      personalBrain += `OWNER PROFILE:\n`;
+      personalBrain += `- Name: ${name}\n`;
+      personalBrain += `- Email: ${email}\n`;
+      if (role) personalBrain += `- Role: ${role}\n`;
+      if (team) personalBrain += `- Team: ${team}\n`;
+      if (context) personalBrain += `\nCONTEXT:\n${context}\n`;
+      if (goals) personalBrain += `\nGOALS:\n${goals}\n`;
+
+      personalBrain += `\nYou speak on behalf of ${name}. You know their schedule, their priorities, and their communication style. You get smarter over time as ${name} uses you.\n`;
+
+      // Combine personal brain + shared Fanded context
+      const fullBrain = personalBrain + '\n' + FANDED_SHARED_BRAIN;
+
+      const instance = await supabaseQuery('mawd_instances', {
+        method: 'POST',
+        body: {
+          name,
+          email,
+          slug: mawdSlug,
+          role: role || '',
+          personal_brain: personalBrain,
+          shared_brain: FANDED_SHARED_BRAIN,
+          full_brain: fullBrain,
+          created_at: new Date().toISOString(),
+          active: true
+        }
+      });
+
+      const mawdUrl = `https://fanded-mawd-chat.vercel.app/v2.html?mawd=${mawdSlug}`;
+
+      return res.status(201).json({
+        ...instance,
+        url: mawdUrl,
+        message: `MAWD created for ${name}. Share this link: ${mawdUrl}`
+      });
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('Onboard error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Export the shared brain for use by chat.js
+export { FANDED_SHARED_BRAIN };

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Set Up Your MAWD</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 520px;
+    padding: 40px 24px;
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #D4A843;
+    letter-spacing: 3px;
+  }
+  .logo p {
+    color: #888;
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  .step {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .step.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  .question {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .hint {
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  input, textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #fff;
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus {
+    border-color: #D4A843;
+  }
+  textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-next {
+    background: linear-gradient(135deg, #D4A843, #E8B84B);
+    color: #0a0a0a;
+  }
+  .btn-next:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(212,168,67,0.3); }
+  .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-back {
+    background: #1a1a1a;
+    color: #888;
+    border: 1px solid #333;
+    flex: 0.4;
+  }
+  .btn-back:hover { border-color: #555; color: #ccc; }
+
+  .progress {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .progress .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.3s;
+  }
+  .progress .dot.done { background: #D4A843; }
+  .progress .dot.current { background: #E8B84B; box-shadow: 0 0 8px rgba(212,168,67,0.5); }
+
+  .result {
+    display: none;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+  }
+  .result.active { display: block; }
+  .result h2 {
+    font-size: 24px;
+    color: #D4A843;
+    margin-bottom: 12px;
+  }
+  .result p {
+    color: #aaa;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .result-link {
+    display: block;
+    background: #1a1a1a;
+    border: 1px solid #D4A843;
+    border-radius: 12px;
+    padding: 16px;
+    color: #D4A843;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .result-link:hover { background: #1f1a10; }
+  .copy-btn {
+    background: none;
+    border: 1px solid #555;
+    color: #aaa;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .copy-btn:hover { border-color: #888; color: #fff; }
+
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #333;
+    border-top-color: #D4A843;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <h1>MAWD</h1>
+    <p>Your AI chief of staff. Let's set yours up.</p>
+  </div>
+
+  <div class="progress" id="progress">
+    <div class="dot current"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <!-- Step 1: Name -->
+  <div class="step active" id="step-0">
+    <div class="question">What's your name?</div>
+    <div class="hint">First and last. This is how your MAWD will refer to you.</div>
+    <input type="text" id="q-name" placeholder="e.g. Lewis Chen" autocomplete="name">
+    <div class="btn-row">
+      <button class="btn btn-next" onclick="nextStep()" id="btn-0">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Email -->
+  <div class="step" id="step-1">
+    <div class="question">What's your email?</div>
+    <div class="hint">Your MAWD will use this for communication on your behalf.</div>
+    <input type="email" id="q-email" placeholder="e.g. lewis@fanded.com" autocomplete="email">
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep()">Back</button>
+      <button class="btn btn-next" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Role -->
+  <div class="step" id="step-2">
+    <div class="question">What's your role?</div>
+    <div class="hint">What do you do? Your MAWD learns how to help based on this.</div>
+    <input type="text" id="q-role" placeholder="e.g. CTO at Fanded, producer, manager">
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep()">Back</button>
+      <button class="btn btn-next" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Context -->
+  <div class="step" id="step-3">
+    <div class="question">Give your MAWD some context</div>
+    <div class="hint">What should your MAWD know about you, your work, and your priorities? The more you share, the smarter it gets.</div>
+    <textarea id="q-context" placeholder="e.g. I'm building the Fanded platform. My focus right now is shipping the multi-MAWD system and closing our seed round. I work best in the mornings."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep()">Back</button>
+      <button class="btn btn-next" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Goals -->
+  <div class="step" id="step-4">
+    <div class="question">What are your top 3 goals right now?</div>
+    <div class="hint">Your MAWD prioritizes around these. Be specific.</div>
+    <textarea id="q-goals" placeholder="e.g. 1. Ship multi-MAWD by end of April&#10;2. Close $1.5M seed round&#10;3. Onboard 10 new artists to Fanded"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep()">Back</button>
+      <button class="btn btn-next" onclick="createMAWD()" id="btn-create">Create my MAWD</button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="result">
+    <h2 id="result-title">Your MAWD is live.</h2>
+    <p id="result-desc">Bookmark this link. It's your personal MAWD, always ready.</p>
+    <a class="result-link" id="result-link" href="#" target="_blank">Open your MAWD</a>
+    <button class="copy-btn" onclick="copyLink()">Copy link</button>
+  </div>
+</div>
+
+<script>
+var currentStep = 0;
+var totalSteps = 5;
+
+function updateProgress() {
+  var dots = document.querySelectorAll('.progress .dot');
+  dots.forEach(function(dot, i) {
+    dot.className = 'dot';
+    if (i < currentStep) dot.className = 'dot done';
+    if (i === currentStep) dot.className = 'dot current';
+  });
+}
+
+function nextStep() {
+  // Validate current step
+  if (currentStep === 0 && !document.getElementById('q-name').value.trim()) return;
+  if (currentStep === 1 && !document.getElementById('q-email').value.trim()) return;
+
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  currentStep++;
+  if (currentStep < totalSteps) {
+    document.getElementById('step-' + currentStep).classList.add('active');
+  }
+  updateProgress();
+}
+
+function prevStep() {
+  if (currentStep <= 0) return;
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  currentStep--;
+  document.getElementById('step-' + currentStep).classList.add('active');
+  updateProgress();
+}
+
+function createMAWD() {
+  var name = document.getElementById('q-name').value.trim();
+  var email = document.getElementById('q-email').value.trim();
+  var role = document.getElementById('q-role').value.trim();
+  var context = document.getElementById('q-context').value.trim();
+  var goals = document.getElementById('q-goals').value.trim();
+
+  if (!name || !email) {
+    alert('Name and email are required.');
+    return;
+  }
+
+  var btn = document.getElementById('btn-create');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Creating...';
+
+  fetch('/api/onboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name,
+      email: email,
+      role: role,
+      context: context,
+      goals: goals,
+      team: 'fanded'
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      btn.disabled = false;
+      btn.textContent = 'Create my MAWD';
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    // Show result
+    document.getElementById('step-4').classList.remove('active');
+    document.getElementById('progress').style.display = 'none';
+
+    var url = data.url || ('https://fanded-mawd-chat.vercel.app/v2.html?mawd=' + data.slug);
+    document.getElementById('result-link').href = url;
+    document.getElementById('result-link').textContent = 'Open ' + name.split(' ')[0] + "'s MAWD";
+    document.getElementById('result-title').textContent = name.split(' ')[0] + "'s MAWD is live.";
+    document.getElementById('result').classList.add('active');
+    window._mawdUrl = url;
+  })
+  .catch(function(err) {
+    btn.disabled = false;
+    btn.textContent = 'Create my MAWD';
+    alert('Connection error. Try again.');
+  });
+}
+
+function copyLink() {
+  var url = window._mawdUrl;
+  if (url) {
+    navigator.clipboard.writeText(url).then(function() {
+      var btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy link'; }, 2000);
+    });
+  }
+}
+
+// Auto-focus first input
+document.getElementById('q-name').focus();
+
+// Enter key advances steps
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    var active = document.querySelector('.step.active');
+    if (active && active.querySelector('textarea') === document.activeElement) return; // allow newlines in textarea
+    e.preventDefault();
+    if (currentStep < totalSteps - 1) nextStep();
+    else createMAWD();
+  }
+});
+</script>
+</body>
+</html>
