@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       if (between) {
         const [a, b] = between.split(',');
         const messages = await supabaseQuery(
-          `mawd_messages?or=(and(from_mawd.eq.${a},to_mawd.eq.${b}),and(from_mawd.eq.${b},to_mawd.eq.${a}))&order=created_at.asc`
+          `mawd_network_messages?or=(and(from_mawd.eq.${a},to_mawd.eq.${b}),and(from_mawd.eq.${b},to_mawd.eq.${a}))&order=created_at.asc`
         );
         return res.status(200).json(messages);
       }
@@ -29,14 +29,14 @@ export default async function handler(req, res) {
       if (to) {
         const filter = status ? `&status=eq.${status}` : '';
         const messages = await supabaseQuery(
-          `mawd_messages?to_mawd=eq.${to}${filter}&order=created_at.desc&limit=50`
+          `mawd_network_messages?to_mawd=eq.${to}${filter}&order=created_at.desc&limit=50`
         );
         return res.status(200).json(messages);
       }
 
       if (from) {
         const messages = await supabaseQuery(
-          `mawd_messages?from_mawd=eq.${from}&order=created_at.desc&limit=50`
+          `mawd_network_messages?from_mawd=eq.${from}&order=created_at.desc&limit=50`
         );
         return res.status(200).json(messages);
       }
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       if (!fromCheck.length) return res.status(404).json({ error: `MAWD "${from_mawd}" not found` });
       if (!toCheck.length) return res.status(404).json({ error: `MAWD "${to_mawd}" not found` });
 
-      const message = await supabaseQuery('mawd_messages', {
+      const message = await supabaseQuery('mawd_network_messages', {
         method: 'POST',
         body: {
           from_mawd,
