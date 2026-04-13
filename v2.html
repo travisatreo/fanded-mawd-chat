@@ -190,6 +190,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   width:24px;height:24px;border-radius:6px;flex-shrink:0;margin-top:2px;
   display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;color:var(--bg);
+  background:linear-gradient(135deg,var(--gold),#E8B84B) !important;
 }
 .msg-mawd .bubble{
   font-size:15px;line-height:1.7;color:var(--text);
@@ -213,6 +214,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
 /* Thinking */
 .thinking{display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;opacity:0;animation:msgIn 0.25s ease-out forwards;}
+.thinking .avatar{background:linear-gradient(135deg,var(--gold),#E8B84B) !important;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg);}
 .thinking .dots{display:flex;gap:4px;padding-top:6px;}
 .thinking .dots span{width:6px;height:6px;border-radius:50%;animation:bounce 1.2s ease-in-out infinite;}
 .thinking .dots span:nth-child(2){animation-delay:0.15s;}
@@ -652,84 +654,69 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
         <!-- MAWD Suggested Topics -->
         <div class="journal-sent-list" id="journalSentList">
-          <div class="journal-section-label" style="display:flex;align-items:center;gap:6px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--gold);"></span>
-            MAWD suggests
-          </div>
-          <p style="font-size:12px;color:var(--text-3);margin:-8px 0 14px;line-height:1.5;">Topics that help your fans survive and thrive. You're Yoda. They're Luke. Guide them.</p>
-
-          <!-- SURVIVE: Help them feel less alone -->
-          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
-            <div class="journal-entry-header">
-              <span style="font-size:10px;font-weight:600;color:var(--pulse);letter-spacing:0.05em;">SURVIVE</span>
-              <span class="journal-entry-stats">Helps fans feel less alone</span>
+          <div class="journal-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--gold);"></span>
+              MAWD suggests
             </div>
-            <div class="journal-entry-preview">
-              <div class="journal-play-btn" style="background:var(--pulse);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-              </div>
-              <div class="journal-entry-text">
-                <div class="journal-entry-title">The song I almost didn't finish</div>
-                <div class="journal-entry-summary">Talk about a moment writing Songs From Dad where you almost gave up. Your fans are fighting their own battles. Hearing you struggle makes them feel seen.</div>
-              </div>
-            </div>
+            <button id="journalRefreshBtn" style="background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:11px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-3)'">New ideas</button>
           </div>
 
-          <!-- SURVIVE: Give them permission -->
-          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
-            <div class="journal-entry-header">
-              <span style="font-size:10px;font-weight:600;color:var(--pulse);letter-spacing:0.05em;">SURVIVE</span>
-              <span class="journal-entry-stats">Gives fans permission to feel</span>
-            </div>
-            <div class="journal-entry-preview">
-              <div class="journal-play-btn" style="background:var(--pulse);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          <div id="journalSuggestions">
+            <!-- SURVIVE -->
+            <div class="journal-entry journal-suggestion" data-suggestion-id="s1" style="position:relative;">
+              <button class="journal-dismiss-btn" onclick="dismissSuggestion(this)" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:4px;line-height:1;font-size:16px;z-index:1;transition:color 0.15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">&times;</button>
+              <div class="journal-entry-header">
+                <span style="font-size:10px;font-weight:600;color:var(--pulse);letter-spacing:0.05em;">SURVIVE</span>
+                <span class="journal-entry-stats">Helps fans feel less alone</span>
               </div>
-              <div class="journal-entry-text">
-                <div class="journal-entry-title">What my dad never said out loud</div>
-                <div class="journal-entry-summary">Share the emotion behind Songs From Dad. Ask fans: what's the thing YOUR parent never said but you knew they felt? This opens the door to real connection.</div>
+              <div class="journal-entry-preview" style="cursor:pointer;" onclick="useSuggestion(this.closest('.journal-suggestion'))">
+                <div class="journal-play-btn" style="background:var(--pulse);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                </div>
+                <div class="journal-entry-text">
+                  <div class="journal-entry-title">The song I almost didn't finish</div>
+                  <div class="journal-entry-summary">Talk about a moment writing Songs From Dad where you almost gave up. Your fans are fighting their own battles. Hearing you struggle makes them feel seen.</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- THRIVE: Invite them into the journey -->
-          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
-            <div class="journal-entry-header">
-              <span style="font-size:10px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">THRIVE</span>
-              <span class="journal-entry-stats">Turns listeners into members</span>
-            </div>
-            <div class="journal-entry-preview">
-              <div class="journal-play-btn" style="background:var(--gold);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            <!-- THRIVE -->
+            <div class="journal-entry journal-suggestion" data-suggestion-id="s2" style="position:relative;">
+              <button class="journal-dismiss-btn" onclick="dismissSuggestion(this)" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:4px;line-height:1;font-size:16px;z-index:1;transition:color 0.15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">&times;</button>
+              <div class="journal-entry-header">
+                <span style="font-size:10px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">THRIVE</span>
+                <span class="journal-entry-stats">Turns listeners into members</span>
               </div>
-              <div class="journal-entry-text">
-                <div class="journal-entry-title">You're hearing this before the world does</div>
-                <div class="journal-entry-summary">Play 20 seconds of an unreleased Songs From Dad track. Tell them this is theirs first. Members get the album 2 weeks early. This is why being inside matters.</div>
+              <div class="journal-entry-preview" style="cursor:pointer;" onclick="useSuggestion(this.closest('.journal-suggestion'))">
+                <div class="journal-play-btn" style="background:var(--gold);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                </div>
+                <div class="journal-entry-text">
+                  <div class="journal-entry-title">You're hearing this before the world does</div>
+                  <div class="journal-entry-summary">Play 20 seconds of an unreleased Songs From Dad track. Tell them this is theirs first. Members get the album 2 weeks early. This is why being inside matters.</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- THRIVE: Make them part of something bigger -->
-          <div class="journal-entry" style="cursor:pointer;" onclick="document.getElementById('journalRecordBtn').click();">
-            <div class="journal-entry-header">
-              <span style="font-size:10px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">THRIVE</span>
-              <span class="journal-entry-stats">Makes fans feel like insiders</span>
+          <!-- Script teleprompter (hidden until a suggestion is tapped) -->
+          <div id="journalScript" style="display:none;margin-top:12px;padding:16px;background:var(--surface);border:1px solid var(--gold);border-radius:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:0.05em;">YOUR SCRIPT</div>
+              <button onclick="closeScript()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;line-height:1;">&times;</button>
             </div>
-            <div class="journal-entry-preview">
-              <div class="journal-play-btn" style="background:var(--gold);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-              </div>
-              <div class="journal-entry-text">
-                <div class="journal-entry-title">I need your help picking the tracklist</div>
-                <div class="journal-entry-summary">Ask members to vote on song order for Songs From Dad. When they shape the album, it becomes THEIRS. They'll tell everyone about it because they built it with you.</div>
-              </div>
-            </div>
+            <div id="journalScriptText" style="font-size:15px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
+            <button onclick="document.getElementById('journalRecordBtn').click();" style="margin-top:14px;width:100%;padding:12px;border-radius:10px;background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              Record now
+            </button>
           </div>
 
-          <div style="margin-top:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
-            <div style="font-size:12px;color:var(--text-3);line-height:1.6;">
-              <strong style="color:var(--text-2);">How this works:</strong> MAWD studies your fans, your content, and your release calendar. It suggests topics that move listeners from <span style="color:var(--pulse);">surviving</span> (feeling seen, less alone) to <span style="color:var(--gold);">thriving</span> (belonging, building with you, becoming members). You record. MAWD handles the rest.
-            </div>
+          <!-- Empty state -->
+          <div id="journalSuggestEmpty" style="display:none;text-align:center;padding:24px 16px;">
+            <div style="font-size:13px;color:var(--text-3);margin-bottom:12px;">No suggestions right now</div>
+            <button onclick="refreshSuggestions()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 20px;color:var(--text-2);font-family:var(--font);font-size:13px;cursor:pointer;">Ask MAWD for ideas</button>
           </div>
         </div>
       </div>
@@ -1916,6 +1903,96 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   }
 
   // ── API ──
+  // ── Journal Suggestion Functions ──
+  function dismissSuggestion(btn){
+    var entry = btn.closest('.journal-suggestion');
+    entry.style.transition = 'opacity 0.2s, transform 0.2s';
+    entry.style.opacity = '0';
+    entry.style.transform = 'translateX(40px)';
+    setTimeout(function(){
+      entry.remove();
+      checkSuggestionsEmpty();
+    }, 200);
+  }
+
+  function checkSuggestionsEmpty(){
+    var remaining = document.querySelectorAll('#journalSuggestions .journal-suggestion');
+    if(remaining.length === 0){
+      document.getElementById('journalSuggestEmpty').style.display = 'block';
+    }
+  }
+
+  function useSuggestion(el){
+    var title = el.querySelector('.journal-entry-title').textContent;
+    var summary = el.querySelector('.journal-entry-summary').textContent;
+    var scriptPanel = document.getElementById('journalScript');
+    var scriptText = document.getElementById('journalScriptText');
+
+    // Show loading state
+    scriptPanel.style.display = 'block';
+    scriptText.textContent = 'MAWD is writing your script...';
+
+    // Ask MAWD to write a talking script
+    callMAWD([{
+      role:'user',
+      content:'Write me a short voice memo script (60-90 seconds when spoken) for this topic:\n\nTitle: "'+title+'"\nBrief: '+summary+'\n\nWrite it conversational, first person, like I\'m talking directly to my fans on a voice note. No stage directions. No brackets. Just the words I\'d say. Start strong, end with a question or call to action. Keep it real, not polished.'
+    }], 'hype', function(reply){
+      scriptText.textContent = reply;
+    });
+  }
+
+  function closeScript(){
+    document.getElementById('journalScript').style.display = 'none';
+  }
+
+  function refreshSuggestions(){
+    var container = document.getElementById('journalSuggestions');
+    var emptyState = document.getElementById('journalSuggestEmpty');
+    emptyState.style.display = 'none';
+
+    // Show loading
+    container.innerHTML = '<div style="text-align:center;padding:24px;"><div style="font-size:13px;color:var(--text-3);">MAWD is thinking...</div></div>';
+
+    callMAWD([{
+      role:'user',
+      content:'Give me 2 voice memo topic suggestions for my fans. One should be a SURVIVE topic (helps fans feel seen, less alone, emotional connection) and one should be a THRIVE topic (turns listeners into members, makes them insiders, builds community).\n\nRespond in EXACTLY this JSON format, nothing else:\n[{"type":"SURVIVE","color":"pulse","title":"...","summary":"...","stats":"..."},{"type":"THRIVE","color":"gold","title":"...","summary":"...","stats":"..."}]\n\nKeep titles under 8 words. Summaries under 30 words. Stats should be a short benefit phrase like "Helps fans feel less alone" or "Turns listeners into members".'
+    }], 'hype', function(reply){
+      try {
+        // Extract JSON from response
+        var jsonMatch = reply.match(/\[[\s\S]*\]/);
+        var suggestions = JSON.parse(jsonMatch[0]);
+        container.innerHTML = '';
+        suggestions.forEach(function(s, i){
+          var colorVar = s.color === 'gold' ? 'var(--gold)' : 'var(--pulse)';
+          var div = document.createElement('div');
+          div.className = 'journal-entry journal-suggestion';
+          div.dataset.suggestionId = 'gen_'+Date.now()+'_'+i;
+          div.style.position = 'relative';
+          div.innerHTML = '<button class="journal-dismiss-btn" onclick="dismissSuggestion(this)" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:4px;line-height:1;font-size:16px;z-index:1;transition:color 0.15s;" onmouseover="this.style.color=\'var(--text)\'" onmouseout="this.style.color=\'var(--text-3)\'">&times;</button>'+
+            '<div class="journal-entry-header">'+
+              '<span style="font-size:10px;font-weight:600;color:'+colorVar+';letter-spacing:0.05em;">'+s.type+'</span>'+
+              '<span class="journal-entry-stats">'+s.stats+'</span>'+
+            '</div>'+
+            '<div class="journal-entry-preview" style="cursor:pointer;" onclick="useSuggestion(this.closest(\'.journal-suggestion\'))">'+
+              '<div class="journal-play-btn" style="background:'+colorVar+';">'+
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>'+
+              '</div>'+
+              '<div class="journal-entry-text">'+
+                '<div class="journal-entry-title">'+s.title+'</div>'+
+                '<div class="journal-entry-summary">'+s.summary+'</div>'+
+              '</div>'+
+            '</div>';
+          container.appendChild(div);
+        });
+      } catch(e){
+        container.innerHTML = '<div style="text-align:center;padding:24px;"><div style="font-size:13px;color:var(--text-3);">Couldn\'t load suggestions. Try again.</div><button onclick="refreshSuggestions()" style="margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-2);font-family:var(--font);font-size:12px;cursor:pointer;">Retry</button></div>';
+      }
+    });
+  }
+
+  // Wire up the refresh button
+  document.getElementById('journalRefreshBtn').addEventListener('click', refreshSuggestions);
+
   function callMAWD(messages, agent, callback){
     var mode = window.location.search.includes('demo') ? 'demo' : 'personal';
     fetch('/api/chat',{
