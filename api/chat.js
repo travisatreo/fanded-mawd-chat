@@ -473,34 +473,107 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     const data = await response.json();
 
     // ── Parse response: extract text and tool_use blocks ──
+    // Read-only tools are auto-executed and fed back to Claude for summarization
+    const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats'];
     let text = '';
     let pendingActions = [];
+    let toolResults = []; // For auto-executed tools that need a follow-up call
 
     for (const block of data.content) {
       if (block.type === 'text') {
         text += block.text;
       } else if (block.type === 'tool_use') {
-        if (block.name === 'get_fan_stats') {
-          // Auto-execute fan stats query — no approval needed
-          try {
-            const stats = await getFanStats();
-            text += `\n\n📊 Fan database: ${stats.total} contacts, ${stats.emailable} emailable, ${stats.top_fans} top fans (score 60+), ${stats.with_phone} with phone.`;
-          } catch (e) {
-            text += '\n\n(Could not load fan stats: ' + e.message + ')';
-          }
-        } else if (block.name === 'save_memory') {
-          // Auto-execute memory saves — no approval needed
+        if (block.name === 'save_memory') {
+          // Auto-execute memory saves silently
           try {
             await saveMemory(block.input.category, block.input.content);
           } catch (e) {
             console.error('Memory save failed:', e.message);
           }
+          toolResults.push({ id: block.id, result: { success: true } });
+        } else if (READ_ONLY_TOOLS.includes(block.name)) {
+          // Auto-execute read-only tools and collect results for follow-up
+          try {
+            let result;
+            if (block.name === 'get_fan_stats') {
+              result = await getFanStats();
+            } else {
+              result = await executeTool(block.name, block.input);
+            }
+            toolResults.push({ id: block.id, result });
+          } catch (e) {
+            toolResults.push({ id: block.id, result: { error: e.message } });
+          }
         } else {
+          // Actions that need approval (send_email, reply_to_email, send_fan_blast, etc.)
           pendingActions.push({
             id: block.id,
             tool: block.name,
             input: block.input
           });
+        }
+      }
+    }
+
+    // ── If we auto-executed tools, make a follow-up call so Claude can summarize results ──
+    if (toolResults.length > 0 && data.stop_reason === 'tool_use') {
+      // Build the follow-up messages: assistant's response + tool results
+      const followUpMessages = [...apiMessages, {
+        role: 'assistant',
+        content: data.content
+      }, {
+        role: 'user',
+        content: toolResults.map(tr => ({
+          type: 'tool_result',
+          tool_use_id: tr.id,
+          content: JSON.stringify(tr.result).substring(0, 8000) // Limit size
+        }))
+      }];
+
+      const followUpBody = {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: followUpMessages,
+        tools: TOOLS
+      };
+
+      const followUpRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(followUpBody)
+      });
+
+      if (followUpRes.ok) {
+        const followUpData = await followUpRes.json();
+        // Reset text and parse follow-up response
+        text = '';
+        for (const block of followUpData.content) {
+          if (block.type === 'text') {
+            text += block.text;
+          } else if (block.type === 'tool_use') {
+            if (block.name === 'save_memory') {
+              try { await saveMemory(block.input.category, block.input.content); } catch (e) {}
+            } else if (READ_ONLY_TOOLS.includes(block.name)) {
+              // If Claude wants to read more (e.g. read_email after list_emails), auto-execute again
+              try {
+                const result = await executeTool(block.name, block.input);
+                // For now, append a brief summary — a third call would be too slow
+                if (block.name === 'read_email' || block.name === 'read_thread') {
+                  const body = Array.isArray(result) ? result.map(m => `From: ${m.from}\n${m.body}`).join('\n---\n') : (result.body || '');
+                  text += '\n\n' + body.substring(0, 2000);
+                }
+              } catch (e) {
+                text += '\n\n(Could not read email: ' + e.message + ')';
+              }
+            } else {
+              pendingActions.push({ id: block.id, tool: block.name, input: block.input });
+            }
+          }
         }
       }
     }
