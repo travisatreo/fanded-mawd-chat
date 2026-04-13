@@ -509,7 +509,7 @@ function buildFanEmailHtml(plainBody, fanName, { title, duration, listenUrl } = 
 <!-- Support CTA -->
 <tr><td style="padding-bottom:28px;text-align:center;">
   <div style="font-size:14px;color:#A1A1AA;line-height:1.6;margin-bottom:16px;">This music is always free for you. But if you want to go deeper and support what I'm building, it would mean the world.</div>
-  <a href="https://app.fanded.com/club/travisatreo" style="display:inline-block;background-color:transparent;color:#C4953A;font-size:13px;font-weight:600;padding:10px 28px;border-radius:50px;text-decoration:none;border:1px solid #C4953A;">Join the Club</a>
+  <a href="https://app.fanded.com/club/travisatreo/manage/funding/tiers" style="display:inline-block;background-color:transparent;color:#C4953A;font-size:13px;font-weight:600;padding:10px 28px;border-radius:50px;text-decoration:none;border:1px solid #C4953A;">Join the Club</a>
 </td></tr>
 
 <!-- Footer -->
