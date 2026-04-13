@@ -1920,13 +1920,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
                 '<span class="journal-sent-letter-dur">'+m+':'+s+'</span>' +
               '</div>' +
             '</div>' +
-            '<span class="journal-sent-letter-badge '+(letter.blastSent?'sent':'draft')+'">'+(letter.blastSent?'Sent':'Draft')+'</span>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span class="journal-sent-letter-badge '+(letter.blastSent?'sent':'draft')+'">'+(letter.blastSent?'Sent':'Draft')+'</span>' +
+              (!letter.blastSent ? '<button class="journal-draft-delete" data-id="'+letter.id+'" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;font-size:16px;line-height:1;border-radius:4px;transition:color 0.15s;" onmouseover="this.style.color=\'#EF4444\'" onmouseout="this.style.color=\'var(--text-3)\'">&times;</button>' : '') +
+            '</div>' +
           '</div>' +
           (letter.blastSent ? '<div class="journal-sent-stats">' +
             '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.sent:'-')+'</div><div class="journal-sent-stat-label">Sent</div></div>' +
             '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.opened:'-')+'</div><div class="journal-sent-stat-label">Opened</div></div>' +
             '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.listened:'-')+'</div><div class="journal-sent-stat-label">Listened</div></div>' +
           '</div>' : '');
+        // Delete draft
+        var delBtn = div.querySelector('.journal-draft-delete');
+        if(delBtn){
+          delBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            if(confirm('Delete this draft?')){
+              deleteSentLetter(letter.id);
+            }
+          });
+        }
         // Click to reopen preview for drafts, or show stats for sent
         div.addEventListener('click', function(){
           if(!letter.blastSent && letter.audioDataUrl){
@@ -1945,6 +1958,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       var idx = letters.findIndex(function(l){ return l.id === letter.id; });
       if(idx >= 0) letters[idx] = letter;
       else letters.unshift(letter);
+      localStorage.setItem('mawd_sent_letters', JSON.stringify(letters));
+      loadSentLetters();
+    } catch(e){}
+  }
+
+  function deleteSentLetter(id){
+    try {
+      var letters = JSON.parse(localStorage.getItem('mawd_sent_letters') || '[]');
+      letters = letters.filter(function(l){ return l.id !== id; });
       localStorage.setItem('mawd_sent_letters', JSON.stringify(letters));
       loadSentLetters();
     } catch(e){}
@@ -2172,7 +2194,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         overlay.querySelector('#vnTitleInput').addEventListener('input', function(e){ vnTitle = e.target.value; });
 
         // Wire buttons
-        overlay.querySelector('#vnDiscard').addEventListener('click', function(){ cleanup(); });
+        overlay.querySelector('#vnDiscard').addEventListener('click', function(){
+          if(confirm('Discard this voice note?')){
+            deleteSentLetter(letterId);
+            cleanup();
+          }
+        });
         overlay.querySelector('#vnNext').addEventListener('click', function(){ step = 2; renderStep(); });
 
       } else if(step === 2){
