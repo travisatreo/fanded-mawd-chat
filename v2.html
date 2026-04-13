@@ -1454,7 +1454,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   function applyModuleOrder(){
     var order = loadModuleOrder();
     // Default order: fans first, everything else follows
-    if(!order) order = ['pulse','compass','hype','dollar','ledger'];
+    // Force correct order if old cached order has compass (Strategy) first
+    if(!order || (order[0] === 'compass')) order = ['pulse','compass','hype','dollar','ledger'];
     order.forEach(function(agentKey){
       var el = agentModules.querySelector('[data-agent="'+agentKey+'"]');
       if(el) agentModules.appendChild(el);
