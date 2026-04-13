@@ -548,20 +548,33 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .journal-record-btn:active{transform:scale(0.98);}
 
 .journal-record-active{
-  background:var(--surface);border:1px solid var(--border);
+  background:var(--surface);border:1px solid #EF4444;
   border-radius:var(--radius);padding:20px;
+  animation:recordBorderPulse 2s ease-in-out infinite;
+}
+@keyframes recordBorderPulse{0%,100%{border-color:#EF4444;}50%{border-color:rgba(239,68,68,0.3);}}
+.journal-record-indicator{
+  display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;
+}
+.journal-record-dot{
+  width:12px;height:12px;border-radius:50%;background:#EF4444;
+  animation:recordDotPulse 1s ease-in-out infinite;
+}
+@keyframes recordDotPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);}}
+.journal-record-label{
+  font-size:12px;font-weight:600;color:#EF4444;text-transform:uppercase;letter-spacing:0.1em;
 }
 .journal-waveform{
   height:48px;background:var(--surface-2);border-radius:8px;
   margin-bottom:12px;overflow:hidden;position:relative;
+  display:flex;align-items:center;justify-content:center;gap:3px;padding:0 12px;
 }
-.journal-waveform::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,var(--gold) 0%,var(--gold) var(--progress,0%),var(--border) var(--progress,0%));
-  opacity:0.3;border-radius:8px;
-  animation:waveformPulse 1.5s ease-in-out infinite;
+.journal-waveform-bar{
+  width:3px;border-radius:3px;background:#EF4444;
+  animation:waveBar 0.8s ease-in-out infinite;
 }
-@keyframes waveformPulse{0%,100%{opacity:0.2;}50%{opacity:0.4;}}
+@keyframes waveBar{0%,100%{height:15%;opacity:0.3;}50%{height:80%;opacity:0.8;}}
+.journal-waveform::after{display:none;}
 .journal-record-time{
   text-align:center;font-family:var(--font-mono);font-size:24px;
   font-weight:600;color:var(--text);margin-bottom:16px;
@@ -787,7 +800,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             <span>Record a voice note</span>
           </button>
           <div class="journal-record-active" id="journalRecordActive" style="display:none;">
-            <div class="journal-waveform" id="journalWaveform"></div>
+            <div class="journal-record-indicator">
+              <div class="journal-record-dot"></div>
+              <span class="journal-record-label">Recording</span>
+            </div>
+            <div class="journal-waveform" id="journalWaveform">
+              <div class="journal-waveform-bar" style="animation-delay:0s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.1s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.2s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.3s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.15s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.25s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.05s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.35s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.12s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.28s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.08s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.2s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.32s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.18s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.04s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.22s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.14s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.3s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.06s;"></div>
+              <div class="journal-waveform-bar" style="animation-delay:0.26s;"></div>
+            </div>
             <div class="journal-record-time" id="journalRecordTime">0:00</div>
             <div class="journal-record-controls">
               <button class="journal-cancel-btn" id="journalCancelBtn">Cancel</button>
