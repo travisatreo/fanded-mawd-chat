@@ -2222,6 +2222,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   function openVoiceNotePreview(audioDataUrl, duration, fileName, existingLetter, mp3Data, voiceData){
     var step = 1; // 1=preview, 2=fan view, 3=send
     var testSent = false;
+    var generatedEmail = null; // {subject, body} — written by MAWD
     var previewAudio = new Audio(audioDataUrl);
     var isPlaying = false;
     var vnTitle = existingLetter ? existingLetter.title : (fileName ? fileName.replace(/\.[^.]+$/,'') : 'Voice note — ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}));
@@ -2383,20 +2384,98 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         overlay.querySelector('#vnNext').addEventListener('click', function(){ step = 2; renderStep(); });
 
       } else if(step === 2){
-        // STEP 2: Fan view — what the email + web app look like
+        // STEP 2: Fan view — MAWD writes the email, then show preview
+        var generatedSubject = generatedEmail ? generatedEmail.subject : '';
+        var generatedBody = generatedEmail ? generatedEmail.body : '';
+
+        if(!generatedEmail){
+          // Show loading state while MAWD writes the email
+          body.innerHTML =
+            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">' +
+              '<div style="width:48px;height:48px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">' +
+                '<div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease infinite;"></div>' +
+              '</div>' +
+              '<div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px;">MAWD is writing your letter...</div>' +
+              '<div style="font-size:13px;color:var(--text-3);line-height:1.5;">Crafting an email that sounds like you,<br>summarizing what you said, and linking to the audio.</div>' +
+            '</div>';
+          footer.innerHTML =
+            '<div class="vn-footer-actions">' +
+              '<button class="vn-btn-back" id="vnBack">← Edit</button>' +
+            '</div>';
+          overlay.querySelector('#vnBack').addEventListener('click', function(){ step = 1; renderStep(); });
+
+          // Ask MAWD to write the email
+          var itemList = [];
+          if(mp3Data) itemList.push('an MP3 song snippet called "'+mp3Data.fileName+'" ('+formatDur(mp3Data.duration)+')');
+          if(voiceData) itemList.push('a personal voice note ('+formatDur(voiceData.duration)+')');
+          var itemDesc = itemList.join(' and ');
+          var totalDur = formatDur(duration);
+
+          var mawdPrompt = 'I just recorded a letter for my fans titled "'+vnTitle+'". It contains '+itemDesc+', total duration '+totalDur+'. Write the email my fans will receive. Requirements:\n\n' +
+            '1. Subject line: Something personal and intriguing, not clickbaity. Make it feel like a note from a friend.\n' +
+            '2. Email body: Write it as me (Travis) talking directly to the fan. Use {{name}} for their first name. The email should:\n' +
+            '   - Open with something warm and personal\n' +
+            '   - Give a short teaser of what I talked about or what the song is about (you can be creative based on the title)\n' +
+            '   - Build anticipation without spoiling everything\n' +
+            '   - End with a natural sign-off as me\n' +
+            '3. Keep it short — 3-5 sentences max for the body. Fans should want to click play, not read an essay.\n' +
+            '4. Do NOT include any link or button text — that gets added automatically.\n\n' +
+            'Respond in EXACTLY this JSON format, nothing else:\n{"subject":"...","body":"..."}';
+
+          fetch('/api/chat',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              messages:[{role:'user',content:mawdPrompt}],
+              agent:'journal',
+              mode:'personal'
+            })
+          })
+          .then(function(r){return r.json();})
+          .then(function(data){
+            try {
+              var reply = (data.reply || '').trim();
+              // Extract JSON from reply (may have markdown code fences)
+              var jsonMatch = reply.match(/\{[\s\S]*\}/);
+              if(jsonMatch){
+                var parsed = JSON.parse(jsonMatch[0]);
+                generatedEmail = { subject: parsed.subject || 'New letter from Travis', body: parsed.body || '' };
+              } else {
+                throw new Error('No JSON');
+              }
+            } catch(e){
+              // Fallback if MAWD doesn't return valid JSON
+              generatedEmail = {
+                subject: 'New letter from Travis: ' + vnTitle,
+                body: 'Hey {{name}},\n\nI just recorded something new for you. It\'s '+totalDur+' — I think you\'re going to love this one.\n\nHit play when you\'re ready.\n\nTalk soon,\nTravis'
+              };
+            }
+            renderStep();
+          })
+          .catch(function(){
+            generatedEmail = {
+              subject: 'New letter from Travis: ' + vnTitle,
+              body: 'Hey {{name}},\n\nI just recorded something new for you. It\'s '+totalDur+' — I think you\'re going to love this one.\n\nHit play when you\'re ready.\n\nTalk soon,\nTravis'
+            };
+            renderStep();
+          });
+          return;
+        }
+
+        // MAWD has generated the email — show the full preview
+        var emailBodyHtml = escapeHtml(generatedBody).replace(/\n/g,'<br>').replace(/\{\{name\}\}/g,'<em style="color:var(--gold)">[fan name]</em>');
+
         body.innerHTML =
           '<div class="vn-fan-preview">' +
             '<div class="vn-fan-preview-label">What fans see in their inbox</div>' +
             '<div class="vn-email-preview">' +
               '<div class="vn-email-from">From: Travis Atreo &lt;travis@travisatreo.com&gt;</div>' +
-              '<div class="vn-email-subject">New letter from Travis: '+escapeHtml(vnTitle)+'</div>' +
+              '<div class="vn-email-subject">'+escapeHtml(generatedSubject)+'</div>' +
               '<div style="font-size:14px;color:var(--text-2);line-height:1.7;margin-bottom:16px;">' +
-                'Hey <em style="color:var(--gold)">[fan name]</em>,<br><br>' +
-                'I just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.' +
+                emailBodyHtml +
               '</div>' +
               '<div class="vn-email-waveform" id="vnFanWaveform">'+generateWaveformBars(30, 99)+'</div>' +
               '<button class="vn-email-cta">▶ Listen Now</button>' +
-              '<div style="font-size:11px;color:var(--text-3);text-align:center;margin-top:12px;">Talk soon,<br>Travis</div>' +
             '</div>' +
           '</div>' +
           '<div class="vn-fan-preview">' +
@@ -2409,20 +2488,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               '<div style="font-size:12px;color:var(--text-3);">'+formatDur(duration)+' · A new letter from Travis</div>' +
               '<div style="margin-top:16px;display:flex;align-items:end;justify-content:center;gap:2px;height:40px;">'+generateWaveformBars(30, 42)+'</div>' +
             '</div>' +
+          '</div>' +
+          '<div style="margin-top:12px;text-align:center;">' +
+            '<button id="vnRegenerate" style="background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;cursor:pointer;padding:8px 12px;text-decoration:underline;">Rewrite this email</button>' +
           '</div>';
 
         footer.innerHTML =
           '<div class="vn-status" id="vnTestStatus"></div>' +
           '<div class="vn-footer-actions">' +
-            '<button class="vn-btn-back" id="vnBack">← Edit</button>' +
-            '<button class="vn-btn-test" id="vnTestBtn" style="flex:2;">Send Test to Me</button>' +
+            '<button class="vn-btn-back" id="vnBack">← Back</button>' +
+            '<button class="vn-btn-test" id="vnTestBtn" style="flex:2;">Send Test to Me First</button>' +
           '</div>' +
           '<div class="vn-footer-actions">' +
             '<button class="vn-btn-send" id="vnScheduleBtn" style="flex:1;">Schedule</button>' +
-            '<button class="vn-btn-send" id="vnSendToFans" style="flex:1;"'+(testSent?' class="ready"':'')+'>Send Now</button>' +
+            '<button class="vn-btn-send" id="vnSendToFans" style="flex:1;"'+(testSent?' class="ready"':'')+'>Send to All 693 Fans</button>' +
           '</div>';
 
         overlay.querySelector('#vnBack').addEventListener('click', function(){ step = 1; renderStep(); });
+
+        // Regenerate email
+        overlay.querySelector('#vnRegenerate').addEventListener('click', function(){
+          generatedEmail = null;
+          renderStep();
+        });
 
         // Test send from fan preview
         var testStatusEl = overlay.querySelector('#vnTestStatus');
@@ -2438,9 +2526,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           testBtnFan.textContent = 'Sending test...';
           testBtnFan.disabled = true;
           testStatusEl.textContent = '';
-          var subject = 'New letter from Travis: ' + vnTitle;
-          var emailBody = 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.\n\n[Listen Now]\n\nTalk soon,\nTravis';
-          var testAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody, testOnly:true}};
+          var emailBody = generatedBody + '\n\n[Listen Now]\n\nhttps://fanded.com/travis/' + encodeURIComponent(vnTitle);
+          var testAction = {tool:'send_fan_blast', input:{subject:generatedSubject, body:emailBody, testOnly:true}};
           fetch('/api/chat',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -2492,9 +2579,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           '</div>';
         footer.innerHTML = '';
 
-        // Execute the send
-        var subject = 'New letter from Travis: ' + vnTitle;
-        var emailBody = 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.\n\n[Listen Now]\n\nTalk soon,\nTravis';
+        // Execute the send using MAWD-generated email
+        var subject = generatedEmail ? generatedEmail.subject : 'New letter from Travis: ' + vnTitle;
+        var emailBody = (generatedEmail ? generatedEmail.body : 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.') + '\n\n[Listen Now]\n\nhttps://fanded.com/travis/' + encodeURIComponent(vnTitle);
         var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody}};
         fetch('/api/chat',{
           method:'POST',
