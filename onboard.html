@@ -697,6 +697,66 @@ var selectedOption = null;
 var gmailConnected = false;
 var calendarConnected = false;
 
+// ── Resume after OAuth redirect ──
+// Google OAuth redirects back with ?gmail=connected&mawd=slug&email=user@email.com
+(function resumeFromOAuth() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('gmail') === 'connected') {
+    // Restore saved state
+    var savedName = sessionStorage.getItem('mawd_onboard_name');
+    var savedContext = sessionStorage.getItem('mawd_onboard_context');
+    var savedCrawl = sessionStorage.getItem('mawd_onboard_crawl');
+    var savedSocials = sessionStorage.getItem('mawd_onboard_socials');
+    var connectedEmail = params.get('email') || '';
+
+    if (savedName) {
+      document.getElementById('q-name').value = savedName;
+    }
+    if (savedContext) {
+      document.getElementById('q-context').value = savedContext;
+    }
+    if (savedCrawl && savedCrawl !== 'null') {
+      try { crawlResult = JSON.parse(savedCrawl); } catch(e) {}
+    }
+    if (savedSocials) {
+      try {
+        var socials = JSON.parse(savedSocials);
+        var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
+        for (var key in fields) {
+          if (socials[key]) document.getElementById(fields[key]).value = socials[key];
+        }
+      } catch(e) {}
+    }
+
+    // Mark Gmail as connected
+    gmailConnected = true;
+    var badge = document.getElementById('badge-gmail');
+    var card = document.getElementById('card-gmail');
+    if (badge) {
+      badge.textContent = connectedEmail || 'Connected';
+      badge.className = 'connect-badge done';
+    }
+    if (card) card.classList.add('connected');
+
+    // Jump to step 5 (connect page, showing Gmail as connected)
+    currentStep = 5;
+    // Hide step 0, show step 5
+    setTimeout(function() {
+      document.querySelectorAll('.step').forEach(function(s) { s.style.display = 'none'; });
+      showStep(5);
+      updateProgress();
+    }, 100);
+
+    // Clean up URL
+    window.history.replaceState({}, '', '/onboard.html');
+    sessionStorage.removeItem('mawd_onboard_name');
+    sessionStorage.removeItem('mawd_onboard_context');
+    sessionStorage.removeItem('mawd_onboard_step');
+    sessionStorage.removeItem('mawd_onboard_crawl');
+    sessionStorage.removeItem('mawd_onboard_socials');
+  }
+})();
+
 function updateProgress() {
   var dots = document.querySelectorAll('.progress .dot');
   dots.forEach(function(dot, i) {
@@ -871,40 +931,48 @@ function backFromOptions() {
   updateProgress();
 }
 
-// Gmail OAuth connection
+// Gmail OAuth connection — real OAuth flow
 function connectGmail() {
   if (gmailConnected) return;
-  // TODO: Replace with real OAuth flow for multi-user
-  // For now, simulate connection or redirect to OAuth
-  var clientId = '85959067382-fcn3i63sm9hqkf8st3bgiklrkjc4fj1r.apps.googleusercontent.com';
-  var redirectUri = encodeURIComponent(window.location.origin + '/api/google-auth');
-  var scopes = encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly');
-  var authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=' + clientId +
-    '&redirect_uri=' + redirectUri +
-    '&response_type=code&scope=' + scopes +
-    '&access_type=offline&prompt=consent' +
-    '&state=gmail_' + encodeURIComponent(document.getElementById('q-name').value.trim());
 
-  // For demo/MVP: mark as connected (real OAuth would redirect)
-  // window.location.href = authUrl;
+  // Save onboarding state to sessionStorage so we can resume after OAuth redirect
+  sessionStorage.setItem('mawd_onboard_name', document.getElementById('q-name').value.trim());
+  sessionStorage.setItem('mawd_onboard_context', document.getElementById('q-context').value.trim());
+  sessionStorage.setItem('mawd_onboard_step', currentStep);
+  sessionStorage.setItem('mawd_onboard_crawl', JSON.stringify(crawlResult || null));
 
-  // Simulate for now
-  var badge = document.getElementById('badge-gmail');
-  var card = document.getElementById('card-gmail');
-  badge.textContent = 'Connected';
-  badge.className = 'connect-badge done';
-  card.classList.add('connected');
-  gmailConnected = true;
+  // Save social links
+  var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
+  var socials = {};
+  for (var key in fields) {
+    var el = document.getElementById(fields[key]);
+    if (el && el.value.trim()) socials[key] = el.value.trim();
+  }
+  sessionStorage.setItem('mawd_onboard_socials', JSON.stringify(socials));
+
+  // Build slug from name (same logic as onboard.js)
+  var name = document.getElementById('q-name').value.trim();
+  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+  // Redirect to Google OAuth with mawd slug in state
+  window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
 }
 
 function connectCalendar() {
   if (calendarConnected) return;
-  var badge = document.getElementById('badge-calendar');
-  var card = document.getElementById('card-calendar');
-  badge.textContent = 'Connected';
-  badge.className = 'connect-badge done';
-  card.classList.add('connected');
-  calendarConnected = true;
+  // Calendar scopes are included in the Gmail OAuth flow,
+  // so if Gmail is connected, calendar is too
+  if (gmailConnected) {
+    var badge = document.getElementById('badge-calendar');
+    var card = document.getElementById('card-calendar');
+    badge.textContent = 'Connected';
+    badge.className = 'connect-badge done';
+    card.classList.add('connected');
+    calendarConnected = true;
+  } else {
+    // If Gmail not connected yet, trigger the full OAuth flow
+    connectGmail();
+  }
 }
 
 function goToEmailOptions() {

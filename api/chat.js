@@ -3,6 +3,7 @@ import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from './s
 import { executeTool, sendEmail } from './google.js';
 
 // ── Load MAWD brain by slug (multi-MAWD support) ──
+// Returns full instance including google_refresh_token for per-user OAuth
 async function loadMawdBrain(slug) {
   try {
     const results = await supabaseQuery(`mawd_instances?slug=eq.${slug}&select=*`);
@@ -153,6 +154,49 @@ const TOOLS = [
       },
       required: ['category', 'content']
     }
+  },
+  {
+    name: 'list_events',
+    description: 'List upcoming calendar events. Use this when the user asks about their schedule, upcoming meetings, or what they have this week. Returns event title, time, attendees, and location.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        timeMin: { type: 'string', description: 'Start of time range (ISO 8601). Defaults to now.' },
+        timeMax: { type: 'string', description: 'End of time range (ISO 8601). Defaults to 7 days from now.' },
+        maxResults: { type: 'number', description: 'Max events to return (default 10)' },
+        query: { type: 'string', description: 'Search text to filter events' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'find_free_time',
+    description: 'Find available time slots across one or more calendars. Use this when scheduling a meeting to find when everyone is free. Checks freeBusy data and returns common open slots.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        emails: { type: 'array', items: { type: 'string' }, description: 'Email addresses of people to check availability for' },
+        timeMin: { type: 'string', description: 'Start of range to check (ISO 8601). Defaults to now.' },
+        timeMax: { type: 'string', description: 'End of range to check (ISO 8601). Defaults to 7 days from now.' },
+        duration: { type: 'number', description: 'Meeting duration in minutes (default 30)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'send_mawd_message',
+    description: 'Send a message to another MAWD in the Fanded network. Use this to coordinate with other team members\' MAWDs (e.g. Lewis\'s MAWD, Kevin\'s MAWD). Types: "scheduling" for meeting coordination, "request" for asking something, "message" for general communication. The other MAWD will receive and process the message on behalf of its owner.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        to_mawd: { type: 'string', description: 'Slug of the recipient MAWD (e.g. "lewis", "kevin")' },
+        type: { type: 'string', enum: ['message', 'request', 'scheduling', 'task'], description: 'Type of message' },
+        subject: { type: 'string', description: 'Brief subject line' },
+        body: { type: 'string', description: 'Full message content. Be specific about what you need from the other MAWD.' },
+        metadata: { type: 'object', description: 'Optional structured data (e.g. proposed times, event details)' }
+      },
+      required: ['to_mawd', 'body']
+    }
   }
 ];
 
@@ -171,6 +215,15 @@ export default async function handler(req, res) {
 
     // ── Direct action execution (from approval card) ──
     if (executeAction) {
+      // Load per-user token for action execution
+      let actionRefreshToken = null;
+      if (mawd) {
+        try {
+          const inst = await loadMawdBrain(mawd);
+          actionRefreshToken = inst?.google_refresh_token || null;
+        } catch (e) {}
+      }
+
       try {
         let result;
         if (executeAction.tool === 'send_fan_blast') {
@@ -179,8 +232,10 @@ export default async function handler(req, res) {
           result = await getFanStats();
         } else if (executeAction.tool === 'add_fan_contact') {
           result = await addFanContact(executeAction.input);
+        } else if (executeAction.tool === 'send_mawd_message') {
+          result = await sendMawdMessage(executeAction.input, mawd);
         } else {
-          result = await executeTool(executeAction.tool, executeAction.input);
+          result = await executeTool(executeAction.tool, executeAction.input, actionRefreshToken);
         }
         return res.status(200).json({
           reply: null,
@@ -474,7 +529,11 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
 
     // ── Parse response: extract text and tool_use blocks ──
     // Read-only tools are auto-executed and fed back to Claude for summarization
-    const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats'];
+    const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats', 'list_events', 'find_free_time'];
+
+    // Per-user refresh token: use MAWD instance's token if available, else env var
+    const userRefreshToken = mawdInstance?.google_refresh_token || null;
+
     let text = '';
     let pendingActions = [];
     let toolResults = []; // For auto-executed tools that need a follow-up call
@@ -498,7 +557,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
             if (block.name === 'get_fan_stats') {
               result = await getFanStats();
             } else {
-              result = await executeTool(block.name, block.input);
+              result = await executeTool(block.name, block.input, userRefreshToken);
             }
             toolResults.push({ id: block.id, result });
           } catch (e) {
@@ -561,7 +620,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
             } else if (READ_ONLY_TOOLS.includes(block.name)) {
               // If Claude wants to read more (e.g. read_email after list_emails), auto-execute again
               try {
-                const result = await executeTool(block.name, block.input);
+                const result = await executeTool(block.name, block.input, userRefreshToken);
                 // For now, append a brief summary — a third call would be too slow
                 if (block.name === 'read_email' || block.name === 'read_thread') {
                   const body = Array.isArray(result) ? result.map(m => `From: ${m.from}\n${m.body}`).join('\n---\n') : (result.body || '');
@@ -626,6 +685,45 @@ async function addFanContact({ email, name }) {
     body: { email, name: name || null, do_not_email: false, source: 'manual' }
   });
   return { status: 'added', contact: result[0] || { email, name } };
+}
+
+// ── MAWD-to-MAWD messaging ──
+async function sendMawdMessage(input, fromSlug) {
+  const { to_mawd, type, subject, body, metadata } = input;
+  if (!to_mawd || !body) throw new Error('to_mawd and body required');
+
+  const from_mawd = fromSlug || 'travis-atreo';
+
+  // Verify both MAWDs exist
+  const fromCheck = await supabaseQuery(`mawd_instances?slug=eq.${from_mawd}&select=slug,name`);
+  const toCheck = await supabaseQuery(`mawd_instances?slug=eq.${to_mawd}&select=slug,name`);
+
+  if (!fromCheck.length) throw new Error(`MAWD "${from_mawd}" not found`);
+  if (!toCheck.length) throw new Error(`MAWD "${to_mawd}" not found`);
+
+  const message = await supabaseQuery('mawd_network_messages', {
+    method: 'POST',
+    body: {
+      from_mawd,
+      to_mawd,
+      from_name: fromCheck[0].name,
+      to_name: toCheck[0].name,
+      type: type || 'message',
+      subject: subject || '',
+      body,
+      metadata: metadata || {},
+      status: 'pending',
+      created_at: new Date().toISOString()
+    }
+  });
+
+  return {
+    sent: true,
+    from: fromCheck[0].name,
+    to: toCheck[0].name,
+    type: type || 'message',
+    summary: `Message sent from ${fromCheck[0].name}'s MAWD to ${toCheck[0].name}'s MAWD`
+  };
 }
 
 function buildFanEmailHtml(plainBody, fanName, { title, duration, listenUrl } = {}) {
