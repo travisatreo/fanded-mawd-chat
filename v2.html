@@ -801,6 +801,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           </div>
           <button onclick="localStorage.removeItem('mawd_learning');document.getElementById('settingsLearnCount').textContent='Cleared';" style="background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px 16px;color:var(--text-2);font-family:var(--font);font-size:13px;cursor:pointer;width:100%;">Reset learning data</button>
         </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;">CONVERSATION</div>
+          <button onclick="if(confirm('Start a new conversation? Your current chat will be cleared.')){localStorage.removeItem('mawd_conversation');location.reload();}" style="background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px 16px;color:var(--text-2);font-family:var(--font);font-size:13px;cursor:pointer;width:100%;">New conversation</button>
+        </div>
       </div>
     </div>
 
@@ -851,6 +855,50 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   var isTyping = false;
   var conversationHistory = [];
   var currentAgent = 'compass';
+
+  // ── Conversation Persistence ──
+  var CONV_KEY = 'mawd_conversation';
+  var CONV_EXPIRY_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+  function saveConversation(){
+    try {
+      var data = {
+        history: conversationHistory,
+        html: chatArea.innerHTML,
+        agent: currentAgent,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(CONV_KEY, JSON.stringify(data));
+    } catch(e){}
+  }
+
+  function loadConversation(){
+    try {
+      var raw = localStorage.getItem(CONV_KEY);
+      if(!raw) return null;
+      var data = JSON.parse(raw);
+      // Expire after 4 hours
+      if(Date.now() - data.savedAt > CONV_EXPIRY_MS) {
+        localStorage.removeItem(CONV_KEY);
+        return null;
+      }
+      // Need at least one exchange
+      if(!data.history || data.history.length < 1) return null;
+      return data;
+    } catch(e){ return null; }
+  }
+
+  function clearConversation(){
+    localStorage.removeItem(CONV_KEY);
+    conversationHistory = [];
+    chatArea.innerHTML = '';
+  }
+
+  // Save on page unload (switching apps, opening links, closing tab)
+  window.addEventListener('beforeunload', function(){ saveConversation(); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden') saveConversation();
+  });
 
   // ── Learning Store ──
   // Tracks what Travis approves, skips, and asks for so MAWD gets smarter
@@ -1541,29 +1589,94 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   journalSendBtn.addEventListener('click', function(){
     var duration = recordSeconds;
     stopRecording();
-    // Add entry to the sent list
     var m = Math.floor(duration/60);
     var s = (duration%60).toString().padStart(2,'0');
     var now = new Date();
     var dateStr = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+    // Show entry immediately with processing state
     var entry = document.createElement('div');
     entry.className = 'journal-entry';
     entry.innerHTML = '<div class="journal-entry-header">' +
       '<span class="journal-entry-date">'+dateStr+'</span>' +
-      '<span class="journal-entry-stats">Sending to 834 fans...</span>' +
+      '<span class="journal-entry-stats" id="journalEntryStatus">MAWD is listening...</span>' +
       '</div><div class="journal-entry-preview">' +
       '<div class="journal-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' +
       '<div class="journal-entry-text"><div class="journal-entry-title">Voice note</div>' +
-      '<div class="journal-entry-summary">AI is transcribing and summarizing...</div></div>' +
+      '<div class="journal-entry-summary" id="journalEntrySummary">Transcribing and generating MAWD summary...</div></div>' +
       '<span class="journal-entry-duration">'+m+':'+s+'</span></div>';
     var list = document.getElementById('journalSentList');
     var label = list.querySelector('.journal-section-label');
     label.after(entry);
-    // Simulate AI processing
-    setTimeout(function(){
-      entry.querySelector('.journal-entry-stats').textContent = '834 delivered · 0 listened · 0 replied';
-      entry.querySelector('.journal-entry-summary').textContent = 'AI transcription complete. Waiting for fan responses...';
-    }, 2000);
+
+    // Convert recorded audio to base64 and send to backend
+    if(audioChunks.length > 0){
+      var blob = new Blob(audioChunks, {type:'audio/webm'});
+      var reader = new FileReader();
+      reader.onloadend = function(){
+        var base64 = reader.result.split(',')[1]; // strip data:audio/webm;base64,
+        fetch('/api/journal', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({audio: base64, title: 'Voice note'})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if(data.error){
+            entry.querySelector('#journalEntryStatus').textContent = 'Processing failed';
+            entry.querySelector('#journalEntrySummary').textContent = data.error;
+            return;
+          }
+          // Update with real data
+          entry.querySelector('#journalEntryStatus').textContent = '695 fans · Ready to send';
+          entry.querySelector('#journalEntrySummary').innerHTML =
+            '<strong style="color:var(--gold);font-size:11px;letter-spacing:0.04em;">MAWD SUMMARY</strong><br>' +
+            escapeHtml(data.mawd_summary);
+          entry.querySelector('.journal-entry-title').textContent = data.title || 'Voice note';
+
+          // Store entry data for blast
+          entry.dataset.entryId = data.id;
+          entry.dataset.dropUrl = data.dropUrl;
+          entry.dataset.summary = data.mawd_summary;
+
+          // Add "Send to Fans" button
+          var blastBtn = document.createElement('button');
+          blastBtn.style.cssText = 'margin-top:12px;width:100%;padding:12px;border-radius:10px;border:1px solid var(--gold);background:var(--gold-dim);color:var(--gold);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;';
+          blastBtn.textContent = 'Send to Fans';
+          blastBtn.addEventListener('click', function(){
+            // Open blast preview with the drop link
+            var blastAction = {
+              tool: 'send_fan_blast',
+              input: {
+                subject: 'New voice note from Travis',
+                body: 'Hey {{name}},\\n\\nI just recorded something for you. Tap the link to listen:\\n\\n' + data.dropUrl + '\\n\\nTalk soon,\\nTravis'
+              }
+            };
+            openBlastPreview(blastAction, entry);
+          });
+          entry.appendChild(blastBtn);
+
+          // Add playback
+          var playBtn = entry.querySelector('.journal-play-btn');
+          var audioEl = new Audio(data.audio_url || data.audioUrl);
+          playBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            if(audioEl.paused){ audioEl.play(); playBtn.style.background='var(--gold)'; }
+            else { audioEl.pause(); playBtn.style.background=''; }
+          });
+          audioEl.addEventListener('ended', function(){ playBtn.style.background=''; });
+        })
+        .catch(function(err){
+          entry.querySelector('#journalEntryStatus').textContent = 'Error';
+          entry.querySelector('#journalEntrySummary').textContent = 'Could not process: ' + err.message;
+        });
+      };
+      reader.readAsDataURL(blob);
+    } else {
+      entry.querySelector('#journalEntryStatus').textContent = 'No audio recorded';
+      entry.querySelector('#journalEntrySummary').textContent = 'Try recording again.';
+    }
+    audioChunks = [];
   });
 
   // ── Queue System ──
@@ -2036,6 +2149,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     addUserMessage(text);
     conversationHistory.push({role:'user', content:text});
+    saveConversation();
     logAction('ask', text);
 
     var agent = pickAgent(text);
@@ -2052,6 +2166,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         }
       }
       conversationHistory.push({role:'assistant', content:reply});
+      saveConversation();
       var qr = pendingActions && pendingActions.length ? [] : generateQuickReplies(reply);
       typeMessage(detectedAgent || agent, reply, qr, function(){
         if(pendingActions && pendingActions.length){
@@ -2093,15 +2208,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
   // ── Start ──
   function startMAWD(){
+    // Check for saved conversation first
+    var params = new URLSearchParams(window.location.search);
+    var ctxKey = params.get('context');
+    var deepLink = ctxKey && DEEP_LINK_CONTEXTS[ctxKey] ? DEEP_LINK_CONTEXTS[ctxKey] : null;
+
+    // If no deep link and we have a saved conversation, restore it
+    if(!deepLink){
+      var saved = loadConversation();
+      if(saved){
+        conversationHistory = saved.history;
+        chatArea.innerHTML = saved.html;
+        if(saved.agent) setActiveAgent(saved.agent);
+        statusText.textContent = 'listening';
+        scrollBottom();
+        return; // Skip new briefing
+      }
+    }
+
     var now = new Date();
     var h = now.getHours()%12||12;
     var mins = now.getMinutes().toString().padStart(2,'0');
     var ampm = now.getHours()>=12?'PM':'AM';
     addTimestamp('Today, '+h+':'+mins+' '+ampm);
-
-    var params = new URLSearchParams(window.location.search);
-    var ctxKey = params.get('context');
-    var deepLink = ctxKey && DEEP_LINK_CONTEXTS[ctxKey] ? DEEP_LINK_CONTEXTS[ctxKey] : null;
 
     // Populate queue from deep link
     if(deepLink && deepLink.queueItems){
@@ -2116,6 +2245,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         hideThinking();
         conversationHistory.push({role:'user',content:deepLink.systemContext});
         conversationHistory.push({role:'assistant',content:deepLink.mawdOpening});
+        saveConversation();
         typeMessage(deepLink.agent, deepLink.mawdOpening, deepLink.quickReplies, null);
       },600);
     } else {
@@ -2126,6 +2256,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       callMAWD([{role:'user',content:briefingPrompt}], agent, function(reply,detectedAgent,pendingActions){
         hideThinking();
         conversationHistory.push({role:'assistant',content:reply});
+        saveConversation();
         var qr = pendingActions ? [] : ['What should I focus on?','Show me my numbers','Draft an email','Songs From Dad update'];
         typeMessage(detectedAgent||'compass', reply, qr, function(){
           if(pendingActions && pendingActions.length){
