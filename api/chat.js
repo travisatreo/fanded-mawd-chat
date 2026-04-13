@@ -129,6 +129,8 @@ export default async function handler(req, res) {
           result = await executeFanBlast(executeAction.input);
         } else if (executeAction.tool === 'get_fan_stats') {
           result = await getFanStats();
+        } else if (executeAction.tool === 'add_fan_contact') {
+          result = await addFanContact(executeAction.input);
         } else {
           result = await executeTool(executeAction.tool, executeAction.input);
         }
@@ -467,6 +469,21 @@ async function getFanStats() {
       fanded_club: fans.filter(f => f.source === 'fanded_club').length
     }
   };
+}
+
+async function addFanContact({ email, name }) {
+  if (!email) throw new Error('email is required');
+  // Check if already exists
+  const existing = await supabaseQuery(`fan_contacts?email=eq.${encodeURIComponent(email)}&select=email,name,do_not_email`);
+  if (existing.length > 0) {
+    return { status: 'already_exists', contact: existing[0] };
+  }
+  // Insert new contact
+  const result = await supabaseQuery('fan_contacts', {
+    method: 'POST',
+    body: { email, name: name || null, do_not_email: false, source: 'manual' }
+  });
+  return { status: 'added', contact: result[0] || { email, name } };
 }
 
 function buildFanEmailHtml(plainBody, fanName, { title, duration, listenUrl } = {}) {
