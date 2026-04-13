@@ -54,7 +54,7 @@ export default async function handler(req, res) {
 
     // POST — create a new MAWD
     if (req.method === 'POST') {
-      const { name, email, role, slug, context, goals, team } = req.body;
+      const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption } = req.body;
 
       if (!name || !email) {
         return res.status(400).json({ error: 'name and email required' });
@@ -69,8 +69,18 @@ export default async function handler(req, res) {
       personalBrain += `- Email: ${email}\n`;
       if (role) personalBrain += `- Role: ${role}\n`;
       if (team) personalBrain += `- Team: ${team}\n`;
+      if (socials) {
+        personalBrain += `\nSOCIAL PROFILES:\n`;
+        if (socials.youtube) personalBrain += `- YouTube: ${socials.youtube}\n`;
+        if (socials.instagram) personalBrain += `- Instagram: ${socials.instagram}\n`;
+        if (socials.tiktok) personalBrain += `- TikTok: ${socials.tiktok}\n`;
+        if (socials.spotify) personalBrain += `- Spotify: ${socials.spotify}\n`;
+        if (socials.twitter) personalBrain += `- X/Twitter: ${socials.twitter}\n`;
+      }
+      if (crawlData) personalBrain += `\nPUBLIC DATA SCAN:\n${JSON.stringify(crawlData)}\n`;
       if (context) personalBrain += `\nCONTEXT:\n${context}\n`;
       if (goals) personalBrain += `\nGOALS:\n${goals}\n`;
+      if (selectedOption) personalBrain += `\nFIRST PRIORITY: ${selectedOption.title} - ${selectedOption.description}\n`;
 
       personalBrain += `\nYou speak on behalf of ${name}. You know their schedule, their priorities, and their communication style. You get smarter over time as ${name} uses you.\n`;
 
