@@ -52,10 +52,63 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { subject, body, testOnly, limit } = req.body || {};
+  const { subject, body, testOnly, limit, listenUrl, title, duration } = req.body || {};
 
   if (!subject || !body) {
     return res.status(400).json({ error: 'subject and body required' });
+  }
+
+  // Build HTML email template
+  function buildHtmlEmail(plainBody, fanName) {
+    const personalizedBody = plainBody
+      .replace(/\{\{name\}\}/g, fanName || 'there')
+      .replace(/\n/g, '<br>');
+
+    const link = listenUrl || 'https://fanded.com/travis';
+    const letterTitle = title || subject;
+    const dur = duration || '';
+
+    return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#09090B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#09090B;padding:40px 20px;">
+<tr><td align="center">
+<table width="100%" style="max-width:520px;" cellpadding="0" cellspacing="0">
+
+<!-- Header -->
+<tr><td style="text-align:center;padding-bottom:32px;">
+  <span style="color:#C4953A;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">A letter from Travis</span>
+</td></tr>
+
+<!-- Body text -->
+<tr><td style="color:#E4E4E7;font-size:16px;line-height:1.7;padding-bottom:28px;">
+  ${personalizedBody}
+</td></tr>
+
+<!-- Audio card -->
+<tr><td style="padding-bottom:32px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#18181B;border:1px solid #27272A;border-radius:16px;">
+  <tr><td style="padding:24px;text-align:center;">
+    <div style="font-size:15px;font-weight:600;color:#FAFAFA;margin-bottom:4px;">${letterTitle.replace(/</g,'&lt;')}</div>
+    ${dur ? `<div style="font-size:12px;color:#71717A;margin-bottom:20px;">${dur}</div>` : '<div style="margin-bottom:20px;"></div>'}
+    <a href="${link}" style="display:inline-block;background-color:#C4953A;color:#09090B;font-size:15px;font-weight:600;padding:14px 40px;border-radius:50px;text-decoration:none;letter-spacing:0.02em;">&#9654;&ensp;Listen Now</a>
+  </td></tr>
+  </table>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="text-align:center;padding-top:16px;border-top:1px solid #27272A;">
+  <span style="color:#52525B;font-size:11px;">Sent with love from Travis via </span><a href="https://fanded.com" style="color:#C4953A;font-size:11px;text-decoration:none;">Fanded</a>
+  <br><br>
+  <a href="https://fanded.com/unsubscribe" style="color:#52525B;font-size:10px;text-decoration:underline;">Unsubscribe</a>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
   }
 
   try {
@@ -64,10 +117,14 @@ export default async function handler(req, res) {
 
     for (const fan of fans) {
       try {
+        const fanName = fan.name || 'there';
+        const plainBody = body.replace(/\{\{name\}\}/g, fanName);
+        const htmlBody = buildHtmlEmail(body, fanName);
         await sendEmail({
           to: fan.email,
           subject,
-          body: body.replace('{{name}}', fan.name || 'there')
+          body: plainBody,
+          html: htmlBody
         });
         results.sent++;
       } catch (err) {

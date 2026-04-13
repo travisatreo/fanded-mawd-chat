@@ -64,19 +64,21 @@ export async function createDraft({ to, subject, body, cc, bcc }) {
 }
 
 // ── Gmail: Send email ──
-export async function sendEmail({ to, subject, body, cc, bcc }) {
+export async function sendEmail({ to, subject, body, html, cc, bcc }) {
   const token = await getAccessToken();
 
+  const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
   const headers = [
     `From: Travis Atreo <travis@travisatreo.com>`,
     `To: ${to}`,
     `Subject: ${subject}`,
-    `Content-Type: text/plain; charset=utf-8`
+    `MIME-Version: 1.0`,
+    `Content-Type: ${contentType}`
   ];
   if (cc) headers.push(`Cc: ${cc}`);
   if (bcc) headers.push(`Bcc: ${bcc}`);
 
-  const raw = headers.join('\r\n') + '\r\n\r\n' + body;
+  const raw = headers.join('\r\n') + '\r\n\r\n' + (html || body);
   const encoded = Buffer.from(raw).toString('base64url');
 
   const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

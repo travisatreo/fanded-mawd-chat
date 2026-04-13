@@ -2411,15 +2411,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           var itemDesc = itemList.join(' and ');
           var totalDur = formatDur(duration);
 
-          var mawdPrompt = 'I just recorded a letter for my fans titled "'+vnTitle+'". It contains '+itemDesc+', total duration '+totalDur+'. Write the email my fans will receive. Requirements:\n\n' +
-            '1. Subject line: Something personal and intriguing, not clickbaity. Make it feel like a note from a friend.\n' +
-            '2. Email body: Write it as me (Travis) talking directly to the fan. Use {{name}} for their first name. The email should:\n' +
-            '   - Open with something warm and personal\n' +
-            '   - Give a short teaser of what I talked about or what the song is about (you can be creative based on the title)\n' +
-            '   - Build anticipation without spoiling everything\n' +
-            '   - End with a natural sign-off as me\n' +
-            '3. Keep it short — 3-5 sentences max for the body. Fans should want to click play, not read an essay.\n' +
-            '4. Do NOT include any link or button text — that gets added automatically.\n\n' +
+          var mawdPrompt = 'I just recorded a letter for my fans titled "'+vnTitle+'". It contains '+itemDesc+', total duration '+totalDur+'. Write the email my fans will receive.\n\n' +
+            'Context: I\'m Travis Atreo, a Filipino-American artist with 306M+ Spotify streams. I\'m working on my first original album "Songs From Dad." My fans are in my inner circle — this email goes to people who signed up to hear from me directly.\n\n' +
+            'Requirements:\n' +
+            '1. Subject line: Personal and intriguing, like a text from a friend. Not clickbaity, not generic.\n' +
+            '2. Email body: Write as me (Travis) talking to the fan. Use {{name}} for their first name. The email should:\n' +
+            '   - Feel like I\'m talking to a friend, not writing a newsletter\n' +
+            '   - Tease what\'s in the audio based on the title — be creative, make them curious\n' +
+            '   - Build anticipation without spoiling it\n' +
+            '   - Be warm but not corny\n' +
+            '3. Keep it to 3-5 sentences. They should want to hit play, not read an essay.\n' +
+            '4. Do NOT include any link, button text like "[Listen Now]", or URL — the email template adds the listen button automatically.\n' +
+            '5. Start with "Hey {{name}}," and end with a short natural sign-off (like "— Travis" or "Talk soon,\\nTravis").\n\n' +
             'Respond in EXACTLY this JSON format, nothing else:\n{"subject":"...","body":"..."}';
 
           fetch('/api/chat',{
@@ -2526,8 +2529,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           testBtnFan.textContent = 'Sending test...';
           testBtnFan.disabled = true;
           testStatusEl.textContent = '';
-          var emailBody = generatedBody + '\n\n[Listen Now]\n\nhttps://fanded.com/travis/' + encodeURIComponent(vnTitle);
-          var testAction = {tool:'send_fan_blast', input:{subject:generatedSubject, body:emailBody, testOnly:true}};
+          var testAction = {tool:'send_fan_blast', input:{subject:generatedSubject, body:generatedBody, testOnly:true, title:vnTitle, duration:formatDur(duration), listenUrl:'https://fanded.com/travis/'+encodeURIComponent(vnTitle)}};
           fetch('/api/chat',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -2581,8 +2583,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
         // Execute the send using MAWD-generated email
         var subject = generatedEmail ? generatedEmail.subject : 'New letter from Travis: ' + vnTitle;
-        var emailBody = (generatedEmail ? generatedEmail.body : 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.') + '\n\n[Listen Now]\n\nhttps://fanded.com/travis/' + encodeURIComponent(vnTitle);
-        var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody}};
+        var emailBody = generatedEmail ? generatedEmail.body : 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.';
+        var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody, title:vnTitle, duration:formatDur(duration), listenUrl:'https://fanded.com/travis/'+encodeURIComponent(vnTitle)}};
         fetch('/api/chat',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
