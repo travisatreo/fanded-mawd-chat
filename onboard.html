@@ -158,6 +158,16 @@
   }
   .copy-btn:hover { border-color: #888; color: #fff; }
 
+  .homescreen-prompt {
+    margin-top: 28px;
+    padding: 20px;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    text-align: center;
+    animation: fadeIn 0.5s ease 1.5s both;
+  }
+
   .spinner {
     display: inline-block;
     width: 20px;
@@ -247,6 +257,14 @@
     <p id="result-desc">Bookmark this link. It's your personal MAWD, always ready.</p>
     <a class="result-link" id="result-link" href="#" target="_blank">Open your MAWD</a>
     <button class="copy-btn" onclick="copyLink()">Copy link</button>
+
+    <div class="homescreen-prompt" id="homescreen-prompt" style="display:none;">
+      <div style="width:40px;height:40px;background:linear-gradient(135deg,#D4A843,#E8B84B);border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+      </div>
+      <p style="color:#fff;font-size:15px;font-weight:600;margin-bottom:6px;">Add to Home Screen</p>
+      <p class="homescreen-instructions" id="homescreen-instructions" style="color:#999;font-size:13px;line-height:1.5;margin-bottom:0;"></p>
+    </div>
   </div>
 </div>
 
@@ -331,6 +349,23 @@ function createMAWD() {
     document.getElementById('result-title').textContent = name.split(' ')[0] + "'s MAWD is live.";
     document.getElementById('result').classList.add('active');
     window._mawdUrl = url;
+
+    // Show "Add to Home Screen" with platform-specific instructions
+    setTimeout(function() {
+      var prompt = document.getElementById('homescreen-prompt');
+      var instructions = document.getElementById('homescreen-instructions');
+      var ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod/.test(ua)) {
+        instructions.innerHTML = 'Tap the <strong style="color:#D4A843;">Share</strong> button at the bottom of Safari, then tap <strong style="color:#D4A843;">Add to Home Screen</strong>.';
+        prompt.style.display = 'block';
+      } else if (/Android/.test(ua)) {
+        instructions.innerHTML = 'Tap the <strong style="color:#D4A843;">menu (three dots)</strong> in Chrome, then tap <strong style="color:#D4A843;">Add to Home Screen</strong>.';
+        prompt.style.display = 'block';
+      } else {
+        instructions.innerHTML = 'On your phone, open this link in Safari or Chrome and add it to your home screen for instant access.';
+        prompt.style.display = 'block';
+      }
+    }, 800);
   })
   .catch(function(err) {
     btn.disabled = false;
