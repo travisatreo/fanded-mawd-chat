@@ -535,6 +535,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .fan-letter-card:hover{border-color:var(--border-hover);}
 .fan-letter-card.has-audio{border-left:3px solid var(--gold);}
 
+/* Attached items */
+.journal-attached-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;margin-top:8px;
+}
+.journal-attached-icon{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+
 .journal-record-section{margin-bottom:32px;}
 .journal-record-btn{
   width:100%;display:flex;align-items:center;gap:12px;
@@ -795,10 +806,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <!-- ARTIST VIEW -->
         <div id="journalArtistView">
         <div class="journal-record-section">
+          <div class="journal-section-label" style="margin-bottom:12px;">Build your letter</div>
+
+          <!-- Step 1: Upload MP3 -->
+          <button class="journal-upload-btn" id="journalUploadBtn" style="margin-top:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <span>Upload MP3 or audio file</span>
+          </button>
+          <input type="file" id="journalFileInput" accept="audio/*,.mp3,.m4a,.wav,.aac,.caf,.ogg,.webm,.mp4" style="display:none;">
+
+          <!-- Attached MP3 (shown after upload) -->
+          <div id="journalAttachedMp3" style="display:none;" class="journal-attached-item">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+              <div class="journal-attached-icon" style="background:var(--gold-dim);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div id="journalMp3Name" style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                <div id="journalMp3Dur" style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);"></div>
+              </div>
+            </div>
+            <button id="journalMp3Remove" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;font-size:16px;line-height:1;" onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='var(--text-3)'">&times;</button>
+          </div>
+
+          <!-- Step 2: Record voice note -->
           <button class="journal-record-btn" id="journalRecordBtn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             <span>Record a voice note</span>
           </button>
+
+          <!-- Recording active state -->
           <div class="journal-record-active" id="journalRecordActive" style="display:none;">
             <div class="journal-record-indicator">
               <div class="journal-record-dot"></div>
@@ -830,18 +867,31 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             <div class="journal-record-controls">
               <button class="journal-cancel-btn" id="journalCancelBtn">Cancel</button>
               <button class="journal-send-btn" id="journalSendBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                Preview &amp; Send
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                Done
               </button>
             </div>
           </div>
 
-          <!-- Upload button -->
-          <button class="journal-upload-btn" id="journalUploadBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span>Upload MP3, voice memo, or audio file</span>
+          <!-- Attached voice note (shown after recording) -->
+          <div id="journalAttachedVN" style="display:none;" class="journal-attached-item">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+              <div class="journal-attached-icon" style="background:rgba(239,68,68,0.15);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:500;color:var(--text);">Voice note</div>
+                <div id="journalVNDur" style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);"></div>
+              </div>
+            </div>
+            <button id="journalVNRemove" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;font-size:16px;line-height:1;" onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='var(--text-3)'">&times;</button>
+          </div>
+
+          <!-- Preview & Send button (appears when at least one item is attached) -->
+          <button id="journalPreviewBtn" style="display:none;width:100%;margin-top:12px;padding:14px;border-radius:var(--radius);background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Preview &amp; Send to Fans
           </button>
-          <input type="file" id="journalFileInput" accept="audio/*,.mp3,.m4a,.wav,.aac,.caf,.ogg,.webm,.mp4" style="display:none;">
         </div>
 
         <!-- Sent Letters -->
@@ -1849,10 +1899,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     audioChunks = [];
   });
 
-  // ── Upload handler ──
+  // ── Letter staging area ──
+  var stagedMp3 = null;   // {dataUrl, duration, fileName}
+  var stagedVoice = null;  // {dataUrl, duration}
+
   var journalUploadBtn = document.getElementById('journalUploadBtn');
   var journalFileInput = document.getElementById('journalFileInput');
+  var journalAttachedMp3 = document.getElementById('journalAttachedMp3');
+  var journalAttachedVN = document.getElementById('journalAttachedVN');
+  var journalPreviewBtn = document.getElementById('journalPreviewBtn');
 
+  function updatePreviewBtn(){
+    if(stagedMp3 || stagedVoice){
+      journalPreviewBtn.style.display = 'flex';
+    } else {
+      journalPreviewBtn.style.display = 'none';
+    }
+  }
+
+  // ── Upload MP3 handler ──
   journalUploadBtn.addEventListener('click', function(){
     journalFileInput.click();
   });
@@ -1862,39 +1927,79 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     if(!file) return;
     journalFileInput.value = '';
 
-    // Read file as data URL
     var reader = new FileReader();
     reader.onloadend = function(){
       var dataUrl = reader.result;
-      // Get duration from audio element
       var tempAudio = new Audio(dataUrl);
       tempAudio.addEventListener('loadedmetadata', function(){
         var dur = Math.round(tempAudio.duration) || 0;
-        openVoiceNotePreview(dataUrl, dur, file.name);
+        stagedMp3 = {dataUrl: dataUrl, duration: dur, fileName: file.name};
+        showAttachedMp3();
       });
-      // Fallback if metadata doesn't load
       tempAudio.addEventListener('error', function(){
-        openVoiceNotePreview(dataUrl, 0, file.name);
+        stagedMp3 = {dataUrl: dataUrl, duration: 0, fileName: file.name};
+        showAttachedMp3();
       });
     };
     reader.readAsDataURL(file);
   });
 
-  // ── Recording → Preview (instead of direct send) ──
+  function showAttachedMp3(){
+    document.getElementById('journalMp3Name').textContent = stagedMp3.fileName;
+    var m = Math.floor(stagedMp3.duration/60);
+    var s = (stagedMp3.duration%60).toString().padStart(2,'0');
+    document.getElementById('journalMp3Dur').textContent = m+':'+s;
+    journalAttachedMp3.style.display = 'flex';
+    journalUploadBtn.style.display = 'none';
+    updatePreviewBtn();
+  }
+
+  document.getElementById('journalMp3Remove').addEventListener('click', function(){
+    stagedMp3 = null;
+    journalAttachedMp3.style.display = 'none';
+    journalUploadBtn.style.display = 'flex';
+    updatePreviewBtn();
+  });
+
+  // ── Recording → stage voice note (not preview) ──
   journalSendBtn.addEventListener('click', function(){
     var duration = recordSeconds;
 
-    // Set up callback that fires AFTER mediaRecorder.onstop flushes all data
     pendingRecordCallback = function(blob){
       var reader = new FileReader();
       reader.onloadend = function(){
-        openVoiceNotePreview(reader.result, duration, null);
+        stagedVoice = {dataUrl: reader.result, duration: duration};
+        showAttachedVN();
       };
       reader.readAsDataURL(blob);
     };
 
-    // This triggers mediaRecorder.onstop → which calls pendingRecordCallback
     stopRecording();
+  });
+
+  function showAttachedVN(){
+    var m = Math.floor(stagedVoice.duration/60);
+    var s = (stagedVoice.duration%60).toString().padStart(2,'0');
+    document.getElementById('journalVNDur').textContent = m+':'+s;
+    journalAttachedVN.style.display = 'flex';
+    updatePreviewBtn();
+  }
+
+  document.getElementById('journalVNRemove').addEventListener('click', function(){
+    stagedVoice = null;
+    journalAttachedVN.style.display = 'none';
+    updatePreviewBtn();
+  });
+
+  // ── Preview & Send button ──
+  journalPreviewBtn.addEventListener('click', function(){
+    // Combine staged items — voice note is the primary, mp3 is an attachment
+    var primaryData = stagedVoice ? stagedVoice.dataUrl : (stagedMp3 ? stagedMp3.dataUrl : null);
+    var totalDuration = (stagedVoice ? stagedVoice.duration : 0) + (stagedMp3 ? stagedMp3.duration : 0);
+    var fileName = stagedMp3 ? stagedMp3.fileName : null;
+    if(!primaryData) return;
+
+    openVoiceNotePreview(primaryData, totalDuration, fileName, null, stagedMp3, stagedVoice);
   });
 
   // ── Sent Letters (localStorage) ──
@@ -2112,7 +2217,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   }
 
   // ── Voice Note Preview Overlay ──
-  function openVoiceNotePreview(audioDataUrl, duration, fileName, existingLetter){
+  function openVoiceNotePreview(audioDataUrl, duration, fileName, existingLetter, mp3Data, voiceData){
     var step = 1; // 1=preview, 2=fan view, 3=send
     var testSent = false;
     var previewAudio = new Audio(audioDataUrl);
@@ -2165,11 +2270,48 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       var footer = overlay.querySelector('#vnFooter');
 
       if(step === 1){
-        // STEP 1: Preview — listen, edit title
-        body.innerHTML =
-          '<div class="vn-player">' +
-            '<input class="vn-player-title-input" id="vnTitleInput" value="'+escapeHtml(vnTitle)+'" placeholder="Title for your fans...">' +
-            (fileName ? '<div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">📎 '+escapeHtml(fileName)+'</div>' : '') +
+        // STEP 1: Preview — listen, edit title, see attached items
+        var itemsHtml = '';
+
+        // Show MP3 attachment if present
+        if(mp3Data){
+          var mp3Dur = formatDur(mp3Data.duration);
+          itemsHtml +=
+            '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface-2);border-radius:10px;margin-bottom:12px;">' +
+              '<div style="width:32px;height:32px;border-radius:8px;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
+              '</div>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHtml(mp3Data.fileName)+'</div>' +
+                '<div style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);">'+mp3Dur+'</div>' +
+              '</div>' +
+              '<button class="vn-play-btn" id="vnPlayMp3" style="width:36px;height:36px;">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>' +
+              '</button>' +
+            '</div>';
+        }
+
+        // Show voice note if present
+        if(voiceData){
+          var vnDur = formatDur(voiceData.duration);
+          itemsHtml +=
+            '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface-2);border-radius:10px;margin-bottom:12px;">' +
+              '<div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>' +
+              '</div>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:13px;font-weight:500;color:var(--text);">Voice note</div>' +
+                '<div style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);">'+vnDur+'</div>' +
+              '</div>' +
+              '<button class="vn-play-btn" id="vnPlayVoice" style="width:36px;height:36px;">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>' +
+              '</button>' +
+            '</div>';
+        }
+
+        // Fallback: single player if only one item and no separate items
+        if(!mp3Data && !voiceData){
+          itemsHtml =
             '<div class="vn-waveform" id="vnWaveform">'+generateWaveformBars(40, letterId.length)+'</div>' +
             '<div class="vn-player-controls">' +
               '<button class="vn-play-btn" id="vnPlayBtn">' +
@@ -2177,9 +2319,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               '</button>' +
               '<span class="vn-time" id="vnTimeDisplay">0:00 / '+formatDur(duration)+'</span>' +
               '<div class="vn-progress-bar" id="vnProgressBar"><div class="vn-progress-fill" id="vnProgressFill" style="width:0%"></div></div>' +
-            '</div>' +
+            '</div>';
+        }
+
+        body.innerHTML =
+          '<div class="vn-player">' +
+            '<input class="vn-player-title-input" id="vnTitleInput" value="'+escapeHtml(vnTitle)+'" placeholder="Title for your fans...">' +
+            itemsHtml +
           '</div>' +
-          '<div style="text-align:center;padding:8px;"><span style="font-size:12px;color:var(--text-3);">Listen back before your fans hear it</span></div>';
+          '<div style="text-align:center;padding:8px;"><span style="font-size:12px;color:var(--text-3);">Review your letter before fans hear it</span></div>';
 
         footer.innerHTML =
           '<div class="vn-footer-actions">' +
@@ -2187,16 +2335,46 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             '<button class="vn-btn-next" id="vnNext">See Fan Preview →</button>' +
           '</div>';
 
-        // Wire playback
-        wirePlayback();
+        // Wire playback — individual players for mp3 and voice, or single player
+        if(mp3Data || voiceData){
+          // Wire individual play buttons
+          function wireItemPlay(btnId, dataUrl){
+            var btn = overlay.querySelector('#'+btnId);
+            if(!btn) return;
+            var audio = new Audio(dataUrl);
+            var playing = false;
+            btn.addEventListener('click', function(){
+              if(playing){ audio.pause(); audio.currentTime = 0; }
+              else { audio.play(); }
+              playing = !playing;
+              btn.innerHTML = playing ?
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--bg)"><rect x="5" y="3" width="5" height="18" rx="1"/><rect x="14" y="3" width="5" height="18" rx="1"/></svg>' :
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>';
+            });
+            audio.addEventListener('ended', function(){
+              playing = false;
+              btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--bg)"><polygon points="6,3 20,12 6,21"/></svg>';
+            });
+          }
+          if(mp3Data) wireItemPlay('vnPlayMp3', mp3Data.dataUrl);
+          if(voiceData) wireItemPlay('vnPlayVoice', voiceData.dataUrl);
+        } else {
+          wirePlayback();
+        }
 
         // Wire title edit
         overlay.querySelector('#vnTitleInput').addEventListener('input', function(e){ vnTitle = e.target.value; });
 
         // Wire buttons
         overlay.querySelector('#vnDiscard').addEventListener('click', function(){
-          if(confirm('Discard this voice note?')){
+          if(confirm('Discard this letter?')){
             deleteSentLetter(letterId);
+            // Clear staged items
+            stagedMp3 = null; stagedVoice = null;
+            journalAttachedMp3.style.display = 'none';
+            journalAttachedVN.style.display = 'none';
+            journalUploadBtn.style.display = 'flex';
+            updatePreviewBtn();
             cleanup();
           }
         });
