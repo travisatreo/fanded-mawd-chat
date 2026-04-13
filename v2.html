@@ -406,6 +406,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 .journal-sent-letter-badge.sent{background:var(--gold-dim);color:var(--gold);}
 .journal-sent-letter-badge.draft{background:var(--surface-2);color:var(--text-3);}
+.journal-sent-letter-badge.scheduled{background:rgba(59,130,246,0.15);color:#60A5FA;}
 
 /* Mini stats on sent letter */
 .journal-sent-stats{
@@ -888,9 +889,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           </div>
 
           <!-- Preview & Send button (appears when at least one item is attached) -->
-          <button id="journalPreviewBtn" style="display:none;width:100%;margin-top:12px;padding:14px;border-radius:var(--radius);background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Preview &amp; Send to Fans
+          <button id="journalPreviewBtn" style="display:none;width:100%;margin-top:12px;padding:14px;border-radius:var(--radius);background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview Letter
           </button>
         </div>
 
@@ -2026,10 +2027,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               '</div>' +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:8px;">' +
-              '<span class="journal-sent-letter-badge '+(letter.blastSent?'sent':'draft')+'">'+(letter.blastSent?'Sent':'Draft')+'</span>' +
+              '<span class="journal-sent-letter-badge '+(letter.blastSent?'sent':letter.status==='scheduled'?'scheduled':'draft')+'">'+(letter.blastSent?'Sent':letter.status==='scheduled'?'📅 Scheduled':'Draft')+'</span>' +
               (!letter.blastSent ? '<button class="journal-draft-delete" data-id="'+letter.id+'" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:4px;font-size:16px;line-height:1;border-radius:4px;transition:color 0.15s;" onmouseover="this.style.color=\'#EF4444\'" onmouseout="this.style.color=\'var(--text-3)\'">&times;</button>' : '') +
             '</div>' +
           '</div>' +
+          (letter.status==='scheduled' && letter.scheduledFor ? '<div style="padding:6px 0 2px;font-size:12px;color:var(--gold);opacity:0.8;">Sends '+new Date(letter.scheduledFor).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' at '+new Date(letter.scheduledFor).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'</div>' : '') +
           (letter.blastSent ? '<div class="journal-sent-stats">' +
             '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.sent:'-')+'</div><div class="journal-sent-stat-label">Sent</div></div>' +
             '<div class="journal-sent-stat"><div class="journal-sent-stat-value">'+(letter.stats?letter.stats.opened:'-')+'</div><div class="journal-sent-stat-label">Opened</div></div>' +
@@ -2412,13 +2414,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         footer.innerHTML =
           '<div class="vn-status" id="vnTestStatus"></div>' +
           '<div class="vn-footer-actions">' +
-            '<button class="vn-btn-back" id="vnBack">← Back</button>' +
-            '<button class="vn-btn-test" id="vnTestBtn" style="flex:2;">Send Test to Me First</button>' +
+            '<button class="vn-btn-back" id="vnBack">← Edit</button>' +
+            '<button class="vn-btn-test" id="vnTestBtn" style="flex:2;">Send Test to Me</button>' +
           '</div>' +
           '<div class="vn-footer-actions">' +
-            '<button class="vn-btn-send" id="vnSendToFans"'+(testSent?' class="ready"':'')+'>'+
-              (testSent ? 'Send to All 693 Fans' : 'Send to All 693 Fans') +
-            '</button>' +
+            '<button class="vn-btn-send" id="vnScheduleBtn" style="flex:1;">Schedule</button>' +
+            '<button class="vn-btn-send" id="vnSendToFans" style="flex:1;"'+(testSent?' class="ready"':'')+'>Send Now</button>' +
           '</div>';
 
         overlay.querySelector('#vnBack').addEventListener('click', function(){ step = 1; renderStep(); });
@@ -2461,14 +2462,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           .catch(function(){ testBtnFan.textContent = 'Test Failed — Retry'; testBtnFan.disabled = false; });
         });
 
-        // Send to all fans — with confirmation popup
+        // Schedule — pick date/time
+        overlay.querySelector('#vnScheduleBtn').addEventListener('click', function(){
+          if(!testSent){
+            testStatusEl.textContent = 'Send a test to yourself first so you can check it looks right.';
+            testStatusEl.style.color = 'var(--pulse)';
+            return;
+          }
+          showSchedulePicker();
+        });
+
+        // Send now — with confirmation popup
         overlay.querySelector('#vnSendToFans').addEventListener('click', function(){
           if(!testSent){
             testStatusEl.textContent = 'Send a test to yourself first so you can check it looks right.';
             testStatusEl.style.color = 'var(--pulse)';
             return;
           }
-          // Show confirmation overlay
           showSendConfirmation();
         });
 
@@ -2542,6 +2552,107 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         confirmEl.remove();
         step = 3;
         renderStep();
+      });
+    }
+
+    function showSchedulePicker(){
+      var now = new Date();
+      // Default to tomorrow at 10am
+      var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 10, 0);
+      var defaultDate = tomorrow.toISOString().slice(0,10);
+      var defaultTime = '10:00';
+
+      var pickerEl = document.createElement('div');
+      pickerEl.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;animation:blastSlideUp 0.15s ease;';
+      pickerEl.innerHTML =
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:340px;width:90%;">' +
+          '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px;text-align:center;">Schedule Letter</div>' +
+          '<div style="font-size:13px;color:var(--text-3);margin-bottom:20px;text-align:center;">Choose when to send <strong style="color:var(--gold);">"'+escapeHtml(vnTitle)+'"</strong></div>' +
+          '<div style="margin-bottom:16px;">' +
+            '<label style="display:block;font-size:12px;color:var(--text-2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Date</label>' +
+            '<input type="date" id="schedDate" value="'+defaultDate+'" min="'+now.toISOString().slice(0,10)+'" style="width:100%;padding:12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:15px;outline:none;-webkit-appearance:none;">' +
+          '</div>' +
+          '<div style="margin-bottom:20px;">' +
+            '<label style="display:block;font-size:12px;color:var(--text-2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Time</label>' +
+            '<input type="time" id="schedTime" value="'+defaultTime+'" style="width:100%;padding:12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:15px;outline:none;-webkit-appearance:none;">' +
+          '</div>' +
+          '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:20px;">' +
+            '<button class="sched-quick" data-hours="1" style="flex:1;min-width:70px;padding:8px 4px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-family:var(--font);font-size:12px;cursor:pointer;">In 1 hour</button>' +
+            '<button class="sched-quick" data-hours="3" style="flex:1;min-width:70px;padding:8px 4px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-family:var(--font);font-size:12px;cursor:pointer;">In 3 hours</button>' +
+            '<button class="sched-quick" data-tomorrow="1" style="flex:1;min-width:70px;padding:8px 4px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-family:var(--font);font-size:12px;cursor:pointer;">Tomorrow 10am</button>' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;">' +
+            '<button id="schedCancel" style="flex:1;padding:14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;">Cancel</button>' +
+            '<button id="schedConfirm" style="flex:1;padding:14px;border-radius:12px;background:var(--gold);border:none;color:var(--bg);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;">Schedule</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(pickerEl);
+
+      var dateInput = pickerEl.querySelector('#schedDate');
+      var timeInput = pickerEl.querySelector('#schedTime');
+
+      // Quick-pick buttons
+      pickerEl.querySelectorAll('.sched-quick').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var h = btn.dataset.hours;
+          var target;
+          if(h){
+            target = new Date(Date.now() + parseInt(h) * 3600000);
+          } else {
+            target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 10, 0);
+          }
+          dateInput.value = target.toISOString().slice(0,10);
+          timeInput.value = ('0'+target.getHours()).slice(-2)+':'+('0'+target.getMinutes()).slice(-2);
+          // Highlight selected
+          pickerEl.querySelectorAll('.sched-quick').forEach(function(b){ b.style.borderColor='var(--border)'; b.style.color='var(--text-2)'; });
+          btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)';
+        });
+      });
+
+      pickerEl.querySelector('#schedCancel').addEventListener('click', function(){ pickerEl.remove(); });
+
+      pickerEl.querySelector('#schedConfirm').addEventListener('click', function(){
+        var d = dateInput.value;
+        var t = timeInput.value;
+        if(!d || !t){ return; }
+        var scheduledDate = new Date(d + 'T' + t);
+        if(scheduledDate <= new Date()){
+          dateInput.style.borderColor = 'var(--pulse)';
+          timeInput.style.borderColor = 'var(--pulse)';
+          return;
+        }
+
+        // Save scheduled letter
+        var letter = {
+          id: Date.now(),
+          title: vnTitle,
+          mp3: stagedMp3 ? { name: stagedMp3.name, dataUrl: stagedMp3.dataUrl, duration: stagedMp3.duration } : null,
+          voice: stagedVoice ? { dataUrl: stagedVoice.dataUrl, duration: stagedVoice.duration } : null,
+          scheduledFor: scheduledDate.toISOString(),
+          status: 'scheduled',
+          createdAt: new Date().toISOString()
+        };
+        saveSentLetter(letter);
+
+        pickerEl.remove();
+        overlay.remove();
+
+        // Reset staged data
+        stagedMp3 = null;
+        stagedVoice = null;
+        if(journalAttachedMp3) journalAttachedMp3.style.display = 'none';
+        if(journalAttachedVN) journalAttachedVN.style.display = 'none';
+        updatePreviewBtn();
+        loadSentLetters();
+
+        // Show success toast
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:14px 20px;z-index:1200;display:flex;align-items:center;gap:10px;animation:blastSlideUp 0.2s ease;';
+        var fmtDate = scheduledDate.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+        var fmtTime = scheduledDate.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+        toast.innerHTML = '<span style="font-size:20px;">📅</span><div><div style="color:var(--text);font-size:14px;font-weight:500;">Scheduled</div><div style="color:var(--text-3);font-size:12px;">'+escapeHtml(vnTitle)+' — '+fmtDate+' at '+fmtTime+'</div></div>';
+        document.body.appendChild(toast);
+        setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(function(){ toast.remove(); }, 300); }, 3000);
       });
     }
 
