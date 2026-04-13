@@ -3027,15 +3027,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   var DEEP_LINK_CONTEXTS = {
     'prep_tomorrow':{
       agent:'compass',
-      mawdOpening:"Here's your prep for tomorrow. Tell me which ones to run and I'll get started.",
-      quickReplies:['Draft the Jason Sparks reply','Confirm Max Diez Thursday','Pull my top 15 whale fans','Draft the Shawn Xu email'],
-      systemContext:'Travis tapped the PREP FOR TOMORROW link from your iMessage. You texted him these 4 items: (1) Draft reply to Jason Sparks explaining the $1.56M ARR math. (2) Draft reply to Max Diez confirming Thursday after 4:30pm + send calendar invite. (3) Pull top 15 whale fans and draft personal outreach for Songs From Dad pre-launch. (4) Draft the materials email to send Shawn Xu at Lower Carbon. He\'s now choosing which ones to approve. Execute immediately when he picks one. Be short.',
-      queueItems:[
-        {agent:'dollar',title:'Jason Sparks reply',action:'Draft the Jason Sparks reply with the $1.56M ARR math'},
-        {agent:'compass',title:'Max Diez confirm',action:'Confirm Max Diez Thursday after 4:30pm and send calendar invite'},
-        {agent:'pulse',title:'Top 15 whale fans',action:'Pull my top 15 whale fans and draft Songs From Dad outreach'},
-        {agent:'scout',title:'Shawn Xu email',action:'Draft the materials email for Shawn Xu at Lower Carbon with deck and MAWD demo link'}
-      ]
+      mawdOpening:null,
+      quickReplies:[],
+      systemContext:'Travis tapped PREP FOR TOMORROW. Generate a fresh prep based on what you know about his current priorities, open loops, and any memories you have. List 3-5 specific action items with → arrows. Each should be immediately executable — if you can draft an email or schedule something, offer to do it. End with quick reply options matching the top items so he can tap to execute. Do NOT reference stale tasks — only suggest things that are currently relevant based on your knowledge and memories.',
+      queueItems:[]
     },
     'morning_briefing':{
       agent:'compass',
