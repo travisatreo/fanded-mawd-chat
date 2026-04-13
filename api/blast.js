@@ -97,6 +97,12 @@ export default async function handler(req, res) {
   </table>
 </td></tr>
 
+<!-- Support CTA -->
+<tr><td style="padding-bottom:28px;text-align:center;">
+  <div style="font-size:14px;color:#A1A1AA;line-height:1.6;margin-bottom:16px;">This music is always free for you. But if you want to go deeper and support what I'm building, it would mean the world.</div>
+  <a href="https://app.fanded.com/club/travisatreo" style="display:inline-block;background-color:transparent;color:#C4953A;font-size:13px;font-weight:600;padding:10px 28px;border-radius:50px;text-decoration:none;border:1px solid #C4953A;">Join the Club</a>
+</td></tr>
+
 <!-- Footer -->
 <tr><td style="text-align:center;padding-top:16px;border-top:1px solid #27272A;">
   <span style="color:#52525B;font-size:11px;">Sent with love from Travis via </span><a href="https://fanded.com" style="color:#C4953A;font-size:11px;text-decoration:none;">Fanded</a>
