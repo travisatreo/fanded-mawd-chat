@@ -164,7 +164,33 @@ BE SHORT. 1-3 sentences default. Like a text from your smartest friend.
 Only go longer when BUILDING something (drafts, plans, documents).
 Never use em dashes. Use commas, periods, colons, or parentheses.
 You already know ${mawdInstance.name}. Don't introduce yourself. Just brief them.
-Always end with ONE question or action to approve.`;
+Always end with ONE question or action to approve.
+
+DOCUMENT MODE:
+When ${mawdInstance.name} asks you to GENERATE, CREATE, BUILD, or DRAFT something (media kit, plan, report, one-sheet, press release, invoice, contract), switch to BUILD mode:
+
+Your response has TWO parts:
+1. A SHORT chat message (2-3 sentences max) explaining what the document contains. This is what ${mawdInstance.name} sees in the chat bubble.
+2. The full document content wrapped in <!--DOCSTART--> and <!--DOCEND--> markers. This content is HIDDEN from chat and only appears in the downloadable PDF/Word file.
+3. After <!--DOCEND-->, add the doc marker: <!--DOC:type:title-->
+
+Example:
+Here's your media kit with all your platform stats and highlights. Download below.
+
+<!--DOCSTART-->
+(full professional document content here with HTML formatting)
+<!--DOCEND-->
+<!--DOC:media-kit:${mawdInstance.name} Media Kit-->
+
+DOCUMENT FORMATTING RULES:
+- Format documents using clean HTML: <h1> for title, <h2> for sections, <h3> for subsections, <table> for data, <strong> for emphasis.
+- Include a professional header: document title, prepared for ${mawdInstance.name}, prepared by MAWD by Fanded, date.
+- For media kits: include stat callouts using <div class="stat-callout"><div class="stat-value">NUMBER</div><div class="stat-label">LABEL</div></div>, platform sections, audience demographics, notable achievements.
+- For one-sheets and press releases: clean layout, key quotes, contact info.
+- NEVER truncate. Complete the full document.
+- USE YOUR FULL TOKEN BUDGET for documents.
+
+Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract, email`;
 
         // Load memories for this MAWD instance
         try {
@@ -335,7 +361,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     const apiMessages = messages || [{ role: 'user', content: 'Start the conversation.' }];
 
     const userMsg = (messages && messages.length) ? messages[messages.length - 1].content.toLowerCase() : '';
-    const isBuildMode = /generat|create|draft|build|write me|full .*(breakdown|report|p&l|p\+l|profit.?loss|statement|plan|email|contract|list)|show me (everything|all|the full|the complete)|break(down| it down)|itemize|line.by.line|detailed|in full|don't cut|finish|keep going|continue|more detail|elaborate/.test(userMsg);
+    const isBuildMode = /generat|create|draft|build|write me|media.?kit|one.?sheet|press.?release|full .*(breakdown|report|p&l|p\+l|profit.?loss|statement|plan|email|contract|list)|show me (everything|all|the full|the complete)|break(down| it down)|itemize|line.by.line|detailed|in full|don't cut|finish|keep going|continue|more detail|elaborate/.test(userMsg);
     const isFinanceAgent = agent && ['ledger', 'dollar'].includes(agent.toLowerCase());
     const maxTokens = isBuildMode ? 8192 : isFinanceAgent ? 1024 : 1200;
 
