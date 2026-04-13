@@ -258,6 +258,45 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .action-card.executed{opacity:0.5;pointer-events:none;}
 .action-card.executed .action-card-label{color:var(--ledger);}
 
+/* ── BLAST PREVIEW (full-screen email review) ── */
+.blast-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;
+  background:var(--bg);display:flex;flex-direction:column;
+  animation:blastSlideUp 0.25s ease;
+}
+@keyframes blastSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.blast-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.blast-header-title{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--gold);}
+.blast-close{background:none;border:none;color:var(--text-2);font-size:24px;cursor:pointer;padding:4px 8px;}
+.blast-content{flex:1;overflow-y:auto;padding:20px;}
+.blast-field{margin-bottom:16px;}
+.blast-field-label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-2);margin-bottom:4px;font-weight:600;}
+.blast-field-value{font-size:15px;color:var(--text);line-height:1.5;}
+.blast-email-body{
+  font-size:15px;color:var(--text);line-height:1.7;
+  padding:20px;background:var(--surface);border-radius:12px;
+  border:1px solid var(--border);white-space:pre-wrap;
+}
+.blast-footer{
+  padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;flex-direction:column;gap:10px;
+}
+.blast-info{font-size:12px;color:var(--text-2);text-align:center;}
+.blast-actions{display:flex;gap:10px;}
+.blast-actions button{
+  flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);
+  font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;min-height:50px;
+}
+.blast-send-test{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+.blast-send-test:hover{background:var(--gold);color:var(--bg);}
+.blast-send-all{background:var(--surface);border-color:var(--border);color:var(--text-2);}
+.blast-send-all.ready{background:var(--gold);border-color:var(--gold);color:var(--bg);}
+.blast-cancel{background:transparent;color:var(--text-2);}
+.blast-status{font-size:13px;text-align:center;padding:8px;color:var(--gold);font-weight:500;}
+
 /* ── AGENT DASHBOARD ── */
 .dash-header{margin-bottom:24px;}
 .dash-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -1748,7 +1787,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   function parseTextActions(text){
     var actions = [];
     var cleanText = text;
-    var toolPattern = /<(send_email|create_draft|create_event)\>\s*\{([\s\S]*?)\}\s*/g;
+    var toolPattern = /<(send_email|create_draft|create_event|send_fan_blast)\>\s*\{([\s\S]*?)\}\s*/g;
     var match;
     while((match = toolPattern.exec(text)) !== null){
       try {
@@ -1810,8 +1849,129 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     });
   }
 
+  // ── Full-screen blast preview ──
+  function openBlastPreview(action, card){
+    var inp = action.input;
+    var overlay = document.createElement('div');
+    overlay.className = 'blast-overlay';
+    var testSent = false;
+
+    overlay.innerHTML =
+      '<div class="blast-header">' +
+        '<span class="blast-header-title">Fan Blast Preview</span>' +
+        '<button class="blast-close">&times;</button>' +
+      '</div>' +
+      '<div class="blast-content">' +
+        '<div class="blast-field"><div class="blast-field-label">To</div><div class="blast-field-value">All fans (693 emailable)</div></div>' +
+        '<div class="blast-field"><div class="blast-field-label">Subject</div><div class="blast-field-value">'+escapeHtml(inp.subject || '')+'</div></div>' +
+        '<div class="blast-field"><div class="blast-field-label">From</div><div class="blast-field-value">Travis Atreo &lt;travis@travisatreo.com&gt;</div></div>' +
+        '<div class="blast-field"><div class="blast-field-label">Email Body</div><div class="blast-email-body">'+escapeHtml(inp.body || '').replace(/\n/g,'<br>').replace(/\{\{name\}\}/g,'<em style="color:var(--gold)">[fan name]</em>')+'</div></div>' +
+      '</div>' +
+      '<div class="blast-footer">' +
+        '<div class="blast-status" id="blastStatus"></div>' +
+        '<div class="blast-actions">' +
+          '<button class="blast-cancel">Cancel</button>' +
+          '<button class="blast-send-test" id="blastTestBtn">Send Test to Me</button>' +
+          '<button class="blast-send-all" id="blastSendBtn">Send to All Fans</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    var statusEl = overlay.querySelector('#blastStatus');
+    var testBtn = overlay.querySelector('#blastTestBtn');
+    var sendBtn = overlay.querySelector('#blastSendBtn');
+
+    // Close
+    overlay.querySelector('.blast-close').addEventListener('click', function(){ overlay.remove(); });
+    overlay.querySelector('.blast-cancel').addEventListener('click', function(){ overlay.remove(); });
+
+    // Send test
+    testBtn.addEventListener('click', function(){
+      testBtn.textContent = 'Sending test...';
+      testBtn.disabled = true;
+      statusEl.textContent = '';
+      var testAction = {tool:'send_fan_blast', input:{subject:inp.subject, body:inp.body, testOnly:true}};
+      fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({executeAction:testAction, agent:currentAgent, mode:'personal'})
+      })
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.actionResult && data.actionResult.success){
+          testBtn.textContent = 'Test Sent!';
+          statusEl.textContent = 'Check your inbox at travis@travisatreo.com';
+          testSent = true;
+          sendBtn.classList.add('ready');
+        } else {
+          testBtn.textContent = 'Test Failed';
+          statusEl.textContent = (data.actionResult ? data.actionResult.error : 'Connection issue');
+          testBtn.disabled = false;
+        }
+      })
+      .catch(function(){ testBtn.textContent = 'Test Failed'; testBtn.disabled = false; });
+    });
+
+    // Send to all fans
+    sendBtn.addEventListener('click', function(){
+      if(!testSent){
+        statusEl.textContent = 'Send a test first so you can check it in your inbox.';
+        return;
+      }
+      if(!confirm('Send this email to all 693 fans? This cannot be undone.')) return;
+      sendBtn.textContent = 'Sending to all fans...';
+      sendBtn.disabled = true;
+      statusEl.textContent = 'This may take a few minutes...';
+      var blastAction = {tool:'send_fan_blast', input:{subject:inp.subject, body:inp.body}};
+      fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({executeAction:blastAction, agent:currentAgent, mode:'personal'})
+      })
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.actionResult && data.actionResult.success){
+          var r = data.actionResult.result;
+          sendBtn.textContent = 'Sent!';
+          statusEl.textContent = r.sent + ' emails sent' + (r.failed ? ', ' + r.failed + ' failed' : '');
+          card.classList.add('executed');
+          card.querySelector('.action-card-label').textContent = 'BLAST SENT';
+          logAction('approve', 'fan_blast: ' + r.sent + ' sent');
+          typeMessage(currentAgent, 'Blast sent to ' + r.sent + ' fans! ' + (r.failed ? r.failed + ' failed.' : 'Zero failures.'), [], null);
+          setTimeout(function(){ overlay.remove(); }, 3000);
+        } else {
+          sendBtn.textContent = 'Failed';
+          statusEl.textContent = (data.actionResult ? data.actionResult.error : 'Connection issue');
+          sendBtn.disabled = false;
+        }
+      })
+      .catch(function(){ sendBtn.textContent = 'Failed'; sendBtn.disabled = false; });
+    });
+  }
+
   // ── Render action card ──
   function addActionCard(parentDiv, action){
+    // Fan blast: show a compact card that opens a full-screen preview
+    if(action.tool === 'send_fan_blast'){
+      var card = document.createElement('div');
+      card.className = 'action-card';
+      card.innerHTML =
+        '<div class="action-card-header"><span class="action-card-icon">📣</span><span class="action-card-label">FAN BLAST</span></div>' +
+        '<div class="action-card-field"><strong>Subject:</strong> '+escapeHtml(action.input.subject || '')+'</div>' +
+        '<div class="action-card-field" style="color:var(--text-2);font-size:12px;">Tap to preview full email before sending</div>' +
+        '<div class="action-card-buttons"><button class="action-approve">Review Email</button><button class="action-skip">Skip</button></div>';
+      card.querySelector('.action-approve').addEventListener('click', function(){ openBlastPreview(action, card); });
+      card.querySelector('.action-skip').addEventListener('click', function(){
+        card.classList.add('executed');
+        card.querySelector('.action-card-label').textContent = 'SKIPPED';
+        logAction('skip', action.tool);
+      });
+      parentDiv.appendChild(card);
+      scrollBottom();
+      return;
+    }
+
     var card = document.createElement('div');
     card.className = 'action-card';
     var icon = action.tool === 'send_email' ? '✉️' : action.tool === 'create_event' ? '📅' : '📝';
@@ -1835,7 +1995,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     card.querySelector('.action-approve').addEventListener('click', function(){
       if(action.tool === 'send_email' || action.tool === 'create_draft'){
-        // Open native email client with pre-filled draft
         var mailto = 'mailto:' + encodeURIComponent(action.input.to || '');
         mailto += '?subject=' + encodeURIComponent(action.input.subject || '');
         mailto += '&body=' + encodeURIComponent(action.input.body || '');
