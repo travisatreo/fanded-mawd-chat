@@ -1754,6 +1754,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   });
 
   // Recording UI
+  var pendingRecordCallback = null;
+
   journalRecordBtn.addEventListener('click', function(){
     journalRecordBtn.style.display = 'none';
     journalRecordActive.style.display = 'block';
@@ -1769,10 +1771,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
       navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
         audioChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = function(e){audioChunks.push(e.data);};
+        mediaRecorder = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'});
+        mediaRecorder.ondataavailable = function(e){
+          if(e.data && e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = function(){
+          // Called after all data is flushed — now it's safe to read audioChunks
+          if(pendingRecordCallback && audioChunks.length > 0){
+            var cb = pendingRecordCallback;
+            pendingRecordCallback = null;
+            var blob = new Blob(audioChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
+            audioChunks = [];
+            cb(blob);
+          }
+        };
         mediaRecorder.start();
-      }).catch(function(){});
+      }).catch(function(err){
+        // Mic permission denied or not available
+        journalRecordBtn.style.display = 'flex';
+        journalRecordActive.style.display = 'none';
+        clearInterval(recordTimer);
+      });
     }
   });
 
@@ -1787,6 +1806,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   }
 
   journalCancelBtn.addEventListener('click', function(){
+    pendingRecordCallback = null;
     stopRecording();
     audioChunks = [];
   });
@@ -1825,19 +1845,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   // ── Recording → Preview (instead of direct send) ──
   journalSendBtn.addEventListener('click', function(){
     var duration = recordSeconds;
-    stopRecording();
 
-    if(audioChunks.length === 0){
-      return; // nothing recorded
-    }
-
-    var blob = new Blob(audioChunks, {type:'audio/webm'});
-    audioChunks = [];
-    var reader = new FileReader();
-    reader.onloadend = function(){
-      openVoiceNotePreview(reader.result, duration, null);
+    // Set up callback that fires AFTER mediaRecorder.onstop flushes all data
+    pendingRecordCallback = function(blob){
+      var reader = new FileReader();
+      reader.onloadend = function(){
+        openVoiceNotePreview(reader.result, duration, null);
+      };
+      reader.readAsDataURL(blob);
     };
-    reader.readAsDataURL(blob);
+
+    // This triggers mediaRecorder.onstop → which calls pendingRecordCallback
+    stopRecording();
   });
 
   // ── Sent Letters (localStorage) ──
