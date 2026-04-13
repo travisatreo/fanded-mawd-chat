@@ -932,14 +932,20 @@ function backFromOptions() {
 }
 
 // Gmail OAuth connection — real OAuth flow
+// Creates the MAWD instance first (so OAuth callback can store tokens), then redirects to Google
 function connectGmail() {
   if (gmailConnected) return;
 
+  var name = document.getElementById('q-name').value.trim();
+  var context = document.getElementById('q-context').value.trim();
+  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
   // Save onboarding state to sessionStorage so we can resume after OAuth redirect
-  sessionStorage.setItem('mawd_onboard_name', document.getElementById('q-name').value.trim());
-  sessionStorage.setItem('mawd_onboard_context', document.getElementById('q-context').value.trim());
+  sessionStorage.setItem('mawd_onboard_name', name);
+  sessionStorage.setItem('mawd_onboard_context', context);
   sessionStorage.setItem('mawd_onboard_step', currentStep);
   sessionStorage.setItem('mawd_onboard_crawl', JSON.stringify(crawlResult || null));
+  sessionStorage.setItem('mawd_onboard_slug', slug);
 
   // Save social links
   var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
@@ -950,12 +956,38 @@ function connectGmail() {
   }
   sessionStorage.setItem('mawd_onboard_socials', JSON.stringify(socials));
 
-  // Build slug from name (same logic as onboard.js)
-  var name = document.getElementById('q-name').value.trim();
-  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  // Create the MAWD instance FIRST so OAuth callback has a row to store tokens in
+  var email = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '@mawd.fanded.com';
+  var brainContext = '';
+  if (crawlResult && crawlResult.synthesis) brainContext += 'MAWD scanned public data and found: ' + crawlResult.synthesis + '\n';
+  if (context) brainContext += 'About them: ' + context + '\n';
 
-  // Redirect to Google OAuth with mawd slug in state
-  window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
+  fetch('/api/onboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: name,
+      email: email,
+      slug: slug,
+      role: '',
+      context: brainContext,
+      goals: context,
+      team: 'fanded',
+      socials: socials,
+      crawlData: crawlResult ? crawlResult.crawledData : null
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    // Instance created (or already exists), now redirect to OAuth
+    sessionStorage.setItem('mawd_instance_created', 'true');
+    window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
+  })
+  .catch(function(err) {
+    // Even if instance creation fails, try OAuth anyway (might already exist)
+    console.error('Pre-create failed:', err);
+    window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
+  });
 }
 
 function connectCalendar() {
@@ -1079,13 +1111,20 @@ function finishOnboarding() {
 
   // Use name to derive an email (they'll connect real one via OAuth)
   var email = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '@mawd.fanded.com';
+  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  var instanceAlreadyCreated = sessionStorage.getItem('mawd_instance_created') === 'true';
 
-  fetch('/api/onboard', {
+  // If instance was pre-created during OAuth flow, PATCH it with final data
+  // Otherwise create fresh
+  var endpoint = instanceAlreadyCreated ? '/api/onboard?update=' + encodeURIComponent(slug) : '/api/onboard';
+
+  fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: name,
       email: email,
+      slug: slug,
       role: '',
       context: brainContext,
       goals: context,

@@ -52,9 +52,10 @@ export default async function handler(req, res) {
       return res.status(200).json(all);
     }
 
-    // POST — create a new MAWD
+    // POST — create or update a MAWD
     if (req.method === 'POST') {
       const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption } = req.body;
+      const updateSlug = req.query?.update;
 
       if (!name || !email) {
         return res.status(400).json({ error: 'name and email required' });
@@ -87,25 +88,63 @@ export default async function handler(req, res) {
       // Combine personal brain + shared Fanded context
       const fullBrain = personalBrain + '\n' + FANDED_SHARED_BRAIN;
 
-      const instance = await supabaseQuery('mawd_instances', {
-        method: 'POST',
-        body: {
-          name,
-          email,
-          slug: mawdSlug,
-          role: role || '',
-          personal_brain: personalBrain,
-          shared_brain: FANDED_SHARED_BRAIN,
-          full_brain: fullBrain,
-          created_at: new Date().toISOString(),
-          active: true
-        }
-      });
-
+      let instance;
       const mawdUrl = `https://fanded-mawd-chat.vercel.app/v2.html?mawd=${mawdSlug}`;
 
+      if (updateSlug) {
+        // PATCH existing instance (pre-created during OAuth flow)
+        // Preserves google_refresh_token, google_scopes, google_email set by OAuth callback
+        instance = await supabaseQuery(`mawd_instances?slug=eq.${updateSlug}`, {
+          method: 'PATCH',
+          body: {
+            name,
+            email,
+            role: role || '',
+            personal_brain: personalBrain,
+            shared_brain: FANDED_SHARED_BRAIN,
+            full_brain: fullBrain,
+            active: true
+          }
+        });
+      } else {
+        // Check if slug already exists (avoid duplicates)
+        const existing = await supabaseQuery(`mawd_instances?slug=eq.${mawdSlug}&select=slug`);
+        if (existing.length > 0) {
+          // Update existing
+          instance = await supabaseQuery(`mawd_instances?slug=eq.${mawdSlug}`, {
+            method: 'PATCH',
+            body: {
+              name,
+              email,
+              role: role || '',
+              personal_brain: personalBrain,
+              shared_brain: FANDED_SHARED_BRAIN,
+              full_brain: fullBrain,
+              active: true
+            }
+          });
+        } else {
+          // Create new
+          instance = await supabaseQuery('mawd_instances', {
+            method: 'POST',
+            body: {
+              name,
+              email,
+              slug: mawdSlug,
+              role: role || '',
+              personal_brain: personalBrain,
+              shared_brain: FANDED_SHARED_BRAIN,
+              full_brain: fullBrain,
+              created_at: new Date().toISOString(),
+              active: true
+            }
+          });
+        }
+      }
+
       return res.status(201).json({
-        ...instance,
+        ...(Array.isArray(instance) ? instance[0] : instance),
+        slug: mawdSlug,
         url: mawdUrl,
         message: `MAWD created for ${name}. Share this link: ${mawdUrl}`
       });
