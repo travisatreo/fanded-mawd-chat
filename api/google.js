@@ -67,11 +67,16 @@ export async function createDraft({ to, subject, body, cc, bcc }) {
 export async function sendEmail({ to, subject, body, html, cc, bcc }) {
   const token = await getAccessToken();
 
+  // RFC 2047 encode subject if it contains non-ASCII characters
+  const encodedSubject = /[^\x00-\x7F]/.test(subject)
+    ? '=?UTF-8?B?' + Buffer.from(subject, 'utf-8').toString('base64') + '?='
+    : subject;
+
   const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
   const headers = [
     `From: Travis Atreo <travis@travisatreo.com>`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodedSubject}`,
     `MIME-Version: 1.0`,
     `Content-Type: ${contentType}`
   ];
