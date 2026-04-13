@@ -62,6 +62,54 @@ const TOOLS = [
     }
   },
   {
+    name: 'list_emails',
+    description: 'List recent emails from Travis\'s Gmail inbox. Use this to check what emails need attention, find specific conversations, or show Travis his inbox. Returns subject, from, date, snippet, and read/unread status. Use the query param to search (same syntax as Gmail search).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        maxResults: { type: 'number', description: 'Number of emails to return (default 10, max 20)' },
+        query: { type: 'string', description: 'Gmail search query (e.g. "is:unread", "from:jason", "subject:invoice", "after:2026/04/01")' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'read_email',
+    description: 'Read the full body of a specific email by ID. Use this after list_emails to read an email Travis wants to see or that you need context from to draft a reply.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Gmail message ID (from list_emails results)' }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'read_thread',
+    description: 'Read an entire email thread/conversation. Returns all messages in order. Use this when Travis asks about a conversation or you need the full back-and-forth to draft a good reply.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        threadId: { type: 'string', description: 'Gmail thread ID (from list_emails results)' }
+      },
+      required: ['threadId']
+    }
+  },
+  {
+    name: 'reply_to_email',
+    description: 'Reply to an existing email in-thread. The reply appears in the same conversation in Gmail. ALWAYS show Travis the draft reply and get his approval before sending. Never reply without confirmation.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        messageId: { type: 'string', description: 'ID of the message being replied to' },
+        threadId: { type: 'string', description: 'Thread ID to keep the reply in-thread' },
+        to: { type: 'string', description: 'Recipient email address' },
+        body: { type: 'string', description: 'Reply body text' }
+      },
+      required: ['messageId', 'threadId', 'to', 'body']
+    }
+  },
+  {
     name: 'send_fan_blast',
     description: 'Send a bulk email blast to all fans in the fan_contacts database. Emails go out from travis@travisatreo.com via Gmail. Only fans with do_not_email=false receive it. Use {{name}} in the body to personalize with the fan\'s name. ALWAYS confirm the subject, body, and fan count with Travis before sending. Show him the draft first and wait for approval.',
     input_schema: {
@@ -339,6 +387,27 @@ KNOWN CONTACTS (use these for email drafts):
 - Anna Akana: (check conversation context)
 
 ALWAYS show a brief text message BEFORE the tool use explaining what you're doing. Keep it to one sentence like "Drafting the reply to Max now." then use the tool.
+
+EMAIL (CORE CAPABILITY):
+You are Travis's email admin. You can read his inbox, read full emails and threads, draft replies, and send them. This is your #1 job.
+
+When Travis asks about email:
+- "Check my email" / "What's in my inbox" → use list_emails to show recent messages
+- "What needs a reply?" → use list_emails with query "is:unread" and identify which emails need responses
+- "Read that email from Jason" → use list_emails to find it, then read_email or read_thread for full context
+- "Reply to that" / "Tell them..." → read the thread for context, draft a reply, show Travis, then send with reply_to_email after approval
+- "Draft a reply" → use create_draft so it appears in Gmail drafts for Travis to review
+
+When drafting replies:
+1. ALWAYS read the thread first so you have full context
+2. Write as Travis — casual, warm, direct. No em dashes. No corporate speak.
+3. Show the draft to Travis and wait for approval before sending
+4. Use reply_to_email (not send_email) so it stays in the same thread
+
+When showing inbox:
+- Summarize each email in one line: who it's from, what they want, how urgent
+- Flag anything that needs a reply
+- Group by priority: needs reply > FYI > can ignore
 
 FAN BLAST:
 You have send_fan_blast and get_fan_stats tools. Travis has 797 fan contacts in his database (693 emailable). When he asks to send a fan blast or email his fans:
