@@ -17,7 +17,13 @@ export default async function handler(req, res) {
     if (!name) return res.status(400).json({ error: 'name required' });
 
     // Step 1: Crawl public data from social profiles
-    const crawledData = await crawlPublicData(name, socials || {});
+    let crawledData;
+    try {
+      crawledData = await crawlPublicData(name, socials || {});
+    } catch (crawlErr) {
+      console.error('Crawl failed, using name only:', crawlErr.message);
+      crawledData = { raw: `Name: ${name}. Social profiles provided but could not be crawled.`, summary: {} };
+    }
 
     // Step 2: Send to Claude for synthesis, insight, and 3 personalized options
     const analysis = await synthesizeWithClaude(apiKey, name, crawledData, focus);

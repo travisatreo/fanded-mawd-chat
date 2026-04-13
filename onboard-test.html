@@ -623,6 +623,18 @@ function showStep(n) {
   }
 }
 
+function getFallbackData(name) {
+  return {
+    synthesis: 'I found some public information about ' + name + '. Connect more data sources and I\'ll get sharper.',
+    insight: 'The creators who grow fastest are the ones who let someone else handle the business side. That\'s what I\'m here for.',
+    options: [
+      { emoji: '💰', title: 'Money Map', description: 'Let me trace every revenue stream and find what\'s leaking.' },
+      { emoji: '📊', title: 'Content Strategy', description: 'I\'ll analyze your content and show you what to double down on.' },
+      { emoji: '⏰', title: 'Time Audit', description: 'Link your calendar and I\'ll find the hours you\'re losing every week.' }
+    ]
+  };
+}
+
 // Step 4: Brain building with animated scan log
 function startBrainBuild() {
   hideStep(3);
@@ -684,6 +696,10 @@ function startBrainBuild() {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
+    // If API returned an error or missing data, use fallback
+    if (data.error || !data.synthesis || !data.options) {
+      data = getFallbackData(name);
+    }
     crawlResult = data;
     // Wait for animation to finish, then show synthesis
     var remaining = scanSteps.length - currentScan;
@@ -691,16 +707,7 @@ function startBrainBuild() {
     setTimeout(function() { showSynthesis(data); }, waitTime);
   })
   .catch(function(err) {
-    // Even on error, show fallback synthesis
-    crawlResult = {
-      synthesis: 'I found some public information about ' + name + '. Connect more data sources and I\'ll get sharper.',
-      insight: 'The creators who grow fastest are the ones who let someone else handle the business side. That\'s what I\'m here for.',
-      options: [
-        { emoji: '💰', title: 'Money Map', description: 'Let me trace every revenue stream and find what\'s leaking.' },
-        { emoji: '📊', title: 'Content Strategy', description: 'I\'ll analyze your content and show you what to double down on.' },
-        { emoji: '⏰', title: 'Time Audit', description: 'Link your calendar and I\'ll find the hours you\'re losing every week.' }
-      ]
-    };
+    crawlResult = getFallbackData(name);
     var remaining = scanSteps.length - currentScan;
     var waitTime = Math.max(0, remaining * 1000) + 1500;
     setTimeout(function() { showSynthesis(crawlResult); }, waitTime);
