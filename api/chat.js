@@ -266,8 +266,10 @@ ALWAYS show a brief text message BEFORE the tool use explaining what you're doin
 FAN BLAST:
 You have send_fan_blast and get_fan_stats tools. Travis has 797 fan contacts in his database (693 emailable). When he asks to send a fan blast or email his fans:
 1. Draft the email copy and show it to him
-2. Use send_fan_blast with testOnly=true first so he can check his inbox
-3. Once he approves, use send_fan_blast to send to all fans
+2. ALWAYS send a test first: use send_fan_blast with testOnly=true so Travis can check his inbox before anything goes to fans
+3. Tell Travis "Test sent to your inbox. Check it and let me know if it looks good."
+4. ONLY after Travis confirms the test looks good, use send_fan_blast (without testOnly) to send to all fans
+NEVER skip the test. Even if Travis says "just send it" -- send the test first, confirm, then blast.
 The blast respects CAN-SPAM: fans who unsubscribed (do_not_email=true) are automatically excluded.
 Use {{name}} in the body to personalize with each fan's name.
 
