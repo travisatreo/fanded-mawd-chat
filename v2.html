@@ -2423,7 +2423,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             '   - Be warm but not corny\n' +
             '3. Keep it to 3-5 sentences. They should want to hit play, not read an essay.\n' +
             '4. Do NOT include any link, button text like "[Listen Now]", or URL — the email template adds the listen button automatically.\n' +
-            '5. Start with "Hey {{name}}," and end with a short natural sign-off (like "— Travis" or "Talk soon,\\nTravis").\n\n' +
+            '5. Start with "Hey {{name}}," and end with a short natural sign-off (like "Talk soon,\\nTravis").\n' +
+            '6. NEVER use em dashes (—). Use commas, periods, or "..." instead.\n\n' +
             'Respond in EXACTLY this JSON format, nothing else:\n{"subject":"...","body":"..."}';
 
           fetch('/api/chat',{
