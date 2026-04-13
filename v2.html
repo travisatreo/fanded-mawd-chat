@@ -530,23 +530,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
       <div class="nav-divider"></div>
 
-      <!-- Agents (reorderable) -->
+      <!-- Agents (reorderable) — Fans first, everything else built on top -->
       <div id="agentModules">
-      <div class="nav-item nav-draggable" data-agent="compass" id="navCompass">
-        <div class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--compass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-          <span class="agent-indicator" style="background:var(--compass);color:var(--compass)"></span>
-        </div>
-        <span class="nav-label">Strategy</span>
-        <span class="nav-grip">⠿</span>
-      </div>
-
       <div class="nav-item nav-draggable" data-agent="pulse" id="navPulse">
         <div class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--pulse)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="agent-indicator" style="background:var(--pulse);color:var(--pulse)"></span>
         </div>
         <span class="nav-label">Fans</span>
+        <span class="nav-grip">⠿</span>
+      </div>
+
+      <div class="nav-item nav-draggable" data-agent="compass" id="navCompass">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--compass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span class="agent-indicator" style="background:var(--compass);color:var(--compass)"></span>
+        </div>
+        <span class="nav-label">Strategy</span>
         <span class="nav-grip">⠿</span>
       </div>
 
@@ -620,10 +620,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     <div id="gradLine"></div>
     <!-- Queue bar — slides down when MAWD has prepared items -->
-    <div id="queueBar">
-      <div class="queue-header">Ready for your approval</div>
-      <div class="queue-items" id="queueItems"></div>
-    </div>
+    <!-- Queue bar removed from chat — approvals happen inline via action cards -->
 
     <div id="chatArea"></div>
 
@@ -845,8 +842,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   var activeAgentDot = document.getElementById('activeAgentDot');
   var activeAgentLabel = document.getElementById('activeAgentLabel');
   var statusText = document.getElementById('statusText');
-  var queueBar = document.getElementById('queueBar');
-  var queueItems = document.getElementById('queueItems');
+  // Queue bar removed from chat — stubs to prevent JS errors
+  var queueBar = document.getElementById('queueBar') || document.createElement('div');
+  var queueItems = document.getElementById('queueItems') || document.createElement('div');
   var queueBadge = document.getElementById('queueBadge');
   var inboxBadge = document.getElementById('inboxBadge'); // may be null after redesign
 
@@ -1407,7 +1405,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   }
   function applyModuleOrder(){
     var order = loadModuleOrder();
-    if(!order) return;
+    // Default order: fans first, everything else follows
+    if(!order) order = ['pulse','compass','hype','dollar','ledger'];
     order.forEach(function(agentKey){
       var el = agentModules.querySelector('[data-agent="'+agentKey+'"]');
       if(el) agentModules.appendChild(el);
