@@ -2223,6 +2223,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     var step = 1; // 1=preview, 2=fan view, 3=send
     var testSent = false;
     var generatedEmail = null; // {subject, body} — written by MAWD
+    var listenUrl = 'https://app.fanded.com/club/travisatreo';
     var previewAudio = new Audio(audioDataUrl);
     var isPlaying = false;
     var vnTitle = existingLetter ? existingLetter.title : (fileName ? fileName.replace(/\.[^.]+$/,'') : 'Voice note — ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}));
@@ -2492,7 +2493,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               '<div style="margin-top:16px;display:flex;align-items:end;justify-content:center;gap:2px;height:40px;">'+generateWaveformBars(30, 42)+'</div>' +
             '</div>' +
           '</div>' +
-          '<div style="margin-top:12px;text-align:center;">' +
+          '<div style="margin-top:16px;padding:12px;background:var(--surface-2);border-radius:10px;">' +
+            '<label style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Listen Now links to</label>' +
+            '<input type="url" id="vnListenUrl" value="'+(listenUrl||'https://app.fanded.com/club/travisatreo')+'" placeholder="Paste your Fanded post URL" style="width:100%;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;outline:none;box-sizing:border-box;">' +
+          '</div>' +
+          '<div style="margin-top:8px;text-align:center;">' +
             '<button id="vnRegenerate" style="background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;cursor:pointer;padding:8px 12px;text-decoration:underline;">Rewrite this email</button>' +
           '</div>';
 
@@ -2529,7 +2534,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           testBtnFan.textContent = 'Sending test...';
           testBtnFan.disabled = true;
           testStatusEl.textContent = '';
-          var testAction = {tool:'send_fan_blast', input:{subject:generatedSubject, body:generatedBody, testOnly:true, title:vnTitle, duration:formatDur(duration), listenUrl:'https://fanded.com/travis/'+encodeURIComponent(vnTitle)}};
+          var urlInput = overlay.querySelector('#vnListenUrl');
+          if(urlInput) listenUrl = urlInput.value.trim() || listenUrl;
+          var testAction = {tool:'send_fan_blast', input:{subject:generatedSubject, body:generatedBody, testOnly:true, title:vnTitle, duration:formatDur(duration), listenUrl:listenUrl}};
           fetch('/api/chat',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -2584,7 +2591,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         // Execute the send using MAWD-generated email
         var subject = generatedEmail ? generatedEmail.subject : 'New letter from Travis: ' + vnTitle;
         var emailBody = generatedEmail ? generatedEmail.body : 'Hey {{name}},\n\nI just recorded something for you. It\'s '+formatDur(duration)+' — tap below to listen.';
-        var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody, title:vnTitle, duration:formatDur(duration), listenUrl:'https://fanded.com/travis/'+encodeURIComponent(vnTitle)}};
+        var blastAction = {tool:'send_fan_blast', input:{subject:subject, body:emailBody, title:vnTitle, duration:formatDur(duration), listenUrl:listenUrl}};
         fetch('/api/chat',{
           method:'POST',
           headers:{'Content-Type':'application/json'},

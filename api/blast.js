@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       .replace(/\{\{name\}\}/g, fanName || 'there')
       .replace(/\n/g, '<br>');
 
-    const link = listenUrl || 'https://fanded.com/travis';
+    const link = listenUrl || 'https://app.fanded.com/club/travisatreo';
     const letterTitle = title || subject;
     const dur = duration || '';
 

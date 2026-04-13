@@ -473,7 +473,7 @@ function buildFanEmailHtml(plainBody, fanName, { title, duration, listenUrl } = 
   const personalizedBody = plainBody
     .replace(/\{\{name\}\}/g, fanName || 'there')
     .replace(/\n/g, '<br>');
-  const link = listenUrl || 'https://fanded.com/travis';
+  const link = listenUrl || 'https://app.fanded.com/club/travisatreo';
   const letterTitle = title || 'New letter from Travis';
   const dur = duration || '';
 
