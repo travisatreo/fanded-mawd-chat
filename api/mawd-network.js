@@ -6,7 +6,7 @@ import { supabaseQuery } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -79,6 +79,28 @@ export default async function handler(req, res) {
         ...message,
         summary: `${fromCheck[0].name}'s MAWD sent a ${type || 'message'} to ${toCheck[0].name}'s MAWD`
       });
+    }
+
+    // PATCH ?id=UUID — update message status (read, actioned, dismissed)
+    if (req.method === 'PATCH') {
+      const id = req.query && req.query.id;
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const body = typeof req.body === 'object' ? req.body : (req.body ? JSON.parse(req.body) : {});
+      const patch = {};
+      if (body.status) patch.status = body.status;
+      if (body.metadata) patch.metadata = body.metadata;
+      const updated = await supabaseQuery(`mawd_network_messages?id=eq.${id}`, {
+        method: 'PATCH', body: patch
+      });
+      return res.status(200).json(Array.isArray(updated) ? updated[0] : updated);
+    }
+
+    // DELETE ?id=UUID — remove a message
+    if (req.method === 'DELETE') {
+      const id = req.query && req.query.id;
+      if (!id) return res.status(400).json({ error: 'id required' });
+      await supabaseQuery(`mawd_network_messages?id=eq.${id}`, { method: 'DELETE' });
+      return res.status(200).json({ deleted: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

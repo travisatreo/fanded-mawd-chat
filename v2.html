@@ -762,6 +762,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         </div>
         <span class="nav-label">Chats</span>
       </div>
+      <div class="nav-item" data-view="inbox" id="navInbox" style="position:relative;">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <span class="nav-label">MAWD Network</span>
+        <span id="inboxBadge" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--gold);color:#000;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:16px;text-align:center;"></span>
+      </div>
       <div class="nav-item" data-view="memory" id="navMemory">
         <div class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"/><rect x="9" y="1" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
@@ -1064,6 +1071,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       </div>
     </div>
 
+    <!-- INBOX VIEW (MAWD Network) -->
+    <div id="inboxView" style="display:none;">
+      <div style="padding:24px 20px;max-width:720px;">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px;">MAWD Network</h2>
+          <p style="font-size:13px;color:var(--text-3);">Messages other MAWDs sent to you on behalf of their humans.</p>
+        </div>
+        <div id="inboxList"></div>
+      </div>
+    </div>
+
     <!-- MEMORY VIEW -->
     <div id="memoryView" style="display:none;">
       <div style="padding:24px 20px;max-width:720px;">
@@ -1258,6 +1276,84 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     typeMessage('compass', timeOfDay + ', Travis. What do you need?', ['Daily briefing', 'Show my to-do list'], null);
     showView('chat');
   }
+  function getInboxSlugParam(){
+    var params = new URLSearchParams(window.location.search);
+    var slug = params.get('mawd');
+    // Default Travis MAWD: check both 'travis' and 'travis-atreo'
+    if(!slug) return 'travis,travis-atreo';
+    return slug;
+  }
+  function refreshInboxBadge(){
+    var slug = getInboxSlugParam();
+    var qs = slug.includes(',') ? ('to=in.(' + slug + ')&') : ('to=' + slug + '&');
+    // /api/mawd-network only supports ?to=<slug>. For the default "travis,travis-atreo" case we fetch both.
+    var slugs = slug.split(',');
+    Promise.all(slugs.map(function(s){
+      return fetch('/api/mawd-network?to=' + s + '&status=pending').then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+    })).then(function(results){
+      var all = [].concat.apply([], results);
+      var badge = document.getElementById('inboxBadge');
+      if(!badge) return;
+      if(all.length > 0){
+        badge.textContent = String(all.length);
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+      window.__inboxCache = all;
+    });
+  }
+  function loadInboxList(){
+    var container = document.getElementById('inboxList');
+    if(!container) return;
+    container.innerHTML = '<div style="padding:16px;color:var(--text-3);font-size:13px;">Loading...</div>';
+    var slug = getInboxSlugParam();
+    var slugs = slug.split(',');
+    Promise.all(slugs.map(function(s){
+      return fetch('/api/mawd-network?to=' + s).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+    })).then(function(results){
+      var all = [].concat.apply([], results);
+      all.sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); });
+      if(all.length === 0){
+        container.innerHTML = '<div style="padding:32px 0;text-align:center;color:var(--text-3);font-size:13px;">No messages from other MAWDs yet.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      all.forEach(function(m){
+        var when = new Date(m.created_at);
+        var whenTxt = when.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + when.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+        var statusColor = m.status === 'pending' ? 'var(--gold)' : m.status === 'actioned' ? '#10B981' : 'var(--text-3)';
+        var row = document.createElement('div');
+        row.style.cssText = 'padding:14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid '+statusColor+';border-radius:12px;margin-bottom:8px;';
+        row.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<div style="font-size:13px;color:var(--text);font-weight:600;">'+escapeHtml(m.from_name||m.from_mawd)+'\'s MAWD</div>' +
+            '<div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;">'+escapeHtml(m.type||'message')+' · '+whenTxt+'</div>' +
+          '</div>' +
+          (m.subject ? '<div style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:6px;">'+escapeHtml(m.subject)+'</div>' : '') +
+          '<div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">'+escapeHtml(m.body||'')+'</div>' +
+          '<div style="display:flex;gap:8px;">' +
+            (m.status === 'pending' ?
+              '<button data-id="'+m.id+'" data-act="actioned" class="inbox-btn" style="background:var(--gold);border:none;border-radius:8px;padding:6px 12px;color:#000;font-size:12px;font-weight:600;cursor:pointer;">Mark done</button>' +
+              '<button data-id="'+m.id+'" data-act="dismissed" class="inbox-btn" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text-2);font-size:12px;cursor:pointer;">Dismiss</button>'
+              : '<span style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;">'+escapeHtml(m.status)+'</span>'
+            ) +
+          '</div>';
+        container.appendChild(row);
+      });
+      container.querySelectorAll('.inbox-btn').forEach(function(b){
+        b.addEventListener('click', function(){
+          var id = b.getAttribute('data-id');
+          var act = b.getAttribute('data-act');
+          fetch('/api/mawd-network?id=' + id, {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ status: act })
+          }).then(function(){ loadInboxList(); refreshInboxBadge(); });
+        });
+      });
+    });
+  }
   function loadChatsList(){
     var container = document.getElementById('chatsList');
     if(!container) return;
@@ -1441,6 +1537,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     memoryView.style.display = 'none';
     var chatsViewEl = document.getElementById('chatsView');
     if(chatsViewEl) chatsViewEl.style.display = 'none';
+    var inboxViewEl = document.getElementById('inboxView');
+    if(inboxViewEl) inboxViewEl.style.display = 'none';
     agentDashView.style.display = 'none';
     inputArea.style.display = 'none';
 
@@ -1481,6 +1579,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       activeAgentLabel.textContent = 'CHATS';
       activeAgentDot.style.background = 'var(--gold)';
       loadChatsList();
+    } else if(view === 'inbox'){
+      document.getElementById('inboxView').style.display = 'block';
+      var navInboxEl = document.getElementById('navInbox');
+      if(navInboxEl) navInboxEl.classList.add('active');
+      activeAgentLabel.textContent = 'NETWORK';
+      activeAgentDot.style.background = 'var(--gold)';
+      loadInboxList();
     } else if(view.startsWith('agent-')){
       // Agent dashboard view
       var agentKey = view.replace('agent-','');
@@ -1560,6 +1665,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     closeSidebar();
     showView('chats');
   });
+  var navInboxEl2 = document.getElementById('navInbox');
+  if(navInboxEl2) navInboxEl2.addEventListener('click', function(){
+    closeSidebar();
+    showView('inbox');
+  });
+  // Refresh badge on load and every 60s
+  refreshInboxBadge();
+  setInterval(refreshInboxBadge, 60000);
 
   // ── Memory CRUD ──
   function escHtml(s){

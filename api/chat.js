@@ -197,6 +197,18 @@ const TOOLS = [
       },
       required: ['to_mawd', 'body']
     }
+  },
+  {
+    name: 'mawd_message_status',
+    description: 'Mark an incoming MAWD network message as read, actioned, or dismissed. Call this after helping the user triage an inbox message.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'The UUID of the message (shown in the inbox block as "id:")' },
+        status: { type: 'string', enum: ['read', 'actioned', 'dismissed'], description: 'New status for the message' }
+      },
+      required: ['id', 'status']
+    }
   }
 ];
 
@@ -320,6 +332,21 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
         } catch (e) {
           // No per-MAWD memory table yet, that's fine
         }
+
+        // A2A inbox for this MAWD
+        try {
+          const inbox = await supabaseQuery(
+            `mawd_network_messages?to_mawd=eq.${mawd}&status=eq.pending&order=created_at.desc&limit=10&select=id,from_mawd,from_name,type,subject,body,created_at`
+          );
+          if (inbox.length > 0) {
+            systemPrompt += `\n\n=== INCOMING MAWD NETWORK MESSAGES (${inbox.length} pending) ===\nMessages other MAWDs sent to ${mawdInstance.name}. Surface them proactively. When ${mawdInstance.name} decides what to do, call mawd_message_status with the id and new status.\n\n`;
+            inbox.forEach(m => {
+              const ts = m.created_at ? new Date(m.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) : '';
+              systemPrompt += `[${m.type || 'message'} from ${m.from_name} @ ${ts}]\nid: ${m.id}\n${m.subject ? 'Subject: ' + m.subject + '\n' : ''}${m.body}\n\n`;
+            });
+            systemPrompt += `=== END INCOMING MESSAGES ===`;
+          }
+        } catch (e) { /* no inbox, skip */ }
       } else {
         // Fallback to default if slug not found
         systemPrompt = MAWD_SYSTEM_PROMPT;
@@ -357,6 +384,21 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
           if (pinned && pinned.content) {
             systemPrompt += `\n\n=== TRAVIS'S STANDING INSTRUCTIONS (ALWAYS REMEMBER — highest priority) ===\n${pinned.content}\n=== END STANDING INSTRUCTIONS ===`;
           }
+
+          // ── A2A inbox: messages from other MAWDs pending review ──
+          try {
+            const inbox = await supabaseQuery(
+              `mawd_network_messages?to_mawd=in.(travis,travis-atreo)&status=eq.pending&order=created_at.desc&limit=10&select=id,from_mawd,from_name,type,subject,body,created_at`
+            );
+            if (inbox.length > 0) {
+              systemPrompt += `\n\n=== INCOMING MAWD NETWORK MESSAGES (${inbox.length} pending) ===\nThese are messages OTHER MAWDs have sent to YOU (Travis's MAWD) on behalf of their owners. Surface them proactively when Travis opens MAWD. Help him triage: what needs a response, what can be dismissed, what needs an action. When he decides, call the mawd_message_status tool with the message id and new status (read, actioned, or dismissed).\n\n`;
+              inbox.forEach(m => {
+                const ts = m.created_at ? new Date(m.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) : '';
+                systemPrompt += `[${m.type || 'message'} from ${m.from_name} (slug:${m.from_mawd}) @ ${ts}]\nid: ${m.id}\n${m.subject ? 'Subject: ' + m.subject + '\n' : ''}${m.body}\n\n`;
+              });
+              systemPrompt += `=== END INCOMING MESSAGES ===`;
+            }
+          } catch (e) { /* no inbox yet, skip */ }
 
           // ── Cross-MAWD team standup: what Kevin and Lewis shipped in the last 36h ──
           try {
@@ -647,7 +689,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     // ── Tool use loop: execute tools and feed results back to Claude ──
     // Supports chained tool calls (e.g. list_emails → read_email → reply)
     // Max 3 iterations to stay under Vercel timeout
-    const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats', 'list_events', 'find_free_time'];
+    const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats', 'list_events', 'find_free_time', 'mawd_message_status'];
     const userRefreshToken = mawdInstance?.google_refresh_token || null;
     let text = '';
     let pendingActions = [];
@@ -676,6 +718,12 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
               let result;
               if (block.name === 'get_fan_stats') {
                 result = await getFanStats();
+              } else if (block.name === 'mawd_message_status') {
+                await supabaseQuery(`mawd_network_messages?id=eq.${block.input.id}`, {
+                  method: 'PATCH',
+                  body: { status: block.input.status }
+                });
+                result = { updated: true, id: block.input.id, status: block.input.status };
               } else {
                 result = await executeTool(block.name, block.input, userRefreshToken);
               }
