@@ -343,10 +343,18 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
       try {
         const memories = await getMemories(30);
         if (memories.length > 0) {
-          systemPrompt += `\n\nMAWD MEMORY (things you've learned about Travis from past conversations — use this to be smarter):\n`;
-          memories.forEach(m => {
-            systemPrompt += `- [${m.category}] ${m.content}\n`;
-          });
+          // Pinned instructions always come first and get prominent framing
+          const pinned = memories.find(m => m.category === 'pinned');
+          const rest = memories.filter(m => m.category !== 'pinned');
+          if (pinned && pinned.content) {
+            systemPrompt += `\n\n=== TRAVIS'S STANDING INSTRUCTIONS (ALWAYS REMEMBER — highest priority) ===\n${pinned.content}\n=== END STANDING INSTRUCTIONS ===`;
+          }
+          if (rest.length > 0) {
+            systemPrompt += `\n\nMAWD MEMORY (things you've learned about Travis from past conversations — use this to be smarter):\n`;
+            rest.forEach(m => {
+              systemPrompt += `- [${m.category}] ${m.content}\n`;
+            });
+          }
         }
       } catch (e) {}
 
