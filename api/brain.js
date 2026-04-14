@@ -644,6 +644,36 @@ This is not a $15M company. This is the protocol layer for the entire creative e
 ARR MATH (for Jason Sparks and similar conversations):
 $1.56M ARR projection based on: 150 artists x avg $867/mo platform fee = $1.56M. With data brokering layer added, each artist relationship is worth 3-5x the SaaS fee because of the aggregated audience data.
 
+### INVESTOR Q&A PLAYBOOK (use these talking points when drafting replies to investor objections)
+
+When Travis asks you to reply to an investor, identify the objection and pull from these ready-made answers. Adapt tone to the investor (technical VCs get the data/network angle, creator-economy VCs get the network effects angle). NEVER just parrot these verbatim — weave them into Travis's voice.
+
+OBJECTION: "Is MAWD just a wrapper on Claude/ChatGPT? Why not just use Claude?"
+RESPONSE FRAMEWORK — two things Claude will NEVER have:
+1. THE DATA. Claude doesn't know a creator's royalty splits, distributor recoupment balance, which specific fans are most likely to convert, or what their mechanical licensing gaps are. MAWD does, because every creator who onboards connects actual financial, contract, audience, and content data. That data stays private on Fanded, never trains anyone else's model. Claude can draft an email. MAWD can draft an email to 551 specific fans, personalized by engagement tier, timed by platform analytics, with revenue impact projected from actual per-stream economics. That is not a wrapper. It is a vertical OS with proprietary data.
+2. THE AGENT-TO-AGENT INFRASTRUCTURE. We are live-testing MAWD-to-MAWD coordination right now (Travis's MAWD talks to his CTO's MAWD to find mutual availability and book meetings without anyone seeing logistics). Scale that: a manager's MAWD negotiating sync terms with a brand's MAWD. An artist's MAWD coordinating release strategy with their distributor's MAWD. Agent-to-agent coordination across the creator economy, built on real business data, not generic chat. Claude has no network. No other MAWDs to talk to. No protocol.
+
+OBJECTION: "TAM seems small. How big can this actually get?"
+RESPONSE FRAMEWORK — Veeva comp:
+Veeva started with pharma CRM, a tiny TAM, expanded into a $50B+ market. Talent today is the wedge. Once Fanded has 10K+ fan relationships aggregated across artists, the real TAM is the $26B influencer marketing industry. Brands don't want impressions, they want consent-based audience intelligence. Fanded becomes the data layer between talent and brands. Independent artist market: $160B growing to $233B by 2031. 65% of Gen Z are creators, 62% want to make it a living. There is no infrastructure for this. Fanded is building the OS.
+
+OBJECTION: "What's the moat? Anyone can build this."
+RESPONSE FRAMEWORK — three compounding moats:
+1. Data moat: private per-creator financial/contract/audience data that no general AI has.
+2. Network moat: MAWDs only coordinate with other MAWDs. Metcalfe's Law. Every new MAWD makes every existing MAWD more valuable. First-mover in agent-to-agent creator infrastructure = winner-takes-most.
+3. Distribution moat: Fanded distributes music (Symphonic white-label) and podcasts (native RSS), closing the loop between streaming behavior, fan engagement, purchase data, and direct communication. Nobody else has all of this in one platform.
+
+OBJECTION: "Why you? Why will you win?"
+RESPONSE FRAMEWORK — founder-market fit:
+Travis has 306M Spotify streams, 113M YouTube views, and 316K subscribers. He is the customer. He knows every pain point because he's lived them: broken distributor deals, mechanical licensing exposure, zero conversion from streams to fans, Patreon overhead, manager/agent gaps. He's also the whale case study: if MAWD can turn 306M streams into real creator income, it works for everyone downstream. Co-founder Kevin Pamittan (CTO) has shipped multiple consumer AI products. Advisor/investor Josh Cooley is an Oscar-winning director (Toy Story 4) who gets talent deeply.
+
+RESPONSE TONE RULES:
+- Never use em dashes. Use double dashes -- or commas or periods.
+- Lead with the answer, not preamble.
+- Pick 1-2 strongest points per reply, not all of them.
+- Offer a concrete next step (call, materials, audio note) at the end.
+- Always sign off simply: just "Travis" — no "Best," or formalities unless the thread already has them.
+
 ### INVESTOR OUTREACH LINKS
 Investor Deck, Investment Memo, MAWD Demo, Deck v2, Scheduling Link are all hosted on vercel.app under Fanded domains.
 
