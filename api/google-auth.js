@@ -21,7 +21,16 @@ export default async function handler(req, res) {
   // Step 2: Handle callback with authorization code
   if (req.query.code) {
     const state = req.query.state || '';
-    const mawdSlug = state.replace(/^gmail_/, '') === 'direct' ? '' : state.replace(/^gmail_/, '');
+    // State format: gmail_<slug>  OR  gmail_<slug>__r__<base64-return-url>
+    let stateSlug = state.replace(/^gmail_/, '');
+    let returnUrl = '';
+    const retSep = '__r__';
+    if (stateSlug.indexOf(retSep) > -1) {
+      const parts = stateSlug.split(retSep);
+      stateSlug = parts[0];
+      try { returnUrl = decodeURIComponent(atob(parts[1] || '')); } catch (e) { returnUrl = ''; }
+    }
+    const mawdSlug = stateSlug === 'direct' ? '' : stateSlug;
 
     try {
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -81,6 +90,12 @@ export default async function handler(req, res) {
 
       // Redirect back to onboarding with success
       if (mawdSlug) {
+        if (returnUrl) {
+          const sep = returnUrl.indexOf('?') > -1 ? '&' : '?';
+          return res.redirect(302,
+            returnUrl + sep + `gmail=connected&mawd=${encodeURIComponent(mawdSlug)}&email=${encodeURIComponent(userEmail)}`
+          );
+        }
         return res.redirect(302,
           `/onboard.html?gmail=connected&mawd=${encodeURIComponent(mawdSlug)}&email=${encodeURIComponent(userEmail)}`
         );
@@ -108,7 +123,12 @@ export default async function handler(req, res) {
   // Step 1: Redirect to Google consent
   // Pass mawd slug through state param so we know where to store tokens on callback
   const mawdSlug = req.query.mawd || '';
-  const stateParam = mawdSlug ? `gmail_${mawdSlug}` : 'gmail_direct';
+  const returnUrlIn = req.query.return || '';
+  let stateParam = mawdSlug ? `gmail_${mawdSlug}` : 'gmail_direct';
+  if (returnUrlIn) {
+    const b64 = Buffer.from(encodeURIComponent(returnUrlIn)).toString('base64');
+    stateParam = stateParam + '__r__' + b64;
+  }
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${clientId}` +

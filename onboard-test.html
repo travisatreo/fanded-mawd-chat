@@ -556,6 +556,14 @@
     </div>
   </div>
 
+  <!-- Connect Google step (shown after /api/onboard succeeds, before result) -->
+  <div class="result" id="connect-google" style="display:none;">
+    <h2 style="color:#D4A843;">One last step</h2>
+    <p style="color:#aaa;font-size:14px;margin-bottom:24px;line-height:1.5;">Connect Google so your MAWD can read your calendar, draft emails, and schedule meetings for you. Takes 15 seconds.</p>
+    <button class="result-link" id="btn-connect-google" style="border:none;cursor:pointer;background:#D4A843;color:#0a0a0a;font-weight:600;">Connect Google Workspace</button>
+    <button class="btn-skip" style="margin-top:12px;" onclick="skipGoogleConnect()">Skip — I'll connect later</button>
+  </div>
+
   <!-- Result -->
   <div class="result" id="result">
     <h2 id="result-title">Your MAWD is live.</h2>
@@ -827,29 +835,78 @@ function finishOnboarding() {
     document.getElementById('result-link').href = url;
     document.getElementById('result-link').textContent = 'Open ' + name.split(' ')[0] + "'s MAWD";
     document.getElementById('result-title').textContent = name.split(' ')[0] + "'s MAWD is live.";
-    document.getElementById('result').classList.add('active');
     window._mawdUrl = url;
+    window._mawdSlug = data.slug;
+    window._mawdFirstName = name.split(' ')[0];
 
-    // Show Add to Home Screen
-    setTimeout(function() {
-      var prompt = document.getElementById('homescreen-prompt');
-      var instructions = document.getElementById('homescreen-instructions');
-      var ua = navigator.userAgent;
-      if (/iPhone|iPad|iPod/.test(ua)) {
-        instructions.innerHTML = 'Tap the <strong style="color:#D4A843;">Share</strong> button at the bottom of Safari, then tap <strong style="color:#D4A843;">Add to Home Screen</strong>.';
-      } else if (/Android/.test(ua)) {
-        instructions.innerHTML = 'Tap the <strong style="color:#D4A843;">menu (three dots)</strong> in Chrome, then tap <strong style="color:#D4A843;">Add to Home Screen</strong>.';
-      } else {
-        instructions.innerHTML = 'On your phone, open this link in Safari or Chrome and add it to your home screen for instant access.';
-      }
-      prompt.style.display = 'block';
-    }, 800);
+    // Show Google connect step first — their MAWD needs OAuth to do anything
+    var connectCard = document.getElementById('connect-google');
+    var connectBtn = document.getElementById('btn-connect-google');
+    connectBtn.onclick = function() {
+      var returnUrl = window.location.origin + window.location.pathname;
+      var oauthUrl = '/api/google-auth?mawd=' + encodeURIComponent(data.slug) +
+        '&return=' + encodeURIComponent(returnUrl);
+      window.location.href = oauthUrl;
+    };
+    connectCard.classList.add('active');
+    connectCard.style.display = 'block';
   })
   .catch(function(err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Create my MAWD'; }
     alert('Connection error. Try again.');
   });
 }
+
+function showResult(firstName, url, googleConnected) {
+  document.getElementById('connect-google').style.display = 'none';
+  document.getElementById('connect-google').classList.remove('active');
+  document.getElementById('result-link').href = url;
+  document.getElementById('result-link').textContent = 'Open ' + firstName + "'s MAWD";
+  document.getElementById('result-title').textContent = firstName + "'s MAWD is live.";
+  var desc = document.getElementById('result-desc');
+  if (desc) desc.textContent = googleConnected
+    ? 'Google connected. MAWD can now read your calendar and draft your emails. Bookmark this link.'
+    : "Bookmark this link. You can connect Google anytime from Settings.";
+  document.getElementById('result').classList.add('active');
+  window._mawdUrl = url;
+  // Kick off homescreen prompt
+  setTimeout(function() {
+    var p = document.getElementById('homescreen-prompt');
+    var ins = document.getElementById('homescreen-instructions');
+    if (!p || !ins) return;
+    var ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) ins.innerHTML = 'Tap <strong style="color:#D4A843;">Share</strong> then <strong style="color:#D4A843;">Add to Home Screen</strong>.';
+    else if (/Android/.test(ua)) ins.innerHTML = 'Tap <strong style="color:#D4A843;">menu (three dots)</strong> then <strong style="color:#D4A843;">Add to Home Screen</strong>.';
+    else ins.innerHTML = 'On your phone, open this link and add to home screen.';
+    p.style.display = 'block';
+  }, 600);
+}
+
+function skipGoogleConnect() {
+  var url = window._mawdUrl;
+  var firstName = window._mawdFirstName || 'Your';
+  if (url) showResult(firstName, url, false);
+}
+
+// On page load: if returning from Google OAuth, jump straight to the connected result
+(function handleOAuthReturn(){
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('gmail') === 'connected' && params.get('mawd')) {
+    var slug = params.get('mawd');
+    var url = 'https://fanded-mawd-chat.vercel.app/v2.html?mawd=' + encodeURIComponent(slug);
+    // Hide all step forms — we're done
+    document.querySelectorAll('.step').forEach(function(s){ s.style.display = 'none'; });
+    var progressEl = document.getElementById('progress');
+    if (progressEl) progressEl.style.display = 'none';
+    // Guess first name from slug (best-effort) — will be overwritten if user-provided name is available
+    var firstGuess = slug.split('-')[0];
+    firstGuess = firstGuess.charAt(0).toUpperCase() + firstGuess.slice(1);
+    window._mawdSlug = slug;
+    window._mawdUrl = url;
+    window._mawdFirstName = firstGuess;
+    showResult(firstGuess, url, true);
+  }
+})();
 
 function copyLink() {
   var url = window._mawdUrl;
