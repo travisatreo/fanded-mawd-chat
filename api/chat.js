@@ -603,6 +603,20 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
 
     // ── If we auto-executed tools, format results directly (no second Claude call) ──
     // This keeps the response under Vercel's 10s timeout on Hobby plan
+
+    // Helper: format ISO timestamp to readable Pacific Time
+    function fmtTime(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+          timeZone: 'America/Los_Angeles'
+        });
+      } catch (e) { return iso; }
+    }
+
     if (toolResults.length > 0 && data.stop_reason === 'tool_use') {
       for (const tr of toolResults) {
         const r = tr.result;
@@ -638,17 +652,29 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
           if (r.freeSlots && r.freeSlots.length > 0) {
             text += '\n\nAvailable slots:\n';
             r.freeSlots.slice(0, 5).forEach(s => {
-              text += `- ${s.start} to ${s.end}\n`;
+              text += `- ${fmtTime(s.start)} to ${fmtTime(s.end)}\n`;
             });
           } else {
             text += '\n\nNo open slots found in that range. Try a wider time window.';
           }
-        } else if (Array.isArray(r) && r.length > 0 && r[0].start) {
+          // Show busy times so user can see conflicts
+          if (r.busyByCalendar) {
+            const busyEntries = Object.entries(r.busyByCalendar).filter(([_, times]) => times.length > 0);
+            if (busyEntries.length > 0) {
+              text += '\n\nBusy times found:\n';
+              busyEntries.forEach(([cal, times]) => {
+                times.forEach(t => {
+                  text += `- ${cal}: ${fmtTime(t.start)} to ${fmtTime(t.end)}\n`;
+                });
+              });
+            }
+          }
+        } else if (Array.isArray(r) && r.length > 0 && (r[0].start || r[0].summary)) {
           // Calendar events
           text += '\n\n';
           r.forEach(e => {
             const start = e.start?.dateTime || e.start?.date || '';
-            text += `- **${e.summary || 'No title'}** — ${start}${e.attendees ? ' (' + e.attendees.map(a => a.email).join(', ') + ')' : ''}\n`;
+            text += `- **${e.summary || 'No title'}** — ${fmtTime(start)}${e.attendees ? ' (' + e.attendees.map(a => a.email).join(', ') + ')' : ''}\n`;
           });
         } else if (r.success) {
           // Memory save or other success
