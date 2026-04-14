@@ -144,8 +144,8 @@ const TOOLS = [
       properties: {
         category: {
           type: 'string',
-          enum: ['preference', 'decision', 'contact', 'deadline', 'context', 'feedback'],
-          description: 'Type of memory: preference (how Travis likes things done), decision (a choice he made), contact (person info), deadline (time-sensitive), context (business context), feedback (what he liked/disliked about MAWD)'
+          enum: ['preference', 'decision', 'contact', 'deadline', 'context', 'feedback', 'revenue_action', 'investor_followup', 'client_pipeline', 'stalled_deal'],
+          description: 'Type of memory: preference (how Travis likes things done), decision (a choice he made), contact (person info), deadline (time-sensitive), context (business context), feedback (what he liked/disliked about MAWD), revenue_action (a concrete income-generating action Travis needs to take or respond to), investor_followup (investor email/ping awaiting Travis response), client_pipeline (production client commitment not yet scheduled), stalled_deal (deal in motion that has gone quiet)'
         },
         content: {
           type: 'string',
@@ -384,6 +384,28 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
           if (pinned && pinned.content) {
             systemPrompt += `\n\n=== TRAVIS'S STANDING INSTRUCTIONS (ALWAYS REMEMBER — highest priority) ===\n${pinned.content}\n=== END STANDING INSTRUCTIONS ===`;
           }
+
+          // ── REVENUE PULSE: stale revenue actions Travis should see before admin ──
+          try {
+            const revenueItems = await supabaseQuery(
+              `mawd_memory?category=in.(revenue_action,investor_followup,client_pipeline,stalled_deal)&select=id,category,content,created_at&order=created_at.desc&limit=20`
+            );
+            const now = Date.now();
+            const stale = revenueItems.filter(m => {
+              if (!m.created_at) return true;
+              const ageHrs = (now - new Date(m.created_at).getTime()) / 3600000;
+              return ageHrs >= 48;
+            }).slice(0, 6);
+            if (stale.length > 0) {
+              systemPrompt += `\n\n=== REVENUE PULSE — STALE HIGH-LEVERAGE ITEMS (surface before admin) ===\nThese are revenue-generating actions that have gone quiet for 48h+. Per the REVENUE-FIRST RULE, check these before answering admin questions and surface the highest-leverage one as a follow-on. Offer to execute it, don't just report it.\n\n`;
+              stale.forEach(m => {
+                const ts = m.created_at ? new Date(m.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium' }) : '';
+                const ageHrs = m.created_at ? Math.round((now - new Date(m.created_at).getTime()) / 3600000) : 0;
+                systemPrompt += `[${m.category} — ${ageHrs}h stale, logged ${ts}]\n${m.content}\n\n`;
+              });
+              systemPrompt += `=== END REVENUE PULSE ===`;
+            }
+          } catch (e) { /* skip if query fails */ }
 
           // ── A2A inbox: messages from other MAWDs pending review ──
           try {
@@ -641,6 +663,12 @@ You have a save_memory tool. Use it to remember important things Travis tells yo
 - When he mentions a deadline → save as 'deadline'
 - When he gives you feedback about how MAWD works → save as 'feedback'
 - When he shares context about his business that isn't in your brain → save as 'context'
+- When a concrete income-generating action is identified (an email to send, a session to book, an outreach to start) → save as 'revenue_action' so future-you can surface it if it goes stale
+- When an investor sends a message or request Travis needs to respond to → save as 'investor_followup'
+- When a production client commits to a next song or project with no session booked → save as 'client_pipeline'
+- When a deal in motion (investor, sync, brand) has gone quiet → save as 'stalled_deal'
+
+These revenue-tagged memories power the REVENUE PULSE injection. If you log them faithfully, future-you will automatically surface the right things at the right time.
 
 Save silently — don't tell Travis you're saving a memory. Just do it. But DO use your memories to get smarter. If Travis told you last week he prefers short emails, draft short emails this week without being told again.
 Your memories from past conversations are injected above in "MAWD MEMORY". Reference them naturally.`;
