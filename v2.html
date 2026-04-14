@@ -3899,31 +3899,61 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     var card = document.createElement('div');
     card.className = 'action-card';
+    var inp = action.input;
     // Treat all email-intent tools as "save as draft" — never auto-send from here
     var isEmailAction = action.tool === 'send_email' || action.tool === 'create_draft' || action.tool === 'save_draft';
-    var icon = isEmailAction ? '✉️' : action.tool === 'create_event' ? '📅' : action.tool === 'send_mawd_message' ? '🔗' : '📝';
-    var label = isEmailAction ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE DRAFT' : 'SAVE DRAFT';
     var isMawdMessage = action.tool === 'send_mawd_message';
+    var icon = isEmailAction ? '✉️' : action.tool === 'create_event' ? '📅' : isMawdMessage ? '🔗' : '📝';
+    var label = isEmailAction ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : isMawdMessage ? 'MAWD MESSAGE DRAFT' : 'SAVE DRAFT';
     var mawdTargetName = isMawdMessage && inp.to_mawd ? (inp.to_mawd.split('-')[0].charAt(0).toUpperCase() + inp.to_mawd.split('-')[0].slice(1)) : '';
+
+    // Editable field helper — looks like plain text, becomes input on tap
+    var editableInputStyle = 'width:100%;background:transparent;border:none;border-bottom:1px dashed transparent;color:var(--text);font:inherit;padding:2px 0;outline:none;transition:border-color 0.15s;';
+    var editableFocusStyle = 'border-bottom-color:var(--gold);';
+
     var fields = '';
-    var inp = action.input;
-    if(inp.to) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to)+'</div>';
-    if(inp.to_mawd) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to_mawd)+'\'s MAWD</div>';
-    if(inp.subject) fields += '<div class="action-card-field"><strong>Subject:</strong> '+escapeHtml(inp.subject)+'</div>';
-    if(inp.summary) fields += '<div class="action-card-field"><strong>Event:</strong> '+escapeHtml(inp.summary)+'</div>';
-    if(inp.startTime) fields += '<div class="action-card-field"><strong>When:</strong> '+escapeHtml(inp.startTime)+'</div>';
-    if(inp.attendees && inp.attendees.length) fields += '<div class="action-card-field"><strong>Inviting:</strong> '+escapeHtml(inp.attendees.join(', '))+'</div>';
-    var bodyPreview = inp.body ? '<div class="action-card-body">'+escapeHtml(inp.body).replace(/\n/g,'<br>')+'</div>' : '';
+    if(inp.to !== undefined) fields += '<div class="action-card-field"><strong>To:</strong> <input data-field="to" value="'+escapeHtml(inp.to||'')+'" style="'+editableInputStyle+'"></div>';
+    if(inp.to_mawd !== undefined) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to_mawd||'')+'\'s MAWD</div>';
+    if(inp.subject !== undefined) fields += '<div class="action-card-field"><strong>Subject:</strong> <input data-field="subject" value="'+escapeHtml(inp.subject||'')+'" style="'+editableInputStyle+'"></div>';
+    if(inp.summary !== undefined) fields += '<div class="action-card-field"><strong>Event:</strong> <input data-field="summary" value="'+escapeHtml(inp.summary||'')+'" style="'+editableInputStyle+'"></div>';
+    if(inp.startTime !== undefined) fields += '<div class="action-card-field"><strong>When:</strong> <input data-field="startTime" value="'+escapeHtml(inp.startTime||'')+'" style="'+editableInputStyle+'"></div>';
+    if(inp.attendees && inp.attendees.length) fields += '<div class="action-card-field"><strong>Inviting:</strong> <input data-field="attendees" value="'+escapeHtml((inp.attendees||[]).join(', '))+'" style="'+editableInputStyle+'"></div>';
+
+    var bodyField = '';
+    if(inp.body !== undefined){
+      bodyField = '<textarea data-field="body" style="width:100%;min-height:120px;font:inherit;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;outline:none;resize:vertical;line-height:1.5;font-size:14px;margin-top:10px;">'+escapeHtml(inp.body||'')+'</textarea>';
+    }
+
+    var hint = '<div style="font-size:11px;color:var(--text-3);margin-top:6px;text-align:right;">Tap any field to edit before sending</div>';
 
     card.innerHTML = '<div class="action-card-header"><span class="action-card-icon">'+icon+'</span><span class="action-card-label">'+label+'</span></div>' +
-      fields + bodyPreview +
+      fields + bodyField + hint +
       '<div class="action-card-buttons"><button class="action-approve">' +
       (isEmailAction ? 'Save to Gmail drafts' : isMawdMessage ? 'Send to ' + mawdTargetName + '\'s MAWD' : 'Approve') +
       '</button>' +
       (isEmailAction ? '<button class="action-copy">Copy</button>' : '') +
       '<button class="action-skip">Skip</button></div>';
 
+    // Focus styling for editable fields
+    card.querySelectorAll('input[data-field], textarea[data-field]').forEach(function(el){
+      el.addEventListener('focus', function(){ el.style.borderBottomColor = 'var(--gold)'; });
+      el.addEventListener('blur', function(){ el.style.borderBottomColor = 'transparent'; });
+    });
+
+    // Helper to read current edited values back into action.input before sending
+    function syncEditedInput(){
+      card.querySelectorAll('input[data-field], textarea[data-field]').forEach(function(el){
+        var field = el.getAttribute('data-field');
+        if(field === 'attendees'){
+          action.input.attendees = el.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        } else {
+          action.input[field] = el.value;
+        }
+      });
+    }
+
     card.querySelector('.action-approve').addEventListener('click', function(){
+      syncEditedInput();
       if(isEmailAction){
         // Force create_draft — never auto-send. Travis reads it in Gmail and decides.
         var draftAction = { tool: 'create_draft', input: action.input };
@@ -3958,6 +3988,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     var copyBtn = card.querySelector('.action-copy');
     if(copyBtn){
       copyBtn.addEventListener('click', function(){
+        syncEditedInput();
         var copyText = 'To: '+(action.input.to||'')+'\nSubject: '+(action.input.subject||'')+'\n\n'+(action.input.body||'');
         navigator.clipboard.writeText(copyText).then(function(){
           copyBtn.textContent = 'Copied';
