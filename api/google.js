@@ -121,7 +121,9 @@ export async function createEvent({ summary, description, startTime, endTime, at
     event.conferenceData = undefined;
   }
 
-  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', {
+  // Use travis@fanded.com calendar (where work events live) instead of primary
+  const calendarId = encodeURIComponent('travis@fanded.com');
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?sendUpdates=all`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -321,7 +323,9 @@ export async function listEvents({ timeMin, timeMax, maxResults = 10, query, _re
   const min = timeMin || now.toISOString();
   const max = timeMax || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  let url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+  // Use travis@fanded.com calendar (where work events live) instead of primary
+  const calendarId = encodeURIComponent('travis@fanded.com');
+  let url = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?` +
     `timeMin=${encodeURIComponent(min)}&timeMax=${encodeURIComponent(max)}` +
     `&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`;
   if (query) url += `&q=${encodeURIComponent(query)}`;
@@ -362,9 +366,13 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
   const max = toRFC3339(timeMax) || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const items = (emails || []).map(email => ({ id: email }));
-  // Always include the current user
+  // Always include the current user's calendars
+  // Travis's work calendar is travis@fanded.com (where syncs live), not travisatreo.com
   if (!items.find(i => i.id === 'primary')) {
     items.unshift({ id: 'primary' });
+  }
+  if (!items.find(i => i.id === 'travis@fanded.com')) {
+    items.unshift({ id: 'travis@fanded.com' });
   }
 
   const requestBody = {
