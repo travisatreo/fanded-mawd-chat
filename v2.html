@@ -498,6 +498,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 #inputWrap .send:hover{opacity:0.85;}
 #inputWrap .send svg{width:16px;height:16px;}
+#inputWrap .mic, #inputWrap .voice-toggle{
+  width:36px;height:36px;border-radius:10px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--text-2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+#inputWrap .mic:hover, #inputWrap .voice-toggle:hover{
+  border-color:var(--border-hover);color:var(--text);
+}
+#inputWrap .mic svg, #inputWrap .voice-toggle svg{width:16px;height:16px;}
+#inputWrap .mic.recording{
+  background:#ef4444;border-color:#ef4444;color:#fff;
+  animation:micPulse 1.2s ease-in-out infinite;
+}
+#inputWrap .voice-toggle.on{
+  background:rgba(196,149,58,0.15);border-color:var(--gold);color:var(--gold);
+}
+@keyframes micPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5);}
+  50%{box-shadow:0 0 0 6px rgba(239,68,68,0);}
+}
 .input-hint{
   font-size:11px;color:var(--text-3);margin-top:6px;
   text-align:center;
@@ -1163,6 +1186,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     <div id="inputArea">
       <div id="inputWrap">
         <input type="text" id="userInput" placeholder="Tell MAWD what you need..." autocomplete="off">
+        <button class="voice-toggle" id="voiceToggleBtn" title="Toggle voice replies" aria-label="Toggle voice replies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        </button>
+        <button class="mic" id="micBtn" title="Hold to talk (or tap to start)" aria-label="Voice input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
         <button class="send" id="sendBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -4033,6 +4071,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       }
       conversationHistory.push({role:'assistant', content:reply});
       saveConversation();
+      if(window.speakReply) window.speakReply(reply);
       var qr = pendingActions && pendingActions.length ? [] : generateQuickReplies(reply);
       typeMessage(detectedAgent || agent, reply, qr, function(){
         if(pendingActions && pendingActions.length){
@@ -4049,6 +4088,105 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   userInput.addEventListener('keydown', function(e){
     if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
   });
+
+  // ── Voice: STT (browser Web Speech API) + TTS (ElevenLabs via /api/tts) ──
+  var micBtn = document.getElementById('micBtn');
+  var voiceToggleBtn = document.getElementById('voiceToggleBtn');
+  var VOICE_REPLY_KEY = 'mawd_voice_reply';
+  var voiceReplyOn = localStorage.getItem(VOICE_REPLY_KEY) === '1';
+  var currentAudio = null;
+  var recognition = null;
+  var isRecording = false;
+
+  function setVoiceToggleUI(){
+    if(voiceReplyOn){ voiceToggleBtn.classList.add('on'); voiceToggleBtn.title='Voice replies ON — tap to mute'; }
+    else { voiceToggleBtn.classList.remove('on'); voiceToggleBtn.title='Voice replies OFF — tap to enable'; }
+  }
+  setVoiceToggleUI();
+
+  voiceToggleBtn.addEventListener('click', function(){
+    voiceReplyOn = !voiceReplyOn;
+    localStorage.setItem(VOICE_REPLY_KEY, voiceReplyOn ? '1' : '0');
+    setVoiceToggleUI();
+    if(!voiceReplyOn && currentAudio){ try{ currentAudio.pause(); currentAudio = null; }catch(e){} }
+  });
+
+  // Speak a MAWD reply via ElevenLabs
+  window.speakReply = function(text){
+    if(!text || !voiceReplyOn) return;
+    if(currentAudio){ try{ currentAudio.pause(); }catch(e){} currentAudio = null; }
+    fetch('/api/tts', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text })
+    }).then(function(r){
+      if(!r.ok) throw new Error('TTS failed: '+r.status);
+      return r.blob();
+    }).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      currentAudio = new Audio(url);
+      currentAudio.play().catch(function(e){ console.warn('Autoplay blocked:', e.message); });
+      currentAudio.onended = function(){ URL.revokeObjectURL(url); currentAudio = null; };
+    }).catch(function(e){ console.warn('TTS error:', e.message); });
+  };
+
+  // STT — browser-native, no extra cost
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    micBtn.style.opacity = '0.4';
+    micBtn.title = 'Voice input not supported in this browser (try Chrome/Safari)';
+    micBtn.addEventListener('click', function(){
+      alert('Voice input requires Chrome or Safari.');
+    });
+  } else {
+    function startRecording(){
+      if(isRecording) return;
+      try{
+        recognition = new SR();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        var finalText = '';
+        recognition.onresult = function(e){
+          var interim = '';
+          for(var i = e.resultIndex; i < e.results.length; i++){
+            var t = e.results[i][0].transcript;
+            if(e.results[i].isFinal) finalText += t;
+            else interim += t;
+          }
+          userInput.value = (finalText + interim).trim();
+        };
+        recognition.onerror = function(e){
+          console.warn('STT error:', e.error);
+          stopRecording(false);
+        };
+        recognition.onend = function(){
+          isRecording = false;
+          micBtn.classList.remove('recording');
+          if(userInput.value.trim()){ sendMessage(); }
+        };
+        recognition.start();
+        isRecording = true;
+        micBtn.classList.add('recording');
+        // Stop any playing TTS so MAWD doesn't talk over you
+        if(currentAudio){ try{ currentAudio.pause(); }catch(e){} currentAudio = null; }
+      } catch(err){
+        console.warn('STT start failed:', err.message);
+        isRecording = false;
+        micBtn.classList.remove('recording');
+      }
+    }
+    function stopRecording(send){
+      if(!isRecording) return;
+      try{ recognition && recognition.stop(); }catch(e){}
+      isRecording = false;
+      micBtn.classList.remove('recording');
+    }
+    micBtn.addEventListener('click', function(){
+      if(isRecording) stopRecording(true);
+      else startRecording();
+    });
+  }
 
   // ── Deep link contexts ──
   var DEEP_LINK_CONTEXTS = {
