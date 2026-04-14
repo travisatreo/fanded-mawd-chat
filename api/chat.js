@@ -76,22 +76,22 @@ const TOOLS = [
   },
   {
     name: 'read_email',
-    description: 'Read the full body of a specific email by ID. Use this after list_emails to read an email Travis wants to see or that you need context from to draft a reply.',
+    description: 'Read the full body of a specific email by ID. IMPORTANT: You MUST call list_emails first to get the real message ID. NEVER guess or make up a message ID — it will 404. Always search first, then read.',
     input_schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'Gmail message ID (from list_emails results)' }
+        id: { type: 'string', description: 'Gmail message ID — MUST come from a list_emails result. Never fabricate this.' }
       },
       required: ['id']
     }
   },
   {
     name: 'read_thread',
-    description: 'Read an entire email thread/conversation. Returns all messages in order. Use this when Travis asks about a conversation or you need the full back-and-forth to draft a good reply.',
+    description: 'Read an entire email thread/conversation. Returns all messages in order. IMPORTANT: You MUST call list_emails first to get the real thread ID. NEVER guess or fabricate a thread ID.',
     input_schema: {
       type: 'object',
       properties: {
-        threadId: { type: 'string', description: 'Gmail thread ID (from list_emails results)' }
+        threadId: { type: 'string', description: 'Gmail thread ID — MUST come from a list_emails result. Never fabricate this.' }
       },
       required: ['threadId']
     }
@@ -492,6 +492,12 @@ IMPORTANT: For scheduling with Kevin, Lewis, or anyone @fanded.com, ALWAYS use f
 CRITICAL: This is a TWO-STEP process. First response: check availability. Second response (after getting results): create the event or report conflict. NEVER combine both into one response.
 NEVER use send_mawd_message for scheduling. That tool is only for non-scheduling communication between MAWDs.
 
+EMAIL RULES (MANDATORY):
+1. NEVER fabricate a message ID or thread ID. They are long hex strings like "19d892fe3729c6d2" — you cannot guess them.
+2. To read or reply to an email, you MUST call list_emails first (with a search query like "from:shawn@lowercarbon.com") to get the real IDs.
+3. To reply, you need BOTH the messageId AND threadId from the list_emails result.
+4. This is always a two-step process: SEARCH first, then READ/REPLY with the real IDs.
+
 ALWAYS show a brief text message BEFORE the tool use explaining what you're doing. Keep it to one sentence like "Drafting the reply to Max now." then use the tool.
 
 EMAIL (CORE CAPABILITY):
@@ -576,59 +582,119 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
       return res.status(500).json({ error: 'API error: ' + response.status, detail: err });
     }
 
-    const data = await response.json();
+    let currentResponse = await response.json();
 
-    // ── Parse response: extract text and tool_use blocks ──
-    // Read-only tools are auto-executed and fed back to Claude for summarization
+    // ── Tool use loop: execute tools and feed results back to Claude ──
+    // Supports chained tool calls (e.g. list_emails → read_email → reply)
+    // Max 3 iterations to stay under Vercel timeout
     const READ_ONLY_TOOLS = ['list_emails', 'read_email', 'read_thread', 'get_fan_stats', 'list_events', 'find_free_time'];
-
-    // Per-user refresh token: use MAWD instance's token if available, else env var
     const userRefreshToken = mawdInstance?.google_refresh_token || null;
-
     let text = '';
     let pendingActions = [];
-    let toolResults = []; // For auto-executed tools that need a follow-up call
+    let loopMessages = [...apiMessages]; // Build up message history for follow-up calls
+    const MAX_TOOL_LOOPS = 3;
 
-    for (const block of data.content) {
-      if (block.type === 'text') {
-        text += block.text;
-      } else if (block.type === 'tool_use') {
-        if (block.name === 'save_memory') {
-          // Auto-execute memory saves silently
-          try {
-            await saveMemory(block.input.category, block.input.content);
-          } catch (e) {
-            console.error('Memory save failed:', e.message);
-          }
-          toolResults.push({ id: block.id, result: { success: true } });
-        } else if (READ_ONLY_TOOLS.includes(block.name)) {
-          // Auto-execute read-only tools and collect results for follow-up
-          try {
-            let result;
-            if (block.name === 'get_fan_stats') {
-              result = await getFanStats();
-            } else {
-              result = await executeTool(block.name, block.input, userRefreshToken);
+    for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
+      let toolResults = [];
+      let hasReadOnlyTools = false;
+
+      // Extract text and process tool calls from current response
+      for (const block of currentResponse.content) {
+        if (block.type === 'text') {
+          text += block.text;
+        } else if (block.type === 'tool_use') {
+          if (block.name === 'save_memory') {
+            try {
+              await saveMemory(block.input.category, block.input.content);
+            } catch (e) {
+              console.error('Memory save failed:', e.message);
             }
-            toolResults.push({ id: block.id, result });
-          } catch (e) {
-            toolResults.push({ id: block.id, result: { error: e.message } });
+            toolResults.push({ id: block.id, result: { success: true } });
+          } else if (READ_ONLY_TOOLS.includes(block.name)) {
+            hasReadOnlyTools = true;
+            try {
+              let result;
+              if (block.name === 'get_fan_stats') {
+                result = await getFanStats();
+              } else {
+                result = await executeTool(block.name, block.input, userRefreshToken);
+              }
+              toolResults.push({ id: block.id, result });
+            } catch (e) {
+              toolResults.push({ id: block.id, result: { error: e.message } });
+            }
+          } else {
+            // Actions that need approval
+            pendingActions.push({
+              id: block.id,
+              tool: block.name,
+              input: block.input
+            });
+            // Still need a tool_result for Claude if we loop
+            toolResults.push({ id: block.id, result: { pending_approval: true } });
           }
-        } else {
-          // Actions that need approval (send_email, reply_to_email, send_fan_blast, etc.)
-          pendingActions.push({
-            id: block.id,
-            tool: block.name,
-            input: block.input
-          });
         }
+      }
+
+      // If no tool calls or stop_reason isn't tool_use, we're done
+      if (currentResponse.stop_reason !== 'tool_use' || toolResults.length === 0) {
+        break;
+      }
+
+      // If we have read-only tool results AND stop_reason is tool_use,
+      // feed results back to Claude so it can chain (e.g. list_emails → read_email)
+      if (hasReadOnlyTools && loop < MAX_TOOL_LOOPS - 1) {
+        // Build tool_result messages for Claude
+        const toolResultMessages = toolResults.map(tr => ({
+          type: 'tool_result',
+          tool_use_id: tr.id,
+          content: JSON.stringify(tr.result).substring(0, 4000) // Cap size for speed
+        }));
+
+        // Add assistant response + tool results to message history
+        loopMessages.push({ role: 'assistant', content: currentResponse.content });
+        loopMessages.push({ role: 'user', content: toolResultMessages });
+
+        // Make follow-up Claude call
+        text = ''; // Reset text — Claude will generate a new response incorporating results
+        try {
+          const followUp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: maxTokens,
+              system: systemPrompt,
+              messages: loopMessages,
+              tools: TOOLS
+            })
+          });
+
+          if (!followUp.ok) {
+            console.error('Follow-up Claude call failed:', followUp.status);
+            // Fall back to direct formatting
+            text = formatToolResults(toolResults);
+            break;
+          }
+          currentResponse = await followUp.json();
+          continue; // Loop again to process new response
+        } catch (e) {
+          console.error('Follow-up call error:', e.message);
+          text = formatToolResults(toolResults);
+          break;
+        }
+      } else {
+        // Last loop iteration or no read-only tools — format directly
+        text += formatToolResults(toolResults);
+        break;
       }
     }
 
-    // ── If we auto-executed tools, format results directly (no second Claude call) ──
-    // This keeps the response under Vercel's 10s timeout on Hobby plan
-
-    // Helper: format ISO timestamp to readable Pacific Time
+    // ── Direct formatter (fallback when we can't do another Claude call) ──
     function fmtTime(iso) {
       if (!iso) return '';
       try {
@@ -641,74 +707,57 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
       } catch (e) { return iso; }
     }
 
-    if (toolResults.length > 0 && data.stop_reason === 'tool_use') {
-      for (const tr of toolResults) {
+    function formatToolResults(results) {
+      let out = '';
+      for (const tr of results) {
         const r = tr.result;
-        if (r.error) {
-          text += '\n\n' + r.error;
-          continue;
-        }
-        // Format based on tool type
+        if (r.error) { out += '\n\n' + r.error; continue; }
+        if (r.success || r.pending_approval) continue;
         if (Array.isArray(r) && r.length > 0 && r[0].subject) {
-          // list_emails or read_thread result
           if (r[0].body && !r[0].isUnread) {
-            // Thread: show messages
-            text += '\n\n';
+            out += '\n\n';
             r.slice(-5).forEach(m => {
-              text += `**${m.from}** (${m.date})\n${(m.body || m.snippet || '').substring(0, 500)}\n\n---\n`;
+              out += `**${m.from}** (${m.date})\n${(m.body || m.snippet || '').substring(0, 500)}\n\n---\n`;
             });
           } else {
-            // Email list
-            text += '\n\n';
+            out += '\n\n';
             r.forEach((e, i) => {
               const unread = e.isUnread ? ' 🔴' : '';
-              text += `${i+1}. **${e.from}**${unread} — ${e.subject}\n${e.snippet}\n\n`;
+              out += `${i+1}. **${e.from}**${unread} -- ${e.subject}\n${e.snippet}\n\n`;
             });
           }
         } else if (r.body && r.threadId) {
-          // Single email read
-          text += `\n\n**From:** ${r.from}\n**Subject:** ${r.subject}\n**Date:** ${r.date}\n\n${(r.body || '').substring(0, 2000)}`;
+          out += `\n\n**From:** ${r.from}\n**Subject:** ${r.subject}\n**Date:** ${r.date}\n\n${(r.body || '').substring(0, 2000)}`;
         } else if (r.total !== undefined && r.emailable !== undefined) {
-          // Fan stats
-          text += `\n\n**Fan Database:** ${r.total} total contacts, ${r.emailable} emailable, ${r.top_fans} top fans`;
+          out += `\n\n**Fan Database:** ${r.total} total contacts, ${r.emailable} emailable, ${r.top_fans} top fans`;
         } else if (r.freeSlots || r.busyByCalendar) {
-          // Free time results
           if (r.freeSlots && r.freeSlots.length > 0) {
-            text += '\n\nAvailable slots:\n';
-            r.freeSlots.slice(0, 5).forEach(s => {
-              text += `- ${fmtTime(s.start)} to ${fmtTime(s.end)}\n`;
-            });
+            out += '\n\nAvailable slots:\n';
+            r.freeSlots.slice(0, 5).forEach(s => { out += `- ${fmtTime(s.start)} to ${fmtTime(s.end)}\n`; });
           } else {
-            text += '\n\nNo open slots found in that range. Try a wider time window.';
+            out += '\n\nNo open slots found in that range. Try a wider time window.';
           }
-          // Show busy times so user can see conflicts
           if (r.busyByCalendar) {
             const busyEntries = Object.entries(r.busyByCalendar).filter(([_, times]) => times.length > 0);
             if (busyEntries.length > 0) {
-              text += '\n\nBusy times found:\n';
+              out += '\n\nBusy times found:\n';
               busyEntries.forEach(([cal, times]) => {
-                times.forEach(t => {
-                  text += `- ${cal}: ${fmtTime(t.start)} to ${fmtTime(t.end)}\n`;
-                });
+                times.forEach(t => { out += `- ${cal}: ${fmtTime(t.start)} to ${fmtTime(t.end)}\n`; });
               });
             }
           }
         } else if (Array.isArray(r) && r.length > 0 && (r[0].start || r[0].summary)) {
-          // Calendar events
-          text += '\n\n';
+          out += '\n\n';
           r.forEach(e => {
             const start = e.start?.dateTime || e.start?.date || '';
-            text += `- **${e.summary || 'No title'}** — ${fmtTime(start)}${e.attendees ? ' (' + e.attendees.map(a => a.email).join(', ') + ')' : ''}\n`;
+            out += `- **${e.summary || 'No title'}** -- ${fmtTime(start)}${e.attendees ? ' (' + e.attendees.map(a => a.email).join(', ') + ')' : ''}\n`;
           });
-        } else if (r.success) {
-          // Memory save or other success
-          continue;
         } else {
-          // Unknown format — dump a brief summary
           const summary = JSON.stringify(r).substring(0, 500);
-          text += '\n\n' + summary;
+          out += '\n\n' + summary;
         }
       }
+      return out;
     }
 
     let detectedAgent = agent || 'compass';
