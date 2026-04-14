@@ -3545,6 +3545,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     }
 
     if(deepLink && deepLink.mawdOpening){
+      // Deep link with a canned opening — no API call needed
       showThinking(deepLink.agent);
       setTimeout(function(){
         hideThinking();
@@ -3553,17 +3554,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         saveConversation();
         typeMessage(deepLink.agent, deepLink.mawdOpening, deepLink.quickReplies, null);
       },600);
-    } else {
-      showThinking('compass');
-      var briefingPrompt = (deepLink && deepLink.systemContext) ? deepLink.systemContext :
-        'Travis just opened MAWD. Give him a proactive home screen briefing. You talk first — he didn\'t ask you anything yet.\n\nFormat:\n1. One greeting line with the vibe (use time of day: morning/afternoon/evening). Keep it warm but not corporate.\n2. If there are open loops, action items due, or follow-ups needed, list 2-4 with → arrows. Be SPECIFIC (names, amounts, deadlines).\n3. End with one momentum line — something positive happening in his business right now.\n\nExamples of good openers:\n"Evening. Calendar\'s clear tomorrow. Here\'s what\'s ready:"\n"Afternoon. Two things need you before end of day:"\n\nDo NOT say "Good morning Travis!" or "Welcome back!" or ask "How can I help?" — you are his chief of staff checking in, not a chatbot greeting him.';
-      var agent = deepLink ? deepLink.agent : 'compass';
-      callMAWD([{role:'user',content:briefingPrompt}], agent, function(reply,detectedAgent,pendingActions){
+    } else if(deepLink && deepLink.systemContext){
+      // Deep link with a system context — make the Claude call (triggered by user tapping notification)
+      showThinking(deepLink.agent || 'compass');
+      callMAWD([{role:'user',content:deepLink.systemContext}], deepLink.agent || 'compass', function(reply,detectedAgent,pendingActions){
         hideThinking();
         conversationHistory.push({role:'assistant',content:reply});
         saveConversation();
-        var qr = pendingActions ? [] : ['What should I focus on?','Show me my numbers','Draft an email','Songs From Dad update'];
-        typeMessage(detectedAgent||'compass', reply, qr, function(){
+        typeMessage(detectedAgent||'compass', reply, [], function(){
           if(pendingActions && pendingActions.length){
             var lastMsg = chatArea.querySelector('.msg-mawd:last-child .msg-content');
             if(lastMsg){
@@ -3572,6 +3570,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           }
         });
       });
+    } else {
+      // Default home screen — STATIC greeting, no API call. Save tokens.
+      // User taps a button or types to initiate any Claude call.
+      var hour = now.getHours();
+      var timeOfDay = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
+      var greeting = timeOfDay + ', Travis. What do you need?';
+      var quickActions = ['Daily briefing', 'Show my to-do list'];
+      conversationHistory = []; // fresh session
+      typeMessage('compass', greeting, quickActions, null);
+      saveConversation();
     }
   }
 
