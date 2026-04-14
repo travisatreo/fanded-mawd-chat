@@ -349,8 +349,17 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
   const token = await getAccessToken(_refreshToken);
 
   const now = new Date();
-  const min = timeMin || now.toISOString();
-  const max = timeMax || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Ensure times are valid RFC3339 (Google API requires timezone)
+  function toRFC3339(val) {
+    if (!val) return null;
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+
+  const min = toRFC3339(timeMin) || now.toISOString();
+  const max = toRFC3339(timeMax) || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const items = (emails || []).map(email => ({ id: email }));
   // Always include the current user
@@ -358,20 +367,27 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
     items.unshift({ id: 'primary' });
   }
 
+  const requestBody = {
+    timeMin: min,
+    timeMax: max,
+    timeZone: 'America/Los_Angeles',
+    items
+  };
+
   const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      timeMin: min,
-      timeMax: max,
-      items
-    })
+    body: JSON.stringify(requestBody)
   });
 
-  if (!res.ok) throw new Error('FreeBusy query failed: ' + await res.text());
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('FreeBusy failed:', errText, 'Request:', JSON.stringify(requestBody));
+    throw new Error('FreeBusy query failed: ' + errText);
+  }
   const data = await res.json();
 
   // Parse busy times per calendar
