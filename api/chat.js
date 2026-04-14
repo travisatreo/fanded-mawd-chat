@@ -601,6 +601,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     }
 
     // ── If we auto-executed tools, make a follow-up call so Claude can summarize results ──
+    const firstCallText = text; // Preserve first call text in case follow-up fails
     if (toolResults.length > 0 && data.stop_reason === 'tool_use') {
       // Build the follow-up messages: assistant's response + tool results
       const followUpMessages = [...apiMessages, {
@@ -670,8 +671,10 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
       } catch (e) {
         // Follow-up timed out or failed — return what we have from the first call
         console.error('Follow-up call failed:', e.message);
-        if (!text) text = 'I found your emails but the summary timed out. Try asking again or be more specific (e.g. "show me unread emails from this week").';
+        text = firstCallText || 'I pulled the data but ran out of time summarizing it. Try asking again or be more specific.';
       }
+      // Safety: if follow-up returned OK but produced empty text, restore first call text
+      if (!text && firstCallText) text = firstCallText;
     }
 
     let detectedAgent = agent || 'compass';
