@@ -367,12 +367,19 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
         weekDays.push(`${dayName} = ${ptDate} (${dateStr})`);
       }
 
-      systemPrompt += `\n\nTODAY: ${todayStr} (${isoDate}). Timezone: America/Los_Angeles (Pacific Time).
+      systemPrompt += `\n\n=== DATE REFERENCE (MANDATORY) ===
+TODAY IS: ${dayOfWeek.toUpperCase()}, ${todayStr} (${isoDate})
+Timezone: America/Los_Angeles (Pacific Time)
 
-THIS WEEK'S DATES (use these, do NOT calculate dates yourself):
+DATE LOOKUP TABLE — when Travis says a day name, copy the date from this table:
 ${weekDays.join('\n')}
 
-ALWAYS use the exact dates above when Travis says a day name. Never do date math yourself.`;
+RULES:
+- NEVER calculate dates yourself. ALWAYS copy from the table above.
+- "today" = ${isoDate}
+- "tomorrow" = ${weekDays[1]?.split(' = ')[1]?.split(' ')[0] || ''}
+- When calling find_free_time or create_event, use the YYYY-MM-DD date from this table.
+=== END DATE REFERENCE ===`;
 
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.

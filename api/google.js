@@ -370,7 +370,9 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
   const requestBody = {
     timeMin: min,
     timeMax: max,
-    timeZone: 'America/Los_Angeles',
+    // Do NOT pass timeZone here — Google returns busy times without offset when timeZone is set,
+    // causing new Date() to misinterpret PT times as UTC (the "3am bug"). Without timeZone,
+    // Google returns UTC times with Z suffix which parse correctly everywhere.
     items
   };
 
@@ -390,12 +392,15 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
   }
   const data = await res.json();
 
-  // Parse busy times per calendar
+  // Parse busy times per calendar — always normalize to UTC ISO strings
   const busyByCalendar = {};
   for (const [cal, info] of Object.entries(data.calendars || {})) {
+    if (info.errors && info.errors.length > 0) {
+      console.error(`FreeBusy error for ${cal}:`, JSON.stringify(info.errors));
+    }
     busyByCalendar[cal] = (info.busy || []).map(b => ({
-      start: b.start,
-      end: b.end
+      start: new Date(b.start).toISOString(),
+      end: new Date(b.end).toISOString()
     }));
   }
 
@@ -457,6 +462,8 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
       cursor += 30 * 60 * 1000; // Try next 30-min increment
     }
   }
+
+  console.log('FreeBusy result:', JSON.stringify({ busyByCalendar, freeSlotCount: freeSlots.length, range: { min, max } }));
 
   return {
     busyByCalendar,
