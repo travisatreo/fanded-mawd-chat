@@ -360,8 +360,17 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
 
       const now = new Date();
       const todayStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' });
-      const isoDate = now.toISOString().split('T')[0];
+      const isoDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD in PT, never server UTC
       const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+      const currentTimePT = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Los_Angeles' });
+      const timePartOfDay = (function(){
+        const h = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Los_Angeles' }), 10);
+        if (h < 5) return 'late night';
+        if (h < 12) return 'morning';
+        if (h < 17) return 'afternoon';
+        if (h < 21) return 'evening';
+        return 'night';
+      })();
 
       // Pre-calculate the next 7 days so Claude doesn't have to do date math
       const weekDays = [];
@@ -375,19 +384,24 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
         weekDays.push(`${dayName} = ${ptDate} (${dateStr})`);
       }
 
-      systemPrompt += `\n\n=== DATE REFERENCE (MANDATORY) ===
-TODAY IS: ${dayOfWeek.toUpperCase()}, ${todayStr} (${isoDate})
-Timezone: America/Los_Angeles (Pacific Time)
+      systemPrompt += `\n\n=== CURRENT DATE AND TIME (MANDATORY — NEVER GUESS, NEVER CALCULATE) ===
+RIGHT NOW IT IS: ${currentTimePT} on ${dayOfWeek.toUpperCase()}, ${todayStr}
+ISO DATE: ${isoDate}
+TIME OF DAY: ${timePartOfDay} (use "${timePartOfDay}" when greeting Travis, not "morning" or "good day" generically)
+TIMEZONE: America/Los_Angeles (Pacific Time) — Travis is in California
 
-DATE LOOKUP TABLE — when Travis says a day name, copy the date from this table:
+DATE LOOKUP TABLE — when Travis says a day name, copy the date from this table EXACTLY:
 ${weekDays.join('\n')}
 
-RULES:
-- NEVER calculate dates yourself. ALWAYS copy from the table above.
-- "today" = ${isoDate}
-- "tomorrow" = ${weekDays[1]?.split(' = ')[1]?.split(' ')[0] || ''}
+RULES (violating these is a critical error):
+- NEVER guess the date, time, or day of the week. ALL of it is above.
+- NEVER calculate dates yourself. Copy from the table.
+- "today" = ${isoDate} (${dayOfWeek})
+- "tomorrow" = ${weekDays[1]?.split(' = ')[1]?.split(' ')[0] || ''} (${weekDays[1]?.split(' = ')[0] || ''})
+- "this week" means the current 7 days in the table above.
 - When calling find_free_time or create_event, use the YYYY-MM-DD date from this table.
-=== END DATE REFERENCE ===`;
+- When greeting Travis, reference the actual time of day (${timePartOfDay}) not a hardcoded "morning".
+=== END CURRENT DATE AND TIME ===`;
 
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.
