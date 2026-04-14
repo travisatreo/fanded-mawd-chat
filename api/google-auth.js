@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   // Step 2: Handle callback with authorization code
   if (req.query.code) {
     const state = req.query.state || '';
-    const mawdSlug = state.replace(/^gmail_/, '');
+    const mawdSlug = state.replace(/^gmail_/, '') === 'direct' ? '' : state.replace(/^gmail_/, '');
 
     try {
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
