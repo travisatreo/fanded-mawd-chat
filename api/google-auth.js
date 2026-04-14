@@ -2,7 +2,7 @@
 // Step 1: GET /api/google-auth?mawd=slug → redirects to Google consent
 // Step 2: Google redirects back with ?code=&state=mawd_slug → exchanges for refresh token → stores in Supabase
 
-import { supabaseQuery } from './supabase.js';
+import { supabaseQuery } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;

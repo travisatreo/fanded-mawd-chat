@@ -2,7 +2,7 @@
 // MAWDs send messages to each other on behalf of their owners
 // POST: send a message from one MAWD to another
 // GET: read messages for a MAWD instance
-import { supabaseQuery } from './supabase.js';
+import { supabaseQuery } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

@@ -1,6 +1,6 @@
-import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from './brain.js';
-import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from './supabase.js';
-import { executeTool, sendEmail } from './google.js';
+import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from '../lib/brain.js';
+import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from '../lib/supabase.js';
+import { executeTool, sendEmail } from '../lib/google.js';
 
 // ── Load MAWD brain by slug (multi-MAWD support) ──
 // Returns full instance including google_refresh_token for per-user OAuth

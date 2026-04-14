@@ -1,6 +1,6 @@
 // Fanded Podcast Distribution — upload episodes, generate RSS feeds
 // Distributes to Apple Podcasts, Spotify, Google via RSS
-import { supabaseQuery } from './supabase.js';
+import { supabaseQuery } from '../lib/supabase.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://jlwidechsxtgxmttypzs.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1,7 +1,7 @@
 // RSS Feed Generator for Fanded Podcast Distribution
 // Generates Apple Podcasts / Spotify compatible RSS XML
 // Usage: /api/feed?show=slug
-import { supabaseQuery } from './supabase.js';
+import { supabaseQuery } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();

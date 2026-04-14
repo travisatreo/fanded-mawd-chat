@@ -1,7 +1,7 @@
 // MAWD Onboarding API — creates a new MAWD instance for a user
 // POST: creates a new MAWD with initial brain from onboarding answers
 // GET: returns MAWD profile by ?id= or ?slug=
-import { supabaseQuery } from './supabase.js';
+import { supabaseQuery } from '../lib/supabase.js';
 
 // Shared company context that every Fanded team MAWD knows
 const FANDED_SHARED_BRAIN = `

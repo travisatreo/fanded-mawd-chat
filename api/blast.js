@@ -2,7 +2,7 @@
 // Sends bulk emails to fan_contacts via Gmail API
 // POST /api/blast { subject, body, testOnly?, limit? }
 
-import { sendEmail } from './google.js';
+import { sendEmail } from '../lib/google.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://jlwidechsxtgxmttypzs.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
