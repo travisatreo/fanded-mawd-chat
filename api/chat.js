@@ -608,7 +608,7 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
         content: toolResults.map(tr => ({
           type: 'tool_result',
           tool_use_id: tr.id,
-          content: JSON.stringify(tr.result).substring(0, 8000) // Limit size
+          content: JSON.stringify(tr.result).substring(0, 4000) // Limit size to prevent context overflow
         }))
       }];
 
@@ -620,6 +620,10 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
         tools: TOOLS
       };
 
+      // Add timeout to prevent Vercel function from hanging
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
       const followUpRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -627,36 +631,43 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify(followUpBody)
-      });
+        body: JSON.stringify(followUpBody),
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeout));
 
-      if (followUpRes.ok) {
-        const followUpData = await followUpRes.json();
-        // Reset text and parse follow-up response
-        text = '';
-        for (const block of followUpData.content) {
-          if (block.type === 'text') {
-            text += block.text;
-          } else if (block.type === 'tool_use') {
-            if (block.name === 'save_memory') {
-              try { await saveMemory(block.input.category, block.input.content); } catch (e) {}
-            } else if (READ_ONLY_TOOLS.includes(block.name)) {
-              // If Claude wants to read more (e.g. read_email after list_emails), auto-execute again
-              try {
-                const result = await executeTool(block.name, block.input, userRefreshToken);
-                // For now, append a brief summary — a third call would be too slow
-                if (block.name === 'read_email' || block.name === 'read_thread') {
-                  const body = Array.isArray(result) ? result.map(m => `From: ${m.from}\n${m.body}`).join('\n---\n') : (result.body || '');
-                  text += '\n\n' + body.substring(0, 2000);
+      try {
+        if (followUpRes.ok) {
+          const followUpData = await followUpRes.json();
+          // Reset text and parse follow-up response
+          text = '';
+          for (const block of followUpData.content) {
+            if (block.type === 'text') {
+              text += block.text;
+            } else if (block.type === 'tool_use') {
+              if (block.name === 'save_memory') {
+                try { await saveMemory(block.input.category, block.input.content); } catch (e) {}
+              } else if (READ_ONLY_TOOLS.includes(block.name)) {
+                // If Claude wants to read more (e.g. read_email after list_emails), auto-execute again
+                try {
+                  const result = await executeTool(block.name, block.input, userRefreshToken);
+                  // For now, append a brief summary — a third call would be too slow
+                  if (block.name === 'read_email' || block.name === 'read_thread') {
+                    const body = Array.isArray(result) ? result.map(m => `From: ${m.from}\n${m.body}`).join('\n---\n') : (result.body || '');
+                    text += '\n\n' + body.substring(0, 2000);
+                  }
+                } catch (e) {
+                  text += '\n\n(Could not read email: ' + e.message + ')';
                 }
-              } catch (e) {
-                text += '\n\n(Could not read email: ' + e.message + ')';
+              } else {
+                pendingActions.push({ id: block.id, tool: block.name, input: block.input });
               }
-            } else {
-              pendingActions.push({ id: block.id, tool: block.name, input: block.input });
             }
           }
         }
+      } catch (e) {
+        // Follow-up timed out or failed — return what we have from the first call
+        console.error('Follow-up call failed:', e.message);
+        if (!text) text = 'I found your emails but the summary timed out. Try asking again or be more specific (e.g. "show me unread emails from this week").';
       }
     }
 

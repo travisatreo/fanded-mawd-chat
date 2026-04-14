@@ -140,6 +140,8 @@ export async function createEvent({ summary, description, startTime, endTime, at
 
 // ── Gmail: List recent emails ──
 export async function listEmails({ maxResults = 10, query = '', labelIds, _refreshToken } = {}) {
+  // Cap at 10 to prevent timeout on large inboxes
+  maxResults = Math.min(maxResults, 10);
   const token = await getAccessToken(_refreshToken);
 
   let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`;
@@ -208,6 +210,7 @@ export async function readEmail({ id, _refreshToken }) {
     return '';
   }
 
+  const fullBody = getBody(data.payload);
   return {
     id: data.id,
     threadId: data.threadId,
@@ -215,7 +218,7 @@ export async function readEmail({ id, _refreshToken }) {
     to: headers.To || '',
     subject: headers.Subject || '',
     date: headers.Date || '',
-    body: getBody(data.payload),
+    body: fullBody.substring(0, 3000) + (fullBody.length > 3000 ? '\n...(truncated)' : ''),
     snippet: data.snippet || '',
     labels: data.labelIds || [],
     isUnread: (data.labelIds || []).includes('UNREAD')
@@ -246,16 +249,19 @@ export async function readThread({ threadId, _refreshToken }) {
     return '';
   }
 
-  return (data.messages || []).map(msg => {
+  // Cap to last 10 messages and truncate bodies to prevent context overflow
+  const messages = (data.messages || []).slice(-10);
+  return messages.map(msg => {
     const headers = {};
     (msg.payload?.headers || []).forEach(h => { headers[h.name] = h.value; });
+    const fullBody = getBody(msg.payload);
     return {
       id: msg.id,
       from: headers.From || '',
       to: headers.To || '',
       subject: headers.Subject || '',
       date: headers.Date || '',
-      body: getBody(msg.payload),
+      body: fullBody.substring(0, 2000) + (fullBody.length > 2000 ? '\n...(truncated)' : ''),
       snippet: msg.snippet || ''
     };
   });
