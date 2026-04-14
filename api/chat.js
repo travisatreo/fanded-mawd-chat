@@ -362,17 +362,17 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
           try {
             const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
             const teamRecaps = await supabaseQuery(
-              `mawd_memory?category=eq.evening_recap&mawd_slug=in.(kevin,lewis)&created_at=gte.${since}&select=mawd_slug,content,created_at&order=created_at.desc&limit=10`
+              `mawd_memory?category=eq.evening_recap&mawd_slug=in.(kevin-p,lewis-zhuo,kevin,lewis)&created_at=gte.${since}&select=mawd_slug,content,created_at&order=created_at.desc&limit=10`
             );
             const latestBySlug = {};
             teamRecaps.forEach(r => { if (!latestBySlug[r.mawd_slug]) latestBySlug[r.mawd_slug] = r; });
             const slugs = Object.keys(latestBySlug);
             if (slugs.length > 0) {
-              systemPrompt += `\n\n=== TEAM STANDUP — LAST 24H (Fanded co-founders) ===\nThis is what Travis's co-founders (Kevin Garcia and Lewis) shipped yesterday, pulled from their MAWD evening recaps. Surface this proactively when Travis opens MAWD in the morning so he walks into the day knowing what his team did. Flag overlap with his own focus.\n\n`;
+              systemPrompt += `\n\n=== TEAM STANDUP — LAST 24H (Fanded co-founders) ===\nThis is what Travis's co-founders (Kevin P and Lewis Zhuo) shipped yesterday, pulled from their MAWD evening recaps. Surface this proactively when Travis opens MAWD in the morning so he walks into the day knowing what his team did. Flag overlap with his own focus.\n\n`;
               slugs.forEach(s => {
                 const r = latestBySlug[s];
                 const ts = r.created_at ? new Date(r.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) : '';
-                const name = s === 'kevin' ? 'KEVIN' : s === 'lewis' ? 'LEWIS' : s.toUpperCase();
+                const name = (s === 'kevin-p' || s === 'kevin') ? 'KEVIN' : (s === 'lewis-zhuo' || s === 'lewis') ? 'LEWIS' : s.toUpperCase();
                 systemPrompt += `--- ${name}'s recap @ ${ts} ---\n${r.content}\n\n`;
               });
               systemPrompt += `=== END TEAM STANDUP ===`;
