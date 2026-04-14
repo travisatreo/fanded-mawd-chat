@@ -345,9 +345,25 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
         if (memories.length > 0) {
           // Pinned instructions always come first and get prominent framing
           const pinned = memories.find(m => m.category === 'pinned');
-          const rest = memories.filter(m => m.category !== 'pinned');
+          const dailyLogs = memories
+            .filter(m => m.category === 'daily_log' || m.category === 'evening_recap' || m.category === 'morning_briefing')
+            .slice(0, 3); // most recent 3
+          const rest = memories.filter(m =>
+            m.category !== 'pinned' &&
+            m.category !== 'daily_log' &&
+            m.category !== 'evening_recap' &&
+            m.category !== 'morning_briefing'
+          );
           if (pinned && pinned.content) {
             systemPrompt += `\n\n=== TRAVIS'S STANDING INSTRUCTIONS (ALWAYS REMEMBER — highest priority) ===\n${pinned.content}\n=== END STANDING INSTRUCTIONS ===`;
+          }
+          if (dailyLogs.length > 0) {
+            systemPrompt += `\n\n=== RECENT iMESSAGES YOU (MAWD) SENT TRAVIS ===\nThese are briefings and evening recaps you sent via iMessage from the Mac-side scheduled tasks. Travis may reply Y/N to action items here in this chat. Treat these as things YOU said to Travis — do not re-introduce them.\n\n`;
+            dailyLogs.forEach(log => {
+              const ts = log.created_at ? new Date(log.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) : '';
+              systemPrompt += `[${log.category} @ ${ts}]\n${log.content}\n\n`;
+            });
+            systemPrompt += `=== END RECENT iMESSAGES ===`;
           }
           if (rest.length > 0) {
             systemPrompt += `\n\nMAWD MEMORY (things you've learned about Travis from past conversations — use this to be smarter):\n`;
