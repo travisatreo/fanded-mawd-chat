@@ -355,9 +355,24 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
       const isoDate = now.toISOString().split('T')[0];
       const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
 
-      systemPrompt += `\n\nTODAY: ${todayStr} (${isoDate}). Day of week: ${dayOfWeek}. Timezone: America/Los_Angeles (Pacific Time).
-When Travis says "tomorrow", that means ${new Date(now.getTime() + 86400000).toISOString().split('T')[0]}.
-When Travis says "Thursday", calculate the NEXT Thursday from today's date. ALWAYS use the correct year (${now.getFullYear()}) in ISO dates. Never use a past date unless explicitly asked.`;
+      // Pre-calculate the next 7 days so Claude doesn't have to do date math
+      const weekDays = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now.getTime() + i * 86400000);
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
+        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        // Use PT date calculation
+        const ptDate = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD format
+        weekDays.push(`${dayName} = ${ptDate} (${dateStr})`);
+      }
+
+      systemPrompt += `\n\nTODAY: ${todayStr} (${isoDate}). Timezone: America/Los_Angeles (Pacific Time).
+
+THIS WEEK'S DATES (use these, do NOT calculate dates yourself):
+${weekDays.join('\n')}
+
+ALWAYS use the exact dates above when Travis says a day name. Never do date math yourself.`;
 
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.

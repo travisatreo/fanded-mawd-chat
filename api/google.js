@@ -428,27 +428,42 @@ export async function findFreeTime({ emails, timeMin, timeMax, duration = 30, _r
   const startTime = new Date(min).getTime();
   const endTime = new Date(max).getTime();
 
-  let cursor = startTime;
-  for (const busy of merged) {
-    if (busy.start - cursor >= durationMs) {
-      // Check if the gap falls in business hours
-      const gapStart = new Date(cursor);
-      const hour = gapStart.getHours();
-      if (hour >= 9 && hour < 18) {
-        freeSlots.push({
-          start: new Date(cursor).toISOString(),
-          end: new Date(Math.min(cursor + durationMs, busy.start)).toISOString()
-        });
-      }
-    }
-    cursor = Math.max(cursor, busy.end);
+  // Get hour in Pacific Time (not server UTC)
+  function getPTHour(timestamp) {
+    const d = new Date(timestamp);
+    const ptStr = d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Los_Angeles' });
+    return parseInt(ptStr, 10);
   }
-  // Check gap after last busy
-  if (endTime - cursor >= durationMs) {
-    freeSlots.push({
-      start: new Date(cursor).toISOString(),
-      end: new Date(cursor + durationMs).toISOString()
-    });
+
+  // Scan each day in the range for free slots during business hours (9am-6pm PT)
+  const dayMs = 24 * 60 * 60 * 1000;
+  const rangeStart = new Date(min);
+  const rangeEnd = new Date(max);
+
+  // Walk through each potential slot in 30-min increments
+  let cursor = startTime;
+  while (cursor < endTime && freeSlots.length < 10) {
+    const ptHour = getPTHour(cursor);
+
+    // Skip outside business hours (before 9am or after 5:30pm PT)
+    if (ptHour < 9 || ptHour >= 18) {
+      cursor += 30 * 60 * 1000;
+      continue;
+    }
+
+    // Check if this slot conflicts with any busy period
+    const slotEnd = cursor + durationMs;
+    const isBusy = merged.some(b => cursor < b.end && slotEnd > b.start);
+
+    if (!isBusy) {
+      freeSlots.push({
+        start: new Date(cursor).toISOString(),
+        end: new Date(slotEnd).toISOString()
+      });
+      cursor = slotEnd; // Jump past this slot
+    } else {
+      cursor += 30 * 60 * 1000; // Try next 30-min increment
+    }
   }
 
   return {
