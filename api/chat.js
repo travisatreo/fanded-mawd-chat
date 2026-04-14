@@ -601,81 +601,64 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
       }
     }
 
-    // ── If we auto-executed tools, make a follow-up call so Claude can summarize results ──
-    const firstCallText = text; // Preserve first call text in case follow-up fails
+    // ── If we auto-executed tools, format results directly (no second Claude call) ──
+    // This keeps the response under Vercel's 10s timeout on Hobby plan
     if (toolResults.length > 0 && data.stop_reason === 'tool_use') {
-      // Build the follow-up messages: assistant's response + tool results
-      const followUpMessages = [...apiMessages, {
-        role: 'assistant',
-        content: data.content
-      }, {
-        role: 'user',
-        content: toolResults.map(tr => ({
-          type: 'tool_result',
-          tool_use_id: tr.id,
-          content: JSON.stringify(tr.result).substring(0, 4000) // Limit size to prevent context overflow
-        }))
-      }];
-
-      const followUpBody = {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: followUpMessages,
-        tools: TOOLS
-      };
-
-      // Add timeout to prevent Vercel function from hanging
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
-
-      const followUpRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify(followUpBody),
-        signal: controller.signal
-      }).finally(() => clearTimeout(timeout));
-
-      try {
-        if (followUpRes.ok) {
-          const followUpData = await followUpRes.json();
-          // Reset text and parse follow-up response
-          text = '';
-          for (const block of followUpData.content) {
-            if (block.type === 'text') {
-              text += block.text;
-            } else if (block.type === 'tool_use') {
-              if (block.name === 'save_memory') {
-                try { await saveMemory(block.input.category, block.input.content); } catch (e) {}
-              } else if (READ_ONLY_TOOLS.includes(block.name)) {
-                // If Claude wants to read more (e.g. read_email after list_emails), auto-execute again
-                try {
-                  const result = await executeTool(block.name, block.input, userRefreshToken);
-                  // For now, append a brief summary — a third call would be too slow
-                  if (block.name === 'read_email' || block.name === 'read_thread') {
-                    const body = Array.isArray(result) ? result.map(m => `From: ${m.from}\n${m.body}`).join('\n---\n') : (result.body || '');
-                    text += '\n\n' + body.substring(0, 2000);
-                  }
-                } catch (e) {
-                  text += '\n\n(Could not read email: ' + e.message + ')';
-                }
-              } else {
-                pendingActions.push({ id: block.id, tool: block.name, input: block.input });
-              }
-            }
-          }
+      for (const tr of toolResults) {
+        const r = tr.result;
+        if (r.error) {
+          text += '\n\n' + r.error;
+          continue;
         }
-      } catch (e) {
-        // Follow-up timed out or failed — return what we have from the first call
-        console.error('Follow-up call failed:', e.message);
-        text = firstCallText || 'I pulled the data but ran out of time summarizing it. Try asking again or be more specific.';
+        // Format based on tool type
+        if (Array.isArray(r) && r.length > 0 && r[0].subject) {
+          // list_emails or read_thread result
+          if (r[0].body && !r[0].isUnread) {
+            // Thread: show messages
+            text += '\n\n';
+            r.slice(-5).forEach(m => {
+              text += `**${m.from}** (${m.date})\n${(m.body || m.snippet || '').substring(0, 500)}\n\n---\n`;
+            });
+          } else {
+            // Email list
+            text += '\n\n';
+            r.forEach((e, i) => {
+              const unread = e.isUnread ? ' 🔴' : '';
+              text += `${i+1}. **${e.from}**${unread} — ${e.subject}\n${e.snippet}\n\n`;
+            });
+          }
+        } else if (r.body && r.threadId) {
+          // Single email read
+          text += `\n\n**From:** ${r.from}\n**Subject:** ${r.subject}\n**Date:** ${r.date}\n\n${(r.body || '').substring(0, 2000)}`;
+        } else if (r.total !== undefined && r.emailable !== undefined) {
+          // Fan stats
+          text += `\n\n**Fan Database:** ${r.total} total contacts, ${r.emailable} emailable, ${r.top_fans} top fans`;
+        } else if (r.freeSlots || r.busyByCalendar) {
+          // Free time results
+          if (r.freeSlots && r.freeSlots.length > 0) {
+            text += '\n\nAvailable slots:\n';
+            r.freeSlots.slice(0, 5).forEach(s => {
+              text += `- ${s.start} to ${s.end}\n`;
+            });
+          } else {
+            text += '\n\nNo open slots found in that range. Try a wider time window.';
+          }
+        } else if (Array.isArray(r) && r.length > 0 && r[0].start) {
+          // Calendar events
+          text += '\n\n';
+          r.forEach(e => {
+            const start = e.start?.dateTime || e.start?.date || '';
+            text += `- **${e.summary || 'No title'}** — ${start}${e.attendees ? ' (' + e.attendees.map(a => a.email).join(', ') + ')' : ''}\n`;
+          });
+        } else if (r.success) {
+          // Memory save or other success
+          continue;
+        } else {
+          // Unknown format — dump a brief summary
+          const summary = JSON.stringify(r).substring(0, 500);
+          text += '\n\n' + summary;
+        }
       }
-      // Safety: if follow-up returned OK but produced empty text, restore first call text
-      if (!text && firstCallText) text = firstCallText;
     }
 
     let detectedAgent = agent || 'compass';
