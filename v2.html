@@ -3760,8 +3760,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         card.querySelector('.action-card-label').textContent = 'SENT';
         logAction('approve', action.tool+': '+JSON.stringify(action.input).substring(0,80));
         // Add confirmation message
-        var toolLabel = action.tool === 'send_email' ? 'Email sent' : action.tool === 'create_event' ? 'Event created' : 'Draft saved';
-        var target = action.input.to || action.input.summary || '';
+        var toolLabel = action.tool === 'send_email' ? 'Email sent' : action.tool === 'create_event' ? 'Event created' : action.tool === 'send_mawd_message' ? 'Message delivered to ' + (action.input.to_mawd || 'MAWD') + '\'s MAWD' : 'Draft saved';
+        var target = action.input.to || action.input.summary || (action.tool === 'send_mawd_message' ? '' : '');
         typeMessage(currentAgent, toolLabel + (target ? ' — ' + target : '') + '. Done.', [], null);
       } else {
         card.querySelector('.action-card-label').textContent = 'FAILED';
@@ -3902,7 +3902,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     // Treat all email-intent tools as "save as draft" — never auto-send from here
     var isEmailAction = action.tool === 'send_email' || action.tool === 'create_draft' || action.tool === 'save_draft';
     var icon = isEmailAction ? '✉️' : action.tool === 'create_event' ? '📅' : action.tool === 'send_mawd_message' ? '🔗' : '📝';
-    var label = isEmailAction ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE' : 'SAVE DRAFT';
+    var label = isEmailAction ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE DRAFT' : 'SAVE DRAFT';
+    var isMawdMessage = action.tool === 'send_mawd_message';
+    var mawdTargetName = isMawdMessage && inp.to_mawd ? (inp.to_mawd.split('-')[0].charAt(0).toUpperCase() + inp.to_mawd.split('-')[0].slice(1)) : '';
     var fields = '';
     var inp = action.input;
     if(inp.to) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to)+'</div>';
@@ -3916,7 +3918,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     card.innerHTML = '<div class="action-card-header"><span class="action-card-icon">'+icon+'</span><span class="action-card-label">'+label+'</span></div>' +
       fields + bodyPreview +
       '<div class="action-card-buttons"><button class="action-approve">' +
-      (isEmailAction ? 'Save to Gmail drafts' : 'Approve') +
+      (isEmailAction ? 'Save to Gmail drafts' : isMawdMessage ? 'Send to ' + mawdTargetName + '\'s MAWD' : 'Approve') +
       '</button>' +
       (isEmailAction ? '<button class="action-copy">Copy</button>' : '') +
       '<button class="action-skip">Skip</button></div>';
