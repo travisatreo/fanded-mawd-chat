@@ -185,7 +185,7 @@ const TOOLS = [
   },
   {
     name: 'send_mawd_message',
-    description: 'Send a message to another MAWD in the Fanded network. Use this to coordinate with other team members\' MAWDs (e.g. Lewis\'s MAWD, Kevin\'s MAWD). Types: "scheduling" for meeting coordination, "request" for asking something, "message" for general communication. The other MAWD will receive and process the message on behalf of its owner.',
+    description: 'Send a message to another MAWD in the Fanded network. Use this to coordinate with other team members\' MAWDs (e.g. Lewis\'s MAWD, Kevin\'s MAWD). Types: "scheduling" for meeting coordination, "request" for asking something, "message" for general communication. The other MAWD will receive and process the message on behalf of its owner. IMPORTANT: If this fails because the recipient doesn\'t have a MAWD, fall back to send_email or create_event to reach them directly. Never show the user an error about MAWD not found.',
     input_schema: {
       type: 'object',
       properties: {
@@ -265,6 +265,12 @@ export default async function handler(req, res) {
       if (mawdInstance) {
         systemPrompt = mawdInstance.full_brain;
 
+        // Inject current date so Claude never hallucinates dates
+        const mNow = new Date();
+        const mTodayStr = mNow.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' });
+        const mIsoDate = mNow.toISOString().split('T')[0];
+        systemPrompt += `\n\nTODAY: ${mTodayStr} (${mIsoDate}). Timezone: America/Los_Angeles. Year: ${mNow.getFullYear()}. When using dates in tools, always use the correct current year.`;
+
         // Add chat voice for multi-MAWD instances
         systemPrompt += `\n\nCHAT VOICE:
 You are in the MAWD chat app. Real-time text conversation.
@@ -343,6 +349,15 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
           });
         }
       } catch (e) {}
+
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' });
+      const isoDate = now.toISOString().split('T')[0];
+      const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+
+      systemPrompt += `\n\nTODAY: ${todayStr} (${isoDate}). Day of week: ${dayOfWeek}. Timezone: America/Los_Angeles (Pacific Time).
+When Travis says "tomorrow", that means ${new Date(now.getTime() + 86400000).toISOString().split('T')[0]}.
+When Travis says "Thursday", calculate the NEXT Thursday from today's date. ALWAYS use the correct year (${now.getFullYear()}) in ISO dates. Never use a past date unless explicitly asked.`;
 
       systemPrompt += `\n\nCHAT VOICE OVERRIDE:
 You are in the MAWD chat app. This is a real-time text conversation.
@@ -433,13 +448,21 @@ You are not a chatbot. You are Travis's chief of staff. Act like it:
 5. Track commitments — if Travis says "I'll get back to them" about anything, draft the follow-up.
 6. When in doubt, DO the work. Don't describe it. Don't ask permission. Show Travis the draft and let him approve or skip.
 
-KNOWN CONTACTS (use these for email drafts):
+KNOWN CONTACTS (use these for email drafts and calendar invites):
 - Jason Sparks (investor): jasonrsparks@gmail.com
 - Max Diez (Twenty Five Ventures): max@25v.co
 - Shawn Xu (Lowercarbon Capital): shawn@lowercarbon.com
-- Kevin (CTO, Fanded): zhuolewis@gmail.com
+- Kevin Pamittan (CTO, Fanded): kevin@fanded.com (work), pamittan.kevin@gmail.com (personal/calendar)
+- Lewis Zhuo (engineer, Fanded): zhuolewis@gmail.com
 - Daniel Suh: (check conversation context)
 - Anna Akana: (check conversation context)
+
+IMPORTANT: Kevin and Lewis are DIFFERENT people. Kevin Pamittan is the CTO. Lewis Zhuo is an engineer. Never mix them up. When Travis says "Kevin" he means Kevin Pamittan (kevin@fanded.com). When he says "Lewis" he means Lewis Zhuo (zhuolewis@gmail.com).
+
+SCHEDULING RULES:
+- When Travis asks to schedule with MULTIPLE people, include ALL of them as attendees in the create_event tool call. Never drop anyone.
+- Always use find_free_time first when scheduling to check availability, unless Travis specifies an exact time.
+- For calendar events, always include a brief description so attendees know what it's about.
 
 ALWAYS show a brief text message BEFORE the tool use explaining what you're doing. Keep it to one sentence like "Drafting the reply to Max now." then use the tool.
 
@@ -699,7 +722,15 @@ async function sendMawdMessage(input, fromSlug) {
   const toCheck = await supabaseQuery(`mawd_instances?slug=eq.${to_mawd}&select=slug,name`);
 
   if (!fromCheck.length) throw new Error(`MAWD "${from_mawd}" not found`);
-  if (!toCheck.length) throw new Error(`MAWD "${to_mawd}" not found`);
+  if (!toCheck.length) {
+    // Recipient doesn't have MAWD -- return a helpful message instead of crashing
+    return {
+      sent: false,
+      error: 'no_mawd',
+      message: `${to_mawd} doesn't have a MAWD yet. Use send_email or create_event instead to reach them directly.`,
+      suggestion: 'fallback_to_email'
+    };
+  }
 
   const message = await supabaseQuery('mawd_network_messages', {
     method: 'POST',

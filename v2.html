@@ -3395,11 +3395,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     var card = document.createElement('div');
     card.className = 'action-card';
-    var icon = action.tool === 'send_email' ? '✉️' : action.tool === 'create_event' ? '📅' : '📝';
-    var label = action.tool === 'send_email' ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : 'SAVE DRAFT';
+    var icon = action.tool === 'send_email' ? '✉️' : action.tool === 'create_event' ? '📅' : action.tool === 'send_mawd_message' ? '🔗' : '📝';
+    var label = action.tool === 'send_email' ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE' : 'SAVE DRAFT';
     var fields = '';
     var inp = action.input;
     if(inp.to) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to)+'</div>';
+    if(inp.to_mawd) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to_mawd)+'\'s MAWD</div>';
     if(inp.subject) fields += '<div class="action-card-field"><strong>Subject:</strong> '+escapeHtml(inp.subject)+'</div>';
     if(inp.summary) fields += '<div class="action-card-field"><strong>Event:</strong> '+escapeHtml(inp.summary)+'</div>';
     if(inp.startTime) fields += '<div class="action-card-field"><strong>When:</strong> '+escapeHtml(inp.startTime)+'</div>';
