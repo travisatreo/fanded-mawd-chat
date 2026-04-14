@@ -1154,9 +1154,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     </div>
 
     <div id="settingsView" style="display:none;">
-      <div style="padding:24px 20px;">
+      <div style="padding:24px 20px;max-width:620px;">
         <h2 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Settings</h2>
-        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Configure MAWD.</p>
+        <p style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Configure your assistant.</p>
+
+        <div style="margin-bottom:24px;">
+          <div style="font-size:13px;font-weight:600;color:var(--gold);letter-spacing:0.5px;margin-bottom:8px;">ASSISTANT IDENTITY</div>
+          <p style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Name your assistant anything. You can change this anytime.</p>
+          <input type="text" id="assistantNameInput" placeholder="MAWD" maxlength="40"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:var(--font);font-size:15px;box-sizing:border-box;outline:none;">
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <div style="font-size:13px;font-weight:600;color:var(--gold);letter-spacing:0.5px;margin-bottom:8px;">VOICE</div>
+          <p style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Default voice uses your device's built-in speech (Siri-style on iPhone, Google on Chrome, free). To use your own cloned voice, paste an ElevenLabs Voice ID below. <a href="https://elevenlabs.io/app/voice-lab" target="_blank" style="color:var(--gold);text-decoration:none;">How to clone your voice →</a></p>
+          <input type="text" id="elevenlabsVoiceIdInput" placeholder="ElevenLabs Voice ID (optional)" maxlength="60"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:var(--font);font-size:13px;box-sizing:border-box;outline:none;font-family:monospace;">
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <button id="testVoiceBtn" style="background:transparent;border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:var(--text-2);font-family:var(--font);font-size:12px;cursor:pointer;">Test voice</button>
+            <button id="saveIdentityBtn" style="background:var(--gold);color:var(--bg);border:none;border-radius:10px;padding:8px 18px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Save identity</button>
+            <span id="identitySaveStatus" style="font-size:12px;color:var(--text-3);align-self:center;"></span>
+          </div>
+        </div>
+
         <div style="margin-bottom:20px;">
           <div style="font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;">NOTIFICATIONS</div>
           <label style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;">
@@ -3766,6 +3786,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     var mode = window.location.search.includes('demo') ? 'demo' : 'personal';
     var payload = {messages:messages, agent:agent, mode:mode};
     if (mawdSlug) payload.mawd = mawdSlug;
+    var assistantName = (typeof window.getAssistantName === 'function') ? window.getAssistantName() : '';
+    if (assistantName) payload.assistantName = assistantName;
     fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -4089,14 +4111,75 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
   });
 
-  // ── Voice: STT (browser Web Speech API) + TTS (ElevenLabs via /api/tts) ──
+  // ── Assistant Identity (name + voice) ──
+  var ASSISTANT_NAME_KEY = 'mawd_assistant_name';
+  var ELEVENLABS_VOICE_ID_KEY = 'mawd_elevenlabs_voice_id';
+  window.getAssistantName = function(){ return (localStorage.getItem(ASSISTANT_NAME_KEY) || '').trim(); };
+  window.getVoiceId = function(){ return (localStorage.getItem(ELEVENLABS_VOICE_ID_KEY) || '').trim(); };
+
+  // ── Voice: STT (browser Web Speech API) + TTS (ElevenLabs if voice ID set, else speechSynthesis) ──
   var micBtn = document.getElementById('micBtn');
   var voiceToggleBtn = document.getElementById('voiceToggleBtn');
   var VOICE_REPLY_KEY = 'mawd_voice_reply';
   var voiceReplyOn = localStorage.getItem(VOICE_REPLY_KEY) === '1';
   var currentAudio = null;
+  var currentUtterance = null;
   var recognition = null;
   var isRecording = false;
+
+  function stopAnyPlayback(){
+    if(currentAudio){ try{ currentAudio.pause(); }catch(e){} currentAudio = null; }
+    if(currentUtterance && window.speechSynthesis){ try{ window.speechSynthesis.cancel(); }catch(e){} currentUtterance = null; }
+  }
+
+  function stripMarkdownForVoice(text){
+    return (text||'')
+      .replace(/```[\s\S]*?```/g,' ')
+      .replace(/`[^`]*`/g,' ')
+      .replace(/\*\*([^*]+)\*\*/g,'$1')
+      .replace(/\*([^*]+)\*/g,'$1')
+      .replace(/^#+\s+/gm,'')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g,'$1')
+      .replace(/^[-*•→]\s+/gm,'')
+      .replace(/\n{2,}/g,'. ')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function speakWithSystemVoice(text){
+    if(!window.speechSynthesis) return;
+    stopAnyPlayback();
+    var utt = new SpeechSynthesisUtterance(stripMarkdownForVoice(text).slice(0,1500));
+    utt.rate = 1.02; utt.pitch = 1.0;
+    // Prefer an Apple voice on iOS/Mac; fall back to default
+    var voices = window.speechSynthesis.getVoices();
+    var preferred = voices.find(function(v){ return /Samantha|Siri|Ava|Allison/i.test(v.name); })
+      || voices.find(function(v){ return /en[-_]US/i.test(v.lang); })
+      || voices[0];
+    if(preferred) utt.voice = preferred;
+    currentUtterance = utt;
+    window.speechSynthesis.speak(utt);
+  }
+
+  function speakWithElevenLabs(text, voiceId){
+    stopAnyPlayback();
+    fetch('/api/tts', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text, voiceId: voiceId })
+    }).then(function(r){
+      if(!r.ok) throw new Error('TTS failed: '+r.status);
+      return r.blob();
+    }).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      currentAudio = new Audio(url);
+      currentAudio.play().catch(function(e){ console.warn('Autoplay blocked:', e.message); });
+      currentAudio.onended = function(){ URL.revokeObjectURL(url); currentAudio = null; };
+    }).catch(function(e){
+      console.warn('ElevenLabs TTS error, falling back to system voice:', e.message);
+      speakWithSystemVoice(text);
+    });
+  }
 
   function setVoiceToggleUI(){
     if(voiceReplyOn){ voiceToggleBtn.classList.add('on'); voiceToggleBtn.title='Voice replies ON — tap to mute'; }
@@ -4108,26 +4191,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     voiceReplyOn = !voiceReplyOn;
     localStorage.setItem(VOICE_REPLY_KEY, voiceReplyOn ? '1' : '0');
     setVoiceToggleUI();
-    if(!voiceReplyOn && currentAudio){ try{ currentAudio.pause(); currentAudio = null; }catch(e){} }
+    if(!voiceReplyOn) stopAnyPlayback();
   });
 
-  // Speak a MAWD reply via ElevenLabs
+  // Speak a MAWD reply — ElevenLabs if voice ID set, otherwise device system voice
   window.speakReply = function(text){
     if(!text || !voiceReplyOn) return;
-    if(currentAudio){ try{ currentAudio.pause(); }catch(e){} currentAudio = null; }
-    fetch('/api/tts', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text: text })
-    }).then(function(r){
-      if(!r.ok) throw new Error('TTS failed: '+r.status);
-      return r.blob();
-    }).then(function(blob){
-      var url = URL.createObjectURL(blob);
-      currentAudio = new Audio(url);
-      currentAudio.play().catch(function(e){ console.warn('Autoplay blocked:', e.message); });
-      currentAudio.onended = function(){ URL.revokeObjectURL(url); currentAudio = null; };
-    }).catch(function(e){ console.warn('TTS error:', e.message); });
+    var voiceId = window.getVoiceId();
+    if(voiceId){ speakWithElevenLabs(text, voiceId); }
+    else { speakWithSystemVoice(text); }
   };
 
   // STT — browser-native, no extra cost
@@ -4169,7 +4241,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         isRecording = true;
         micBtn.classList.add('recording');
         // Stop any playing TTS so MAWD doesn't talk over you
-        if(currentAudio){ try{ currentAudio.pause(); }catch(e){} currentAudio = null; }
+        stopAnyPlayback();
       } catch(err){
         console.warn('STT start failed:', err.message);
         isRecording = false;
@@ -4185,6 +4257,41 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     micBtn.addEventListener('click', function(){
       if(isRecording) stopRecording(true);
       else startRecording();
+    });
+  }
+
+  // ── Identity settings (name + voice ID) ──
+  var assistantNameInput = document.getElementById('assistantNameInput');
+  var elevenlabsVoiceIdInput = document.getElementById('elevenlabsVoiceIdInput');
+  var saveIdentityBtn = document.getElementById('saveIdentityBtn');
+  var testVoiceBtn = document.getElementById('testVoiceBtn');
+  var identitySaveStatus = document.getElementById('identitySaveStatus');
+
+  function loadIdentityUI(){
+    if(assistantNameInput) assistantNameInput.value = window.getAssistantName() || '';
+    if(elevenlabsVoiceIdInput) elevenlabsVoiceIdInput.value = window.getVoiceId() || '';
+  }
+  loadIdentityUI();
+
+  if(saveIdentityBtn){
+    saveIdentityBtn.addEventListener('click', function(){
+      var name = (assistantNameInput.value || '').trim().slice(0,40);
+      var vid = (elevenlabsVoiceIdInput.value || '').trim().slice(0,60);
+      if(name) localStorage.setItem(ASSISTANT_NAME_KEY, name); else localStorage.removeItem(ASSISTANT_NAME_KEY);
+      if(vid) localStorage.setItem(ELEVENLABS_VOICE_ID_KEY, vid); else localStorage.removeItem(ELEVENLABS_VOICE_ID_KEY);
+      identitySaveStatus.textContent = 'Saved' + (name ? ' · meet ' + name : '');
+      identitySaveStatus.style.color = 'var(--gold)';
+      setTimeout(function(){ identitySaveStatus.textContent = ''; }, 3500);
+    });
+  }
+
+  if(testVoiceBtn){
+    testVoiceBtn.addEventListener('click', function(){
+      var name = (assistantNameInput.value || '').trim() || 'your assistant';
+      var vid = (elevenlabsVoiceIdInput.value || '').trim();
+      var sample = "Hey Travis, this is " + name + ". Voice check, one two.";
+      if(vid) speakWithElevenLabs(sample, vid);
+      else speakWithSystemVoice(sample);
     });
   }
 

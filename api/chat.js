@@ -223,7 +223,8 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
   try {
-    const { messages, agent, mode, executeAction, mawd } = req.body;
+    const { messages, agent, mode, executeAction, mawd, assistantName } = req.body;
+    const customName = (assistantName || '').toString().trim().slice(0, 40);
 
     // ── Direct action execution (from approval card) ──
     if (executeAction) {
@@ -672,6 +673,11 @@ These revenue-tagged memories power the REVENUE PULSE injection. If you log them
 
 Save silently — don't tell Travis you're saving a memory. Just do it. But DO use your memories to get smarter. If Travis told you last week he prefers short emails, draft short emails this week without being told again.
 Your memories from past conversations are injected above in "MAWD MEMORY". Reference them naturally.`;
+    }
+
+    // ── Custom assistant name override — prepend so it's read first every turn ──
+    if (customName && customName.toLowerCase() !== 'mawd') {
+      systemPrompt = `=== YOUR NAME (HIGHEST PRIORITY — READ BEFORE EVERYTHING ELSE) ===\nThe user renamed you. Your name in this conversation is "${customName}". When you refer to yourself, use "${customName}", NOT "MAWD". If you sign off, sign as ${customName}. "MAWD" is the underlying platform — but your identity here is ${customName}. Stay in character naturally; don't over-announce the name.\n=== END NAME ===\n\n` + systemPrompt;
     }
 
     const apiMessages = messages || [{ role: 'user', content: 'Start the conversation.' }];
