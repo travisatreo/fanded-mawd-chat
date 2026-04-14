@@ -3758,8 +3758,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     var card = document.createElement('div');
     card.className = 'action-card';
-    var icon = action.tool === 'send_email' ? '✉️' : action.tool === 'create_event' ? '📅' : action.tool === 'send_mawd_message' ? '🔗' : '📝';
-    var label = action.tool === 'send_email' ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE' : 'SAVE DRAFT';
+    // Treat all email-intent tools as "save as draft" — never auto-send from here
+    var isEmailAction = action.tool === 'send_email' || action.tool === 'create_draft' || action.tool === 'save_draft';
+    var icon = isEmailAction ? '✉️' : action.tool === 'create_event' ? '📅' : action.tool === 'send_mawd_message' ? '🔗' : '📝';
+    var label = isEmailAction ? 'EMAIL DRAFT' : action.tool === 'create_event' ? 'CREATE EVENT' : action.tool === 'send_mawd_message' ? 'MAWD MESSAGE' : 'SAVE DRAFT';
     var fields = '';
     var inp = action.input;
     if(inp.to) fields += '<div class="action-card-field"><strong>To:</strong> '+escapeHtml(inp.to)+'</div>';
@@ -3773,22 +3775,39 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     card.innerHTML = '<div class="action-card-header"><span class="action-card-icon">'+icon+'</span><span class="action-card-label">'+label+'</span></div>' +
       fields + bodyPreview +
       '<div class="action-card-buttons"><button class="action-approve">' +
-      ((action.tool === 'send_email' || action.tool === 'create_draft') ? 'Open in Mail' : 'Approve') +
+      (isEmailAction ? 'Save to Gmail drafts' : 'Approve') +
       '</button>' +
-      ((action.tool === 'send_email' || action.tool === 'create_draft') ? '<button class="action-copy">Copy</button>' : '') +
+      (isEmailAction ? '<button class="action-copy">Copy</button>' : '') +
       '<button class="action-skip">Skip</button></div>';
 
     card.querySelector('.action-approve').addEventListener('click', function(){
-      if(action.tool === 'send_email' || action.tool === 'create_draft'){
-        var mailto = 'mailto:' + encodeURIComponent(action.input.to || '');
-        mailto += '?subject=' + encodeURIComponent(action.input.subject || '');
-        mailto += '&body=' + encodeURIComponent(action.input.body || '');
-        if(action.input.cc) mailto += '&cc=' + encodeURIComponent(action.input.cc);
-        if(action.input.bcc) mailto += '&bcc=' + encodeURIComponent(action.input.bcc);
-        window.open(mailto, '_blank');
+      if(isEmailAction){
+        // Force create_draft — never auto-send. Travis reads it in Gmail and decides.
+        var draftAction = { tool: 'create_draft', input: action.input };
         card.classList.add('executed');
-        card.querySelector('.action-card-label').textContent = 'OPENED IN EMAIL';
-        logAction('approve', action.tool + ': ' + (action.input.to || action.input.subject || ''));
+        card.querySelector('.action-card-label').textContent = 'SAVING DRAFT...';
+        var execPayload = {executeAction:{tool:draftAction.tool, input:draftAction.input}, agent:currentAgent, mode:'personal'};
+        if (mawdSlug) execPayload.mawd = mawdSlug;
+        fetch('/api/chat',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(execPayload)
+        })
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(data.actionResult && data.actionResult.success){
+            card.querySelector('.action-card-label').textContent = 'DRAFT SAVED';
+            logAction('approve', 'create_draft: ' + (action.input.to || action.input.subject || ''));
+            var buttons = card.querySelector('.action-card-buttons');
+            if(buttons) buttons.innerHTML = '<a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" class="action-approve" style="text-decoration:none;text-align:center;">Open in Gmail</a>';
+            typeMessage(currentAgent, 'Draft saved to Gmail — ' + (action.input.to || 'drafts folder') + '. Read it over, tweak anything, then send when you\'re ready.', [], null);
+          } else {
+            card.querySelector('.action-card-label').textContent = 'FAILED';
+            card.style.opacity = '0.7';
+            typeMessage(currentAgent, 'Couldn\'t save the draft — ' + (data.actionResult ? data.actionResult.error : 'connection issue') + '. Want me to try again?', ['Try again','Skip it'], null);
+          }
+        })
+        .catch(function(){ card.querySelector('.action-card-label').textContent = 'FAILED'; });
       } else {
         executeAction(action, card);
       }
