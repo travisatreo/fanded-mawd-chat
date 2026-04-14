@@ -1,123 +1,118 @@
-// MAWD Memory API
-// GET /api/memory            -> list all memories (grouped by category)
-// POST /api/memory           -> { category, content } create a new memory
-// PATCH /api/memory?id=XX    -> { content } update a memory's content
-// DELETE /api/memory?id=XX   -> delete a memory
-// PUT /api/memory/pinned     -> { content } upsert the single pinned instructions
+// MAWD Memory API — Vercel serverless function
+// GET  /api/memory             -> list all memories (grouped by category) + pinned
+// POST /api/memory             -> { category, content } create a new memory
+// PATCH /api/memory?id=XX      -> { content, category? } update a memory
+// DELETE /api/memory?id=XX     -> delete a memory
+// PUT /api/memory?pinned=1     -> { content } upsert the single pinned instructions
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://jlwidechsxtgxmttypzs.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-async function sb(path, options = {}) {
+async function sb(path, options) {
+  options = options || {};
   if (!SUPABASE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': options.prefer || 'return=representation',
-      ...options.headers
-    },
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': options.prefer || 'return=representation'
+  };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     method: options.method || 'GET',
+    headers: headers,
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Supabase ${res.status}: ${text}`);
+    throw new Error('Supabase ' + res.status + ': ' + text);
   }
-  // DELETE with return=minimal has no body
   if (options.method === 'DELETE') return { ok: true };
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,PUT,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const id = url.searchParams.get('id');
-    const isPinned = url.pathname.endsWith('/pinned') || url.searchParams.get('pinned') === '1';
+    const id = req.query && req.query.id ? req.query.id : null;
+    const isPinned = req.query && req.query.pinned === '1';
 
-    // ── GET: list all memories ──
+    // GET — list all
     if (req.method === 'GET') {
       const rows = await sb('mawd_memory?select=id,category,content,created_at&order=created_at.desc&limit=200');
-      // Split out pinned instructions from rest
-      const pinned = rows.find(r => r.category === 'pinned');
-      const others = rows.filter(r => r.category !== 'pinned');
-      // Group others by category
+      const pinned = rows.find(function(r){ return r.category === 'pinned'; });
+      const others = rows.filter(function(r){ return r.category !== 'pinned'; });
       const grouped = {};
-      for (const m of others) {
+      others.forEach(function(m){
         if (!grouped[m.category]) grouped[m.category] = [];
         grouped[m.category].push(m);
-      }
+      });
       return res.status(200).json({
         pinned: pinned ? pinned.content : '',
         pinnedId: pinned ? pinned.id : null,
-        grouped,
+        grouped: grouped,
         total: others.length
       });
     }
 
-    // ── PUT /pinned: upsert the single pinned instructions ──
+    // PUT ?pinned=1 — upsert pinned instructions
     if (req.method === 'PUT' && isPinned) {
-      const body = await readBody(req);
+      const body = typeof req.body === 'object' ? req.body : (req.body ? JSON.parse(req.body) : {});
       const content = (body.content || '').trim();
-      // Find existing pinned row
-      const existing = await sb(`mawd_memory?category=eq.pinned&select=id&limit=1`);
+      const existing = await sb('mawd_memory?category=eq.pinned&select=id&limit=1');
       if (existing.length > 0) {
-        const row = existing[0];
+        const rowId = existing[0].id;
         if (!content) {
-          // Empty content -> delete the pinned row
-          await sb(`mawd_memory?id=eq.${row.id}`, { method: 'DELETE' });
+          await sb('mawd_memory?id=eq.' + rowId, { method: 'DELETE' });
           return res.status(200).json({ deleted: true });
         }
-        const updated = await sb(`mawd_memory?id=eq.${row.id}`, {
+        const updated = await sb('mawd_memory?id=eq.' + rowId, {
           method: 'PATCH',
-          body: { content }
+          body: { content: content }
         });
-        return res.status(200).json(updated[0] || { ok: true });
+        return res.status(200).json(Array.isArray(updated) ? updated[0] : updated);
       } else if (content) {
         const created = await sb('mawd_memory', {
           method: 'POST',
-          body: { category: 'pinned', content, created_at: new Date().toISOString() }
+          body: { category: 'pinned', content: content, created_at: new Date().toISOString() }
         });
         return res.status(201).json(Array.isArray(created) ? created[0] : created);
       }
       return res.status(200).json({ ok: true });
     }
 
-    // ── POST: create a new memory ──
+    // POST — create
     if (req.method === 'POST') {
-      const body = await readBody(req);
+      const body = typeof req.body === 'object' ? req.body : (req.body ? JSON.parse(req.body) : {});
       const category = body.category || 'context';
       const content = (body.content || '').trim();
       if (!content) return res.status(400).json({ error: 'content required' });
       const created = await sb('mawd_memory', {
         method: 'POST',
-        body: { category, content, created_at: new Date().toISOString() }
+        body: { category: category, content: content, created_at: new Date().toISOString() }
       });
       return res.status(201).json(Array.isArray(created) ? created[0] : created);
     }
 
-    // ── PATCH: update a memory by id ──
+    // PATCH — update
     if (req.method === 'PATCH') {
       if (!id) return res.status(400).json({ error: 'id required' });
-      const body = await readBody(req);
+      const body = typeof req.body === 'object' ? req.body : (req.body ? JSON.parse(req.body) : {});
       const patch = {};
       if (body.content !== undefined) patch.content = body.content;
       if (body.category !== undefined) patch.category = body.category;
-      const updated = await sb(`mawd_memory?id=eq.${id}`, { method: 'PATCH', body: patch });
-      return res.status(200).json(updated[0] || { ok: true });
+      const updated = await sb('mawd_memory?id=eq.' + id, { method: 'PATCH', body: patch });
+      return res.status(200).json(Array.isArray(updated) ? updated[0] : updated);
     }
 
-    // ── DELETE: delete a memory by id ──
+    // DELETE
     if (req.method === 'DELETE') {
       if (!id) return res.status(400).json({ error: 'id required' });
-      await sb(`mawd_memory?id=eq.${id}`, { method: 'DELETE' });
+      await sb('mawd_memory?id=eq.' + id, { method: 'DELETE' });
       return res.status(200).json({ deleted: true });
     }
 
@@ -126,12 +121,4 @@ export default async function handler(req, res) {
     console.error('Memory API error:', err);
     return res.status(500).json({ error: err.message });
   }
-}
-
-async function readBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
-  const raw = Buffer.concat(chunks).toString('utf8');
-  try { return JSON.parse(raw); } catch { return {}; }
 }
