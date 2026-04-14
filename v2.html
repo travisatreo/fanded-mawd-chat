@@ -1245,7 +1245,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     var list = loadArchivedConversations().filter(function(c){ return c.id !== id; });
     saveArchivedConversations(list);
   }
-  function startNewConversation(){
+  window.startNewConversation = function startNewConversation(){
     archiveCurrentConversation();
     localStorage.removeItem(CONV_KEY);
     conversationHistory = [];
@@ -2378,6 +2378,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   function deleteSentLetter(id){
     try {
       var letters = JSON.parse(localStorage.getItem('mawd_sent_letters') || '[]');
+      var letter = letters.find(function(l){ return l.id === id; });
+      // Cancel on server if it was scheduled there
+      if(letter && letter.serverId){
+        fetch('/api/scheduled?id='+encodeURIComponent(letter.serverId), {method:'DELETE'}).catch(function(){});
+      }
       letters = letters.filter(function(l){ return l.id !== id; });
       localStorage.setItem('mawd_sent_letters', JSON.stringify(letters));
       loadSentLetters();
@@ -3064,10 +3069,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           return;
         }
 
-        // Save scheduled letter
+        // Save scheduled letter (client-side copy for UI)
         var letter = {
           id: Date.now(),
           title: vnTitle,
+          subject: generatedSubject,
+          body: generatedBody,
+          listenUrl: listenUrl,
+          duration: formatDur(duration),
           mp3: stagedMp3 ? { name: stagedMp3.name, dataUrl: stagedMp3.dataUrl, duration: stagedMp3.duration } : null,
           voice: stagedVoice ? { dataUrl: stagedVoice.dataUrl, duration: stagedVoice.duration } : null,
           scheduledFor: scheduledDate.toISOString(),
@@ -3075,6 +3084,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           createdAt: new Date().toISOString()
         };
         saveSentLetter(letter);
+
+        // Queue with server so the cron dispatcher can send it
+        fetch('/api/scheduled', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            title: vnTitle,
+            subject: generatedSubject,
+            body: generatedBody,
+            listenUrl: listenUrl,
+            duration: formatDur(duration),
+            scheduledFor: scheduledDate.toISOString()
+          })
+        }).then(function(r){ return r.json(); }).then(function(data){
+          if(data && data.id){
+            letter.serverId = data.id;
+            saveSentLetter(letter);
+          }
+        }).catch(function(){});
 
         pickerEl.remove();
         overlay.remove();
