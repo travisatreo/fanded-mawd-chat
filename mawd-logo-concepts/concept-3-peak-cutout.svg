@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#47bfff"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <mask id="m3">
+      <rect width="512" height="512" fill="white"/>
+      <!-- M formed like the F logo: angular mountain shapes as negative space -->
+      <!-- Two chevron peaks pointing up, connected at base = reads as M -->
+      <path d="
+        M100 380
+        L100 340
+        L190 160
+        L210 160
+        L256 260
+        L302 160
+        L322 160
+        L412 340
+        L412 380
+        L350 380
+        L350 350
+        L302 250
+        L272 320
+        L240 320
+        L210 250
+        L162 350
+        L162 380
+        Z
+      " fill="black"/>
+    </mask>
+  </defs>
+  <circle cx="256" cy="256" r="230" fill="url(#g3)" mask="url(#m3)"/>
+</svg>

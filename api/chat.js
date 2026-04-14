@@ -357,6 +357,28 @@ Doc types: media-kit, one-sheet, press-release, plan, report, invoice, contract,
           if (pinned && pinned.content) {
             systemPrompt += `\n\n=== TRAVIS'S STANDING INSTRUCTIONS (ALWAYS REMEMBER — highest priority) ===\n${pinned.content}\n=== END STANDING INSTRUCTIONS ===`;
           }
+
+          // ── Cross-MAWD team standup: what Kevin and Lewis shipped in the last 36h ──
+          try {
+            const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+            const teamRecaps = await supabaseQuery(
+              `mawd_memory?category=eq.evening_recap&mawd_slug=in.(kevin,lewis)&created_at=gte.${since}&select=mawd_slug,content,created_at&order=created_at.desc&limit=10`
+            );
+            const latestBySlug = {};
+            teamRecaps.forEach(r => { if (!latestBySlug[r.mawd_slug]) latestBySlug[r.mawd_slug] = r; });
+            const slugs = Object.keys(latestBySlug);
+            if (slugs.length > 0) {
+              systemPrompt += `\n\n=== TEAM STANDUP — LAST 24H (Fanded co-founders) ===\nThis is what Travis's co-founders (Kevin Garcia and Lewis) shipped yesterday, pulled from their MAWD evening recaps. Surface this proactively when Travis opens MAWD in the morning so he walks into the day knowing what his team did. Flag overlap with his own focus.\n\n`;
+              slugs.forEach(s => {
+                const r = latestBySlug[s];
+                const ts = r.created_at ? new Date(r.created_at).toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' }) : '';
+                const name = s === 'kevin' ? 'KEVIN' : s === 'lewis' ? 'LEWIS' : s.toUpperCase();
+                systemPrompt += `--- ${name}'s recap @ ${ts} ---\n${r.content}\n\n`;
+              });
+              systemPrompt += `=== END TEAM STANDUP ===`;
+            }
+          } catch (e) { /* no team data yet, skip */ }
+
           if (dailyLogs.length > 0) {
             systemPrompt += `\n\n=== RECENT iMESSAGES YOU (MAWD) SENT TRAVIS ===\nThese are briefings and evening recaps you sent via iMessage from the Mac-side scheduled tasks. Travis may reply Y/N to action items here in this chat. Treat these as things YOU said to Travis — do not re-introduce them.\n\n`;
             dailyLogs.forEach(log => {

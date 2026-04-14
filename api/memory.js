@@ -40,6 +40,23 @@ export default async function handler(req, res) {
   try {
     const id = req.query && req.query.id ? req.query.id : null;
     const isPinned = req.query && req.query.pinned === '1';
+    const isDigest = req.query && req.query.digest === '1';
+
+    // GET ?digest=1 — cross-MAWD standup digest
+    // Returns latest evening_recap per known mawd_slug from last 36h
+    if (req.method === 'GET' && isDigest) {
+      const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+      const rows = await sb(
+        'mawd_memory?category=eq.evening_recap&created_at=gte.' + since +
+        '&select=mawd_slug,content,created_at&order=created_at.desc&limit=50'
+      );
+      const bySlug = {};
+      rows.forEach(function(r){
+        const slug = r.mawd_slug || 'travis';
+        if (!bySlug[slug]) bySlug[slug] = r; // first = most recent
+      });
+      return res.status(200).json({ digest: bySlug, generatedAt: new Date().toISOString() });
+    }
 
     // GET — list all
     if (req.method === 'GET') {
@@ -90,10 +107,11 @@ export default async function handler(req, res) {
       const body = typeof req.body === 'object' ? req.body : (req.body ? JSON.parse(req.body) : {});
       const category = body.category || 'context';
       const content = (body.content || '').trim();
+      const mawd_slug = (body.mawd_slug || 'travis').toLowerCase();
       if (!content) return res.status(400).json({ error: 'content required' });
       const created = await sb('mawd_memory', {
         method: 'POST',
-        body: { category: category, content: content, created_at: new Date().toISOString() }
+        body: { category: category, content: content, mawd_slug: mawd_slug, created_at: new Date().toISOString() }
       });
       return res.status(201).json(Array.isArray(created) ? created[0] : created);
     }

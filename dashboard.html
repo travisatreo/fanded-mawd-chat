@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MAWD Network</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #09090B;
+    color: #E4E4E7;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .header {
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #C4953A;
+    letter-spacing: 3px;
+  }
+
+  .header-left .byline {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #52525B;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 24px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #FAFAFA;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: #71717A;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .search-bar {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+  }
+
+  .search-bar input {
+    width: 100%;
+    background: #111113;
+    border: 1px solid #27272A;
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #FAFAFA;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar input:focus {
+    border-color: #C4953A;
+  }
+
+  .search-bar input::placeholder {
+    color: #52525B;
+  }
+
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: #111113;
+    border: 1px solid #27272A;
+    border-radius: 16px;
+    padding: 20px;
+    transition: border-color 0.2s, transform 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .card:hover {
+    border-color: #C4953A;
+    transform: translateY(-2px);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #1a1a1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #C4953A;
+    flex-shrink: 0;
+  }
+
+  .card-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #FAFAFA;
+  }
+
+  .card-role {
+    font-size: 12px;
+    color: #71717A;
+    margin-top: 2px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot.connected {
+    background: #22C55E;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+  }
+
+  .status-dot.disconnected {
+    background: #52525B;
+  }
+
+  .status-text {
+    font-size: 13px;
+    color: #A1A1AA;
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #1e1e22;
+  }
+
+  .card-slug {
+    font-size: 12px;
+    color: #52525B;
+    font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+  }
+
+  .card-date {
+    font-size: 12px;
+    color: #52525B;
+  }
+
+  .section-title {
+    max-width: 1200px;
+    margin: 0 auto 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #C4953A;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .activity-feed {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .activity-item {
+    background: #111113;
+    border: 1px solid #27272A;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #1a1a1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    color: #C4953A;
+  }
+
+  .activity-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .activity-header {
+    font-size: 13px;
+    color: #A1A1AA;
+    margin-bottom: 4px;
+  }
+
+  .activity-header strong {
+    color: #FAFAFA;
+    font-weight: 600;
+  }
+
+  .activity-subject {
+    font-size: 14px;
+    color: #E4E4E7;
+    font-weight: 500;
+  }
+
+  .activity-body {
+    font-size: 13px;
+    color: #71717A;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .activity-time {
+    font-size: 11px;
+    color: #52525B;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #52525B;
+    font-size: 14px;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #52525B;
+    font-size: 14px;
+  }
+
+  .refresh-indicator {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    font-size: 11px;
+    color: #52525B;
+    background: #111113;
+    border: 1px solid #27272A;
+    border-radius: 8px;
+    padding: 6px 12px;
+    z-index: 100;
+  }
+
+  .refresh-indicator.active {
+    color: #C4953A;
+    border-color: #C4953A33;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 16px; }
+
+    .header { margin-bottom: 20px; }
+
+    .header-left h1 { font-size: 22px; }
+
+    .stats { gap: 16px; }
+
+    .stat-value { font-size: 24px; }
+
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .card { padding: 16px; }
+
+    .activity-item { padding: 12px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="refresh-indicator" id="refreshIndicator">Auto-refresh: 30s</div>
+
+<div class="header">
+  <div class="header-left">
+    <div class="byline">Fanded Inc</div>
+    <h1>MAWD NETWORK</h1>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="totalCount">--</div>
+      <div class="stat-label">Total MAWDs</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="connectedCount">--</div>
+      <div class="stat-label">Connected</div>
+    </div>
+  </div>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search by name, email, or slug..." />
+</div>
+
+<div class="grid" id="mawdGrid">
+  <div class="loading">Loading MAWD instances...</div>
+</div>
+
+<div class="section-title">Network Activity</div>
+<div class="activity-feed" id="activityFeed">
+  <div class="loading">Loading network messages...</div>
+</div>
+
+<script>
+  let allInstances = [];
+
+  function timeAgo(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) {
+      const m = Math.floor(seconds / 60);
+      return m + (m === 1 ? ' minute ago' : ' minutes ago');
+    }
+    if (seconds < 86400) {
+      const h = Math.floor(seconds / 3600);
+      return h + (h === 1 ? ' hour ago' : ' hours ago');
+    }
+    if (seconds < 604800) {
+      const d = Math.floor(seconds / 86400);
+      return d + (d === 1 ? ' day ago' : ' days ago');
+    }
+    if (seconds < 2592000) {
+      const w = Math.floor(seconds / 604800);
+      return w + (w === 1 ? ' week ago' : ' weeks ago');
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function renderCard(instance) {
+    const isConnected = !!instance.google_email;
+    const displayEmail = instance.google_email || instance.email || 'No email';
+    const displayRole = instance.role || 'MAWD instance';
+    const slug = instance.slug || 'unknown';
+    const created = instance.created_at ? timeAgo(instance.created_at) : 'Unknown';
+
+    return `
+      <a class="card" href="/v2.html?mawd=${encodeURIComponent(slug)}" data-search="${(instance.name + ' ' + displayEmail + ' ' + slug).toLowerCase()}">
+        <div class="card-top">
+          <div class="avatar">${getInitials(instance.name)}</div>
+          <div>
+            <div class="card-name">${escapeHtml(instance.name || 'Unnamed')}</div>
+            <div class="card-role">${escapeHtml(displayRole)}</div>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="status-dot ${isConnected ? 'connected' : 'disconnected'}"></div>
+          <div class="status-text">${escapeHtml(displayEmail)}</div>
+        </div>
+        <div class="card-meta">
+          <div class="card-slug">/${escapeHtml(slug)}</div>
+          <div class="card-date">${created}</div>
+        </div>
+      </a>
+    `;
+  }
+
+  function renderActivityItem(msg) {
+    const typeIcons = {
+      email: '\u2709',
+      task: '\u2713',
+      intro: '\u21C4',
+      update: '\u2022',
+      request: '?'
+    };
+    const icon = typeIcons[msg.type] || '\u2022';
+    const time = msg.created_at ? timeAgo(msg.created_at) : '';
+
+    return `
+      <div class="activity-item">
+        <div class="activity-icon">${icon}</div>
+        <div class="activity-content">
+          <div class="activity-header">
+            <strong>${escapeHtml(msg.from_name || msg.from_mawd || 'Unknown')}</strong>
+            &rarr;
+            <strong>${escapeHtml(msg.to_name || msg.to_mawd || 'Unknown')}</strong>
+            ${msg.type ? '<span style="color:#52525B;"> / ' + escapeHtml(msg.type) + '</span>' : ''}
+          </div>
+          ${msg.subject ? '<div class="activity-subject">' + escapeHtml(msg.subject) + '</div>' : ''}
+          ${msg.body ? '<div class="activity-body">' + escapeHtml(msg.body.slice(0, 200)) + '</div>' : ''}
+        </div>
+        <div class="activity-time">${time}</div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function loadInstances() {
+    try {
+      const res = await fetch('/api/onboard');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      allInstances = Array.isArray(data) ? data : [];
+
+      const total = allInstances.length;
+      const connected = allInstances.filter(i => !!i.google_email).length;
+
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('connectedCount').textContent = connected;
+
+      const grid = document.getElementById('mawdGrid');
+      if (total === 0) {
+        grid.innerHTML = '<div class="empty-state">No MAWD instances found.</div>';
+      } else {
+        grid.innerHTML = allInstances.map(renderCard).join('');
+      }
+
+      applySearch();
+    } catch (err) {
+      console.error('Error loading instances:', err);
+      document.getElementById('mawdGrid').innerHTML =
+        '<div class="empty-state">Failed to load MAWD instances. Check console for details.</div>';
+    }
+  }
+
+  async function loadActivity() {
+    try {
+      // Load recent messages from travis-atreo as a starting point,
+      // then try to get broader activity by loading from the first few MAWDs
+      const feed = document.getElementById('activityFeed');
+      let allMessages = [];
+
+      // If we have instances, fetch messages from the most recent ones
+      const slugsToCheck = allInstances.slice(0, 5).map(i => i.slug).filter(Boolean);
+
+      const fetches = slugsToCheck.map(slug =>
+        fetch('/api/mawd-network?from=' + encodeURIComponent(slug))
+          .then(r => r.ok ? r.json() : [])
+          .catch(() => [])
+      );
+
+      // Also fetch messages TO the first few
+      const toFetches = slugsToCheck.map(slug =>
+        fetch('/api/mawd-network?to=' + encodeURIComponent(slug))
+          .then(r => r.ok ? r.json() : [])
+          .catch(() => [])
+      );
+
+      const results = await Promise.all([...fetches, ...toFetches]);
+      results.forEach(msgs => {
+        if (Array.isArray(msgs)) allMessages.push(...msgs);
+      });
+
+      // Deduplicate by id
+      const seen = new Set();
+      allMessages = allMessages.filter(m => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+
+      // Sort newest first
+      allMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      // Show top 20
+      const recent = allMessages.slice(0, 20);
+
+      if (recent.length === 0) {
+        feed.innerHTML = '<div class="empty-state">No network messages yet. When MAWDs communicate with each other, activity will appear here.</div>';
+      } else {
+        feed.innerHTML = recent.map(renderActivityItem).join('');
+      }
+    } catch (err) {
+      console.error('Error loading activity:', err);
+      document.getElementById('activityFeed').innerHTML =
+        '<div class="empty-state">Failed to load network activity.</div>';
+    }
+  }
+
+  function applySearch() {
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+      const searchData = card.getAttribute('data-search') || '';
+      card.style.display = (!query || searchData.includes(query)) ? '' : 'none';
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', applySearch);
+
+  // Initial load
+  async function refresh() {
+    const indicator = document.getElementById('refreshIndicator');
+    indicator.classList.add('active');
+    indicator.textContent = 'Refreshing...';
+
+    await loadInstances();
+    await loadActivity();
+
+    indicator.classList.remove('active');
+    indicator.textContent = 'Auto-refresh: 30s';
+  }
+
+  refresh();
+
+  // Auto-refresh every 30 seconds
+  let countdown = 30;
+  setInterval(() => {
+    countdown--;
+    if (countdown <= 0) {
+      countdown = 30;
+      refresh();
+    } else {
+      document.getElementById('refreshIndicator').textContent = 'Refresh in ' + countdown + 's';
+    }
+  }, 1000);
+</script>
+
+</body>
+</html>
