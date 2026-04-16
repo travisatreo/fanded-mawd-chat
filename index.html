@@ -754,8 +754,8 @@ function draftFor(insightId){
   addDraft({to:ins.draftTarget.to,subject:ins.draftTarget.subject||'Catching up',body:ins.draftTarget.body||'',contextPill:ins.draftTarget.context||''});
 }
 
-function scanInbox(){
-  showToast('MAWD is reading your inbox...');
+function scanInbox(silent){
+  if (!silent) showToast('MAWD is reading your inbox...');
   fetch('/api/chat?action=inbox-scan&role='+encodeURIComponent(getRole())+'&owner='+encodeURIComponent(state.owner.email))
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -763,8 +763,8 @@ function scanInbox(){
         state.dossier = data.dossier;
         renderSidebar();
         renderCanvasPrimary();
-        showToast('Dossier updated');
-      } else if (data && data.needsConnect) {
+        if (!silent) showToast('Dossier updated');
+      } else if (data && data.needsConnect && !silent) {
         showToast('Connect Gmail to scan your inbox');
       }
     })
@@ -834,7 +834,11 @@ function needsOnboarding(){
     if (e.key === 'Enter') sendMessage();
   });
 
-  setTimeout(scanInbox, 400);
+  // On first paint, scan silently. If there's no Gmail refresh token on the
+  // server side, the API returns { needsConnect: true } and we leave the
+  // empty-state cards visible instead of flashing a misleading "MAWD is
+  // reading your inbox..." toast.
+  setTimeout(function(){ scanInbox(true); }, 400);
 })();
 </script>
 </body>
