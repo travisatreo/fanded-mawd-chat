@@ -1,6 +1,6 @@
 import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from '../lib/brain.js';
 import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from '../lib/supabase.js';
-import { executeTool, sendEmail } from '../lib/google.js';
+import { executeTool, sendEmail, listEmails } from '../lib/google.js';
 
 // ── Load MAWD brain by slug (multi-MAWD support) ──
 // Returns full instance including google_refresh_token for per-user OAuth
@@ -214,9 +214,16 @@ const TOOLS = [
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Inbox-scan sub-route (GET /api/chat?action=inbox-scan&role=founder&owner=email)
+  // Kept inside chat.js so we stay under the Vercel Hobby 12-function limit.
+  if (req.method === 'GET' && req.query && req.query.action === 'inbox-scan') {
+    return handleInboxScan(req, res);
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -1129,4 +1136,166 @@ Always end with ONE question or action to approve.
 
 ## CURRENT AGENT
 Speaking as ${agent ? agent.toUpperCase() : 'COMPASS'}. Switch naturally when topic shifts.`;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Inbox scan sub-route: called as GET /api/chat?action=inbox-scan&role=...&owner=...
+// Returns a role-adapted dossier { metrics, insights } built from Gmail.
+// Lives in chat.js to stay under the Vercel Hobby 12-function limit.
+// ────────────────────────────────────────────────────────────────────────────
+
+const INBOX_SCAN_ROLE_PROMPTS = {
+  founder: {
+    metricLabels: ['INVESTORS PITCHED', 'DORMANT THREADS', 'WAITING ON YOU'],
+    instruction: 'You are reading a founder\'s inbox. Identify: investor conversations (any VC, angel, fund), past clients who have gone cold, and warm threads that need a reply. Use specific names and contexts.'
+  },
+  influencer: {
+    metricLabels: ['BRAND CONVERSATIONS', 'COLD DEALS', 'AGENCY PITCHES'],
+    instruction: 'You are reading an influencer\'s inbox. Identify: brand deal conversations, deals that stalled mid-negotiation, and agency pitches. Use specific brand or person names.'
+  },
+  actor: {
+    metricLabels: ['CASTING CONVERSATIONS', 'PROJECTS DISCUSSED', 'REPS AND MANAGERS'],
+    instruction: 'You are reading an actor\'s inbox. Identify: casting director conversations, producer or writer pitches about projects, and communications from reps. Name specific people and projects.'
+  },
+  musician: {
+    metricLabels: ['COLLABORATORS', 'SYNC OR LICENSING', 'VENUE OR PROMOTER'],
+    instruction: 'You are reading a musician\'s inbox. Identify: other artists or producers discussing collabs, sync licensing threads, and venue/promoter conversations. Name specific people and projects.'
+  },
+  other: {
+    metricLabels: ['PEOPLE WHO PAID YOU', 'WARM THREADS', 'WAITING ON YOU'],
+    instruction: 'You are reading a professional\'s inbox. Identify: people who have paid for work, warm threads where the relationship is active, and threads where someone is waiting on a reply.'
+  }
+};
+
+async function handleInboxScan(req, res) {
+  try {
+    const role = (req.query.role || 'other').toLowerCase();
+    const ownerEmail = req.query.owner || '';
+    const config = INBOX_SCAN_ROLE_PROMPTS[role] || INBOX_SCAN_ROLE_PROMPTS.other;
+
+    let refreshToken = null;
+    if (ownerEmail) {
+      try {
+        const rows = await supabaseQuery(`mawd_instances?email=eq.${encodeURIComponent(ownerEmail)}`);
+        if (rows && rows.length && rows[0].google_refresh_token) {
+          refreshToken = rows[0].google_refresh_token;
+        }
+      } catch (_) {}
+    }
+
+    if (!refreshToken) {
+      return res.status(200).json({ needsConnect: true, dossier: null });
+    }
+
+    let emails = [];
+    try {
+      emails = await listEmails({ maxResults: 40, _refreshToken: refreshToken });
+    } catch (err) {
+      return res.status(200).json({ needsConnect: true, error: 'Gmail read failed', dossier: null });
+    }
+
+    if (!emails || !emails.length) {
+      return res.status(200).json({ dossier: inboxScanEmptyDossier(config) });
+    }
+
+    const compact = emails.slice(0, 40).map(e => ({
+      from: e.from || '',
+      subject: e.subject || '',
+      snippet: (e.snippet || '').slice(0, 200),
+      date: e.date || e.internalDate || ''
+    }));
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return res.status(200).json({ dossier: inboxScanFallbackDossier(config, compact) });
+    }
+
+    const userPrompt = `${config.instruction}\n\nHere are the ${compact.length} most recent emails:\n\n${JSON.stringify(compact, null, 2)}\n\nReturn ONLY valid JSON in this exact shape:\n{\n  "metrics": [\n    {"value": "12", "label": "${config.metricLabels[0]}"},\n    {"value": "4", "label": "${config.metricLabels[1]}"},\n    {"value": "7", "label": "${config.metricLabels[2]}"}\n  ],\n  "insights": [\n    {"tag": "COLD", "tagClass": "t-warn", "headline": "Jane Doe from Acme asked for a demo 18 days ago.", "sub": "Draft a re-engage?", "draftTarget": {"to": "jane@acme.com", "subject": "Quick follow-up", "body": "Hi Jane, circling back on the demo we discussed. Any time this week?", "context": "Cold 18d"}}\n  ]\n}\n\nReturn 4-7 insights. Each must reference a REAL person from the emails above with their actual email address in draftTarget.to. Draft bodies should be 2-3 sentences, warm, first person. No em dashes. Metric values should be real counts.`;
+
+    let claudeText = null;
+    try {
+      const anthResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 2500,
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+      });
+      const anthData = await anthResp.json();
+      claudeText = anthData && anthData.content && anthData.content[0] && anthData.content[0].text;
+    } catch (err) {
+      console.error('inbox-scan claude call failed:', err.message);
+    }
+
+    let dossier = null;
+    if (claudeText) {
+      const jsonMatch = claudeText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { dossier = JSON.parse(jsonMatch[0]); } catch (_) {}
+      }
+    }
+    if (!dossier || !dossier.insights) {
+      dossier = inboxScanFallbackDossier(config, compact);
+    }
+    dossier.insights = (dossier.insights || []).map((ins, i) => Object.assign({}, ins, {
+      id: 'ins_' + Date.now() + '_' + i
+    }));
+
+    return res.status(200).json({ dossier });
+  } catch (err) {
+    console.error('inbox-scan error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+function inboxScanEmptyDossier(config) {
+  return {
+    metrics: config.metricLabels.map(l => ({ value: '0', label: l })),
+    insights: [{
+      id: 'ins_empty',
+      tag: 'EMPTY',
+      tagClass: 't-pulse',
+      headline: 'Your inbox is clean right now.',
+      sub: 'MAWD will surface new threads here as they come in.'
+    }]
+  };
+}
+
+function inboxScanFallbackDossier(config, emails) {
+  const bySender = {};
+  emails.forEach(e => {
+    const m = /<([^>]+)>/.exec(e.from) || [null, e.from];
+    const addr = (m[1] || e.from || '').trim();
+    const name = (e.from || '').replace(/<[^>]+>/, '').replace(/"/g, '').trim() || addr;
+    if (!addr) return;
+    if (!bySender[addr]) bySender[addr] = { name, addr, count: 0, recent: e.subject };
+    bySender[addr].count++;
+  });
+  const top = Object.values(bySender).sort((a, b) => b.count - a.count).slice(0, 5);
+  return {
+    metrics: [
+      { value: String(emails.length), label: config.metricLabels[0] },
+      { value: String(top.length), label: config.metricLabels[1] },
+      { value: String(Math.max(0, emails.length - top.length)), label: config.metricLabels[2] }
+    ],
+    insights: top.map((t, i) => ({
+      id: 'ins_fb_' + i,
+      tag: 'INBOX',
+      tagClass: 't-metric',
+      headline: t.name + ' has ' + t.count + ' recent thread' + (t.count > 1 ? 's' : '') + '.',
+      sub: 'Last subject: ' + (t.recent || ''),
+      draftTarget: {
+        to: t.addr,
+        subject: 'Catching up',
+        body: 'Hey, wanted to circle back on our last thread. Free this week to sync?',
+        context: 'Re-engage'
+      }
+    }))
+  };
 }

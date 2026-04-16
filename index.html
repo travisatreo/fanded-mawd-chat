@@ -741,7 +741,7 @@ function draftFor(insightId){
 
 function scanInbox(){
   showToast('MAWD is reading your inbox...');
-  fetch('/api/inbox-scan?role='+encodeURIComponent(getRole())+'&owner='+encodeURIComponent(state.owner.email))
+  fetch('/api/chat?action=inbox-scan&role='+encodeURIComponent(getRole())+'&owner='+encodeURIComponent(state.owner.email))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.dossier) {
