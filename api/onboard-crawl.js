@@ -56,17 +56,30 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { name, socials, fallbackHint } = req.body || {};
+    const { name, socials, fallbackHint, userLinks } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name required' });
 
+    // Don't cache second-pass crawls — each user-provided link deserves a
+    // fresh synthesis. The cache keys the initial name-only lookup.
     const cacheKey = normalize(name) + (socials ? '|' + JSON.stringify(socials) : '') + (fallbackHint ? '|' + fallbackHint : '');
-    const hit = CACHE.get(cacheKey);
-    if (hit && (Date.now() - hit.at) < CACHE_TTL_MS) {
-      return res.status(200).json(hit.result);
+    const usingUserLinks = Array.isArray(userLinks) && userLinks.length > 0;
+    if (!usingUserLinks) {
+      const hit = CACHE.get(cacheKey);
+      if (hit && (Date.now() - hit.at) < CACHE_TTL_MS) {
+        return res.status(200).json(hit.result);
+      }
     }
 
     // 1. Parallel crawl across all sources
-    const findings = await crawlPublicFootprint(name, socials, fallbackHint);
+    let findings = await crawlPublicFootprint(name, socials, fallbackHint);
+
+    // 1b. Second-pass: fetch user-provided links and add them as high-weight
+    // findings. The user explicitly vouched for these so we trust them more
+    // than anything the crawl found on its own.
+    if (usingUserLinks) {
+      const userFindings = await Promise.all(userLinks.slice(0, 3).map(fetchUserLink));
+      findings = userFindings.filter(Boolean).concat(findings);
+    }
 
     // 2. Claude Opus synthesis
     const synthesis = await synthesizeDossier(apiKey, name, findings, socials, fallbackHint);
@@ -202,6 +215,86 @@ async function crawlPublicFootprint(name, socials, fallbackHint) {
   findings.sort((a, b) => (b.weight || 0) - (a.weight || 0));
 
   return findings;
+}
+
+// ── User-provided link fetch ───────────────────────────────────────────────
+// When a user pastes a link during the tier-2 "sharpen" flow, fetch the
+// page and build a high-weight finding. Prefer Tavily /extract when the
+// key is available (returns cleaned LLM-ready content). Otherwise direct
+// GET + title/meta heuristics.
+async function fetchUserLink(rawUrl) {
+  if (!rawUrl) return null;
+  let url = String(rawUrl).trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  const host = hostOf(url);
+  const source = sourceFromHost(host) || 'userlink';
+  const baseFinding = {
+    source,
+    url,
+    title: `User-provided: ${host}`,
+    snippet: '',
+    weight: 10, // user explicitly vouched for this
+    userProvided: true
+  };
+
+  // Try Tavily extract first if the key is configured
+  const tavilyKey = process.env.TAVILY_API_KEY;
+  if (tavilyKey) {
+    try {
+      const resp = await fetch('https://api.tavily.com/extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tavilyKey}`
+        },
+        body: JSON.stringify({ urls: [url], extract_depth: 'advanced' })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const r = Array.isArray(data?.results) ? data.results[0] : null;
+        if (r && r.raw_content) {
+          return {
+            ...baseFinding,
+            title: r.title || baseFinding.title,
+            snippet: String(r.raw_content).slice(0, 1600)
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Tavily extract failed:', e.message);
+    }
+  }
+
+  // Fallback: direct GET, extract <title> + og:description + first chunk of
+  // visible text. Crude but works for most static pages.
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html'
+      }
+    });
+    if (!resp.ok) return baseFinding;
+    const html = await resp.text();
+    const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
+    const ogDesc = (html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) || [])[1] || '';
+    const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) || [])[1] || '';
+    // Strip tags and collapse whitespace for a rough body snippet.
+    const bodyText = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 1200);
+    const snippet = [ogDesc || desc, bodyText].filter(Boolean).join(' — ').slice(0, 1600);
+    return { ...baseFinding, title: title.trim() || baseFinding.title, snippet };
+  } catch (_) {
+    return baseFinding;
+  }
 }
 
 // ── Tavily Search API ──────────────────────────────────────────────────────
@@ -427,8 +520,10 @@ function decodeHtmlEntities(s){
 async function synthesizeDossier(apiKey, name, findings, socials, fallbackHint) {
   // Findings are already sorted by weight desc. Take the top 10.
   const top = findings.slice(0, 10);
+  const anyUserProvided = findings.some(f => f.userProvided);
   const findingsText = top.map((f, i) => {
-    return `[${i+1}] ${f.source} (weight ${f.weight || 0}): ${f.title}\n    ${f.url}\n    ${(f.snippet||'').slice(0,280)}`;
+    const mark = f.userProvided ? ' [USER-VOUCHED]' : '';
+    return `[${i+1}] ${f.source} (weight ${f.weight || 0})${mark}: ${f.title}\n    ${f.url}\n    ${(f.snippet||'').slice(0,380)}`;
   }).join('\n\n') || '(no public findings)';
 
   // A crawl is "substantive" if we have at least 3 sources with weight >= 5
@@ -454,6 +549,8 @@ Meta:
 Your task:
 1. Infer their primary role from the HIGHEST-weighted findings ONLY. Choose ONE: founder, musician, influencer, actor, creator, other. Do not let low-weight handle probes dominate if high-weight sources say otherwise.
 2. Write a 2-4 sentence first-person summary as if MAWD just did its homework.
+${anyUserProvided ? `
+USER-VOUCHED RULE: At least one finding is marked [USER-VOUCHED]. The user pasted this link themselves, so treat it as ground truth. Lead the dossier with facts from those pages. If other findings contradict user-vouched content, the user-vouched content wins. Do not ask "Sound right?" at the end of a user-vouched dossier; instead end with "Better?" or "Sharper?"` : ''}
 
 CRITICAL RULES ON FABRICATION:
 - Use ONLY facts that appear in the findings above. Do NOT use your own training knowledge about this person.
