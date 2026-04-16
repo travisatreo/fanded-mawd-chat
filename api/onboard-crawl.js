@@ -62,32 +62,27 @@ function normalize(s){ return String(s||'').toLowerCase().trim().replace(/\s+/g,
 
 // ── Public footprint crawl ─────────────────────────────────────────────────
 async function crawlPublicFootprint(name, socials, fallbackHint) {
-  const findings = [];
+  // Run all sources in parallel. DDG blocks many serverless IPs; we used to
+  // fall back to handle probes only when DDG returned <3 results, but that
+  // means a Vercel-blocked DDG silently produced near-empty dossiers. Now
+  // everything fires at once.
+  const query = [name, socials?.website, fallbackHint].filter(Boolean).join(' ');
+  const [ddg, wiki, probes] = await Promise.all([
+    ddgSearch(query, 10).catch(err => { console.error('DDG failed:', err.message); return []; }),
+    wikipediaLookup(name, fallbackHint).catch(err => { console.error('Wiki failed:', err.message); return []; }),
+    Promise.all(buildHandleProbes(name).map(probeUrl)).then(r => r.filter(Boolean)).catch(() => [])
+  ]);
 
-  // Step A: DuckDuckGo HTML search (no API key required)
-  try {
-    const query = [name, socials?.website, fallbackHint].filter(Boolean).join(' ');
-    const ddg = await ddgSearch(query, 10);
-    findings.push(...ddg);
-  } catch (e) {
-    console.error('DDG failed:', e.message);
-  }
+  const findings = [...ddg, ...wiki, ...probes];
 
-  // Step B: predictable handle probes (only if DDG was weak)
-  if (findings.length < 3) {
-    const probes = buildHandleProbes(name);
-    const probeResults = await Promise.all(probes.map(probeUrl));
-    findings.push(...probeResults.filter(Boolean));
-  }
-
-  // Step C: if user supplied socials (deepen pass), add them as ground-truth anchors
+  // If user supplied socials (deepen pass), add them as ground-truth anchors
   if (socials) {
     for (const [k, v] of Object.entries(socials)) {
       if (v) findings.push({ source: k, title: `${k}: ${v}`, url: v.startsWith('http') ? v : '', snippet: `User-provided ${k} handle.` });
     }
   }
 
-  // Deduplicate by URL
+  // Deduplicate by URL, then source+title
   const seen = new Set();
   return findings.filter(f => {
     const key = f.url || (f.source + '|' + f.title);
@@ -95,6 +90,46 @@ async function crawlPublicFootprint(name, socials, fallbackHint) {
     seen.add(key);
     return true;
   });
+}
+
+// Wikipedia REST API. Free, unauth, returns structured JSON including
+// extract (first paragraph) and description. Best single public source
+// for real public figures.
+async function wikipediaLookup(name, hint) {
+  const out = [];
+  const candidates = [
+    name.trim().replace(/\s+/g, '_'),
+    name.trim().split(/\s+/).map(s => s[0].toUpperCase() + s.slice(1).toLowerCase()).join('_')
+  ];
+  const seen = new Set();
+  for (const title of candidates) {
+    if (seen.has(title)) continue;
+    seen.add(title);
+    try {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      const resp = await fetch(url, { headers: { 'User-Agent': 'MAWD/1.0 (https://fanded.com)' } });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (data.type === 'disambiguation') {
+        // Disambiguation page = name matches multiple people. Useful signal.
+        out.push({
+          source: 'wikipedia',
+          title: `Wikipedia disambiguation: ${data.title}`,
+          url: data.content_urls?.desktop?.page || url,
+          snippet: (data.extract || 'Multiple public figures share this name.').slice(0, 300)
+        });
+      } else if (data.extract) {
+        out.push({
+          source: 'wikipedia',
+          title: `Wikipedia: ${data.title}${data.description ? ' — ' + data.description : ''}`,
+          url: data.content_urls?.desktop?.page || url,
+          snippet: (data.extract || '').slice(0, 400)
+        });
+        break; // First hit wins
+      }
+    } catch (_) { /* try next */ }
+  }
+  return out;
 }
 
 async function ddgSearch(query, maxResults) {
@@ -162,25 +197,54 @@ function buildHandleProbes(name){
   if (parts.length < 2) return [];
   const [first, ...rest] = parts;
   const last = rest[rest.length - 1];
-  const variants = [
-    `${first}${last}`,
-    `${first}.${last}`,
-    `${first}_${last}`,
-    `${first}-${last}`
-  ];
+  const flat = `${first}${last}`;
+  const dot  = `${first}.${last}`;
+  const und  = `${first}_${last}`;
+  const dash = `${first}-${last}`;
+  // Build probes. Platform ordering prioritizes richer identity signal first.
   const urls = [];
-  for (const h of variants) {
-    urls.push({ source:'linkedin', url:`https://www.linkedin.com/in/${h}/`, title:`LinkedIn: /in/${h}` });
-    urls.push({ source:'instagram', url:`https://www.instagram.com/${h}/`, title:`Instagram: @${h}` });
-    urls.push({ source:'twitter', url:`https://twitter.com/${h}`, title:`X: @${h}` });
-  }
+  // Wikipedia-like handle convention not a real probe (covered by wiki API).
+  // LinkedIn: most profiles use first-last
+  urls.push({ source:'linkedin', url:`https://www.linkedin.com/in/${dash}/`, title:`LinkedIn: /in/${dash}` });
+  // Instagram
+  urls.push({ source:'instagram', url:`https://www.instagram.com/${flat}/`, title:`Instagram: @${flat}` });
+  urls.push({ source:'instagram', url:`https://www.instagram.com/${dot}/`, title:`Instagram: @${dot}` });
+  urls.push({ source:'instagram', url:`https://www.instagram.com/${und}/`, title:`Instagram: @${und}` });
+  // X / Twitter
+  urls.push({ source:'twitter',   url:`https://twitter.com/${flat}`, title:`X: @${flat}` });
+  urls.push({ source:'twitter',   url:`https://twitter.com/${und}`, title:`X: @${und}` });
+  // YouTube
+  urls.push({ source:'youtube',   url:`https://www.youtube.com/@${flat}`, title:`YouTube: @${flat}` });
+  urls.push({ source:'youtube',   url:`https://www.youtube.com/@${first}${last}`, title:`YouTube: @${first}${last}` });
+  // TikTok
+  urls.push({ source:'tiktok',    url:`https://www.tiktok.com/@${flat}`, title:`TikTok: @${flat}` });
+  urls.push({ source:'tiktok',    url:`https://www.tiktok.com/@${und}`, title:`TikTok: @${und}` });
+  // GitHub (useful for founder / engineer signal)
+  urls.push({ source:'github',    url:`https://github.com/${flat}`, title:`GitHub: @${flat}` });
+  urls.push({ source:'github',    url:`https://github.com/${dash}`, title:`GitHub: @${dash}` });
   return urls;
 }
 
 async function probeUrl({ source, url, title }){
   try {
-    const resp = await fetch(url, { method:'HEAD', redirect:'follow' });
-    if (resp.ok) return { source, url, title, snippet:'Handle URL responded (public profile likely exists).' };
+    // Use GET with range to confirm real pages (HEAD often returns 200 even
+    // for "user not found" pages on LinkedIn / Instagram which are SPA).
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Range': 'bytes=0-16384' // Just the head of the HTML
+      }
+    });
+    if (!resp.ok && resp.status !== 206) return null;
+    const text = await resp.text().catch(() => '');
+    // Reject known "user not found" heuristics
+    if (/page not found|sorry, this page|404|couldn't find this account|user not found/i.test(text)) return null;
+    // Try to extract <title>
+    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const snippet = titleMatch ? titleMatch[1].trim().slice(0, 200) : 'Handle URL responded.';
+    return { source, url, title, snippet };
   } catch(_){}
   return null;
 }
@@ -191,26 +255,37 @@ async function synthesizeDossier(apiKey, name, findings, socials, fallbackHint) 
     return `[${i+1}] ${f.source}: ${f.title}\n    ${f.url}\n    ${(f.snippet||'').slice(0,240)}`;
   }).join('\n\n') || '(no public findings)';
 
+  const hasRichFindings = findings.some(f => f.source === 'wikipedia' || (f.snippet && f.snippet.length > 80));
+
   const userPrompt = `You are writing MAWD's first-person summary of a user based on a public-web crawl.
 
 The user's name: ${name}
 ${fallbackHint ? `They also told you: "${fallbackHint}"` : ''}
 ${socials ? 'They provided these handles: ' + JSON.stringify(socials) : ''}
 
-Here are the public findings from DuckDuckGo + handle probes:
+Here are the public findings (DuckDuckGo results + Wikipedia lookup + handle probes):
 
 ${findingsText}
 
 Your task:
-1. Infer their primary role from these findings. Choose ONE: founder, musician, influencer, actor, creator, other.
-2. Write a 2-4 sentence first-person summary as if MAWD just did its homework. Lead with their name and primary identity. Include 2-3 specific, verifiable facts from the findings (don't invent anything). End with a warm question like "Sound right?" or "Did I get that?"
+1. Infer their primary role from these findings ONLY. Choose ONE: founder, musician, influencer, actor, creator, other.
+2. Write a 2-4 sentence first-person summary as if MAWD just did its homework.
 
-Rules:
+CRITICAL RULES ON FABRICATION:
+- Use ONLY facts that appear in the findings above. Do NOT use your own training knowledge about this person.
+- If the findings do not mention something, you do not know it. Don't assume. Don't guess.
+- "${hasRichFindings ? 'Findings are usable.' : 'Findings are thin.'}"
+- If findings contain ONLY handle probes (Instagram/Twitter/YouTube URLs with no descriptive context), the crawl is WEAK. Say so honestly and ask for a hint. Example: "Your name turns up a few handles (@${name.toLowerCase().replace(/\s+/g,'')} on a couple of platforms), but the open web didn't give me much about what you actually do. Drop me a link or a sentence and I'll sharpen this."
+- If findings contain a Wikipedia extract or substantive DDG snippets, use them. Include 1-2 specific verifiable facts (role, company, project) directly from the findings text.
+
+Style rules:
+- Lead with their name and primary identity.
+- End with a warm question: "Sound right?" or "Did I get that?" or "Close?"
 - Keep under 60 words.
-- No corporate phrasing, no "it appears", no "based on the data."
 - No em dashes. Use commas, periods, or parentheses.
+- No corporate phrasing, no "it appears", no "based on the data."
 - Never say "AI" or "artificial intelligence."
-- If findings are sparse, say so honestly: "I couldn't pin you down from the open web. Tell me what you do and I'll try again."
+- If findings are empty: "I couldn't pin you down from the open web. Tell me what you do and I'll try again."
 
 Respond ONLY with valid JSON in this shape:
 {
