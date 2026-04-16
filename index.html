@@ -336,6 +336,103 @@ input,textarea{font-family:inherit;color:inherit;background:none;border:none;out
 @media (max-width: 420px){
   .metric-value{font-size:16px;}
 }
+
+/* ── Settings modal ────────────────────────────────────────────── */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  z-index:60;display:none;
+  align-items:center;justify-content:center;
+  padding:20px;
+  overflow-y:auto;
+}
+.modal-backdrop.open{display:flex;}
+.modal{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  width:100%;max-width:460px;
+  max-height:calc(100vh - 40px);
+  overflow-y:auto;
+  padding:20px;
+  animation:modalIn 0.25s ease;
+  -webkit-overflow-scrolling:touch;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.modal-title{font-size:17px;font-weight:600;letter-spacing:-0.01em;color:var(--text);}
+.modal-close{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-3);
+}
+.modal-close:hover{background:var(--surface-2);color:var(--text);}
+.modal-section{
+  padding:14px 0;
+  border-top:1px solid var(--border);
+}
+.modal-section:first-of-type{border-top:none;padding-top:4px;}
+.modal-section-heading{
+  font-size:10.5px;color:var(--text-3);
+  letter-spacing:0.08em;text-transform:uppercase;
+  margin-bottom:8px;
+}
+.modal-section-title{
+  font-size:14px;font-weight:600;color:var(--text);
+  margin-bottom:4px;letter-spacing:-0.01em;
+}
+.modal-section-desc{font-size:12.5px;color:var(--text-3);line-height:1.5;margin-bottom:10px;}
+.modal-row{display:flex;gap:8px;flex-wrap:wrap;}
+.modal-btn{
+  padding:9px 14px;border-radius:9px;
+  font-size:13px;font-weight:600;
+  border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);
+  transition:background 0.12s,border-color 0.12s;
+}
+.modal-btn:hover{background:var(--surface-3);border-color:var(--border-hover);}
+.modal-btn.primary{background:var(--color-brand-primary);color:#0A0A0A;border-color:var(--color-brand-primary);}
+.modal-btn.primary:hover{background:var(--color-brand-primary-hover);}
+.modal-btn.danger{color:var(--c-3);border-color:rgba(236,72,153,0.35);background:rgba(236,72,153,0.08);}
+.modal-btn.danger:hover{background:rgba(236,72,153,0.14);border-color:rgba(236,72,153,0.5);}
+.modal-btn.ghost{background:transparent;border-color:transparent;color:var(--text-3);padding:6px 10px;}
+.modal-btn.ghost:hover{color:var(--text);background:var(--surface-2);}
+.gmail-status{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--border);
+  margin-bottom:10px;
+}
+.gmail-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--c-4);flex-shrink:0;
+  box-shadow:0 0 8px var(--c-4);
+}
+.gmail-dot.off{background:var(--text-4);box-shadow:none;}
+.gmail-info{flex:1;min-width:0;}
+.gmail-email{font-size:12.5px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gmail-mode{font-size:11px;color:var(--text-3);margin-top:2px;}
+.modal-checkbox{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:12.5px;color:var(--text-2);
+  padding:8px 0;
+}
+.modal-checkbox input{margin:0;cursor:pointer;}
+.session-banner{
+  background:rgba(139,92,246,0.08);
+  border:1px solid rgba(139,92,246,0.25);
+  color:var(--c-1);
+  padding:8px 12px;border-radius:999px;
+  font-size:11px;font-weight:600;letter-spacing:0.04em;
+  display:flex;align-items:center;gap:6px;
+  position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  z-index:50;
+  font-family:var(--font-mono);
+}
+.session-banner .dot{width:6px;height:6px;border-radius:50%;background:var(--c-1);}
 </style>
 </head>
 <body>
@@ -391,6 +488,86 @@ input,textarea{font-family:inherit;color:inherit;background:none;border:none;out
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Guest-session banner -->
+  <div id="guestBanner" class="session-banner" style="display:none;"><span class="dot"></span><span>Guest session</span></div>
+
+  <!-- Settings modal -->
+  <div class="modal-backdrop" id="settingsBackdrop" onclick="if(event.target===this)closeSettings()">
+    <div class="modal" role="dialog" aria-labelledby="settingsTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="settingsTitle">Settings</div>
+        <button class="modal-close" onclick="closeSettings()" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Gmail section -->
+      <div class="modal-section">
+        <div class="modal-section-heading">Gmail</div>
+        <div id="gmailStatusWrap"></div>
+        <div class="modal-row" id="gmailActionsRow"></div>
+      </div>
+
+      <!-- Start over -->
+      <div class="modal-section">
+        <div class="modal-section-heading">Start over</div>
+        <div class="modal-section-desc">Wipes your session and re-runs onboarding. Use this if you want to re-experience the flow or start fresh.</div>
+        <div class="modal-row">
+          <button class="modal-btn danger" onclick="openResetConfirm()">Reset my MAWD</button>
+        </div>
+      </div>
+
+      <!-- Try as someone else -->
+      <div class="modal-section">
+        <div class="modal-section-heading">Try as someone else</div>
+        <div class="modal-section-desc">Open a guest session to experience onboarding fresh. Your MAWD stays intact.</div>
+        <div class="modal-row">
+          <button class="modal-btn primary" onclick="openGuestSession()">Open guest session</button>
+        </div>
+      </div>
+
+      <!-- Change role (secondary QA tool) -->
+      <div class="modal-section">
+        <div class="modal-section-heading">Role</div>
+        <div class="modal-section-desc" id="currentRoleDesc">Current: musician</div>
+        <div class="modal-row">
+          <button class="modal-btn ghost" onclick="changeRole()">Change role</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset confirmation modal -->
+  <div class="modal-backdrop" id="resetBackdrop" onclick="if(event.target===this)closeResetConfirm()">
+    <div class="modal" role="dialog" aria-labelledby="resetTitle" style="max-width:400px;">
+      <div class="modal-header">
+        <div class="modal-title" id="resetTitle">Reset your MAWD?</div>
+      </div>
+      <div class="modal-section" style="padding-top:0;">
+        <div class="modal-section-desc" style="font-size:13.5px;color:var(--text-2);">This clears your current MAWD session, dossier, and connected inbox scan. Your Gmail will stay connected unless you disconnect it separately. Continue?</div>
+        <label class="modal-checkbox"><input type="checkbox" id="alsoDisconnectGmail"><span>Also disconnect Gmail</span></label>
+        <div class="modal-row" style="margin-top:6px;">
+          <button class="modal-btn" onclick="closeResetConfirm()">Cancel</button>
+          <button class="modal-btn danger" onclick="confirmReset()">Yes, reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reconnect prompt (session expired) -->
+  <div class="modal-backdrop" id="reconnectBackdrop">
+    <div class="modal" role="dialog" style="max-width:400px;">
+      <div class="modal-header"><div class="modal-title">Session ended</div></div>
+      <div class="modal-section" style="padding-top:0;">
+        <div class="modal-section-desc" style="font-size:13.5px;color:var(--text-2);">Reconnect Gmail to continue where you left off?</div>
+        <div class="modal-row">
+          <button class="modal-btn" onclick="resetFromReconnect()">Start over</button>
+          <button class="modal-btn primary" onclick="reconnectGmail()">Reconnect</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -484,10 +661,27 @@ var state = {
   drafts:[]
 };
 
+// ── Session type (user vs guest) + storage isolation ──
+var mawdSession = { type: 'user' };
+(function detectSessionType(){
+  var qp = new URLSearchParams(window.location.search);
+  // If URL says guest, OR a guest owner already exists in sessionStorage (e.g. after OAuth return), treat as guest.
+  if (qp.get('mode') === 'guest' || qp.get('guest') === '1') {
+    mawdSession.type = 'guest';
+  } else {
+    try {
+      var g = sessionStorage.getItem('mawd_guest_owner');
+      if (g) { var parsed = JSON.parse(g); if (parsed && parsed.name) mawdSession.type = 'guest'; }
+    } catch(e){}
+  }
+})();
+function sessionStore(){ return mawdSession.type === 'guest' ? sessionStorage : localStorage; }
+function ownerKey(){ return mawdSession.type === 'guest' ? 'mawd_guest_owner' : 'mawd_owner'; }
+
 function loadOwner(){
-  try { var saved = JSON.parse(localStorage.getItem('mawd_owner')||'{}'); if(saved&&saved.name) state.owner = Object.assign(state.owner, saved); } catch(e){}
+  try { var saved = JSON.parse(sessionStore().getItem(ownerKey())||'{}'); if(saved&&saved.name) state.owner = Object.assign(state.owner, saved); } catch(e){}
 }
-function saveOwner(){ try { localStorage.setItem('mawd_owner', JSON.stringify(state.owner)); } catch(e){} }
+function saveOwner(){ try { sessionStore().setItem(ownerKey(), JSON.stringify(state.owner)); } catch(e){} }
 function getRole(){ var r = (state.owner.role||'other').toLowerCase(); if(!ROLES[r]) r='other'; return r; }
 
 function renderSidebar(){
@@ -754,21 +948,24 @@ function draftFor(insightId){
   addDraft({to:ins.draftTarget.to,subject:ins.draftTarget.subject||'Catching up',body:ins.draftTarget.body||'',contextPill:ins.draftTarget.context||''});
 }
 
-function scanInbox(silent){
+function scanInbox(silent, onDone){
   if (!silent) showToast('MAWD is reading your inbox...');
   fetch('/api/chat?action=inbox-scan&role='+encodeURIComponent(getRole())+'&owner='+encodeURIComponent(state.owner.email))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.dossier) {
         state.dossier = data.dossier;
+        state.owner.gmail_connected = true;
+        saveOwner();
         renderSidebar();
         renderCanvasPrimary();
         if (!silent) showToast('Dossier updated');
       } else if (data && data.needsConnect && !silent) {
         showToast('Connect Gmail to scan your inbox');
       }
+      if (typeof onDone === 'function') onDone(data);
     })
-    .catch(function(){ /* silent */ });
+    .catch(function(){ if (typeof onDone === 'function') onDone(null); });
 }
 
 function toggleSidebar(force){
@@ -778,17 +975,134 @@ function toggleSidebar(force){
   el.classList.toggle('open', open);
   ov.classList.toggle('open', open);
 }
+// ── Settings modal ──
 function openSettings(){
-  var choice = prompt('Settings:\n1. Re-run onboarding\n2. Change role (current: '+getRole()+')\n3. Disconnect Gmail\n\nEnter 1, 2, or 3:');
-  if (choice === '1') window.location.href = '/onboard.html';
-  else if (choice === '2') {
-    var r = prompt('Role (founder, influencer, actor, musician, other):', getRole());
-    if (r && ROLES[r.toLowerCase()]) { state.owner.role = r.toLowerCase(); saveOwner(); renderSidebar(); setView(ROLES[getRole()].sidebar[0].key); }
-  } else if (choice === '3') {
-    localStorage.removeItem('mawd_gmail_refresh');
-    showToast('Gmail disconnected');
+  renderGmailSection();
+  document.getElementById('currentRoleDesc').textContent = 'Current: ' + getRole();
+  document.getElementById('settingsBackdrop').classList.add('open');
+}
+function closeSettings(){ document.getElementById('settingsBackdrop').classList.remove('open'); }
+
+function renderGmailSection(){
+  var wrap = document.getElementById('gmailStatusWrap');
+  var actions = document.getElementById('gmailActionsRow');
+  var mode = state.owner.connection_mode || 'session';
+  var connected = !!state.owner.gmail_connected;
+  var email = state.owner.email || '';
+  wrap.innerHTML =
+    '<div class="gmail-status">' +
+      '<span class="gmail-dot' + (connected ? '' : ' off') + '"></span>' +
+      '<div class="gmail-info">' +
+        '<div class="gmail-email">' + (connected ? escapeHtml(email) : 'Not connected') + '</div>' +
+        '<div class="gmail-mode">' + (connected ? (mode === 'session' ? 'Session only (disconnects on tab close or 30 min idle)' : 'Persistent (stays until you disconnect)') : 'Connect to let MAWD read your inbox.') + '</div>' +
+      '</div>' +
+    '</div>';
+  if (connected) {
+    var switchLabel = mode === 'session' ? 'Switch to persistent mode' : 'Switch to session mode';
+    actions.innerHTML =
+      '<button class="modal-btn ghost" onclick="switchGmailMode()">' + switchLabel + '</button>' +
+      '<button class="modal-btn" onclick="disconnectGmail()">Disconnect Gmail</button>';
+  } else {
+    actions.innerHTML = '<button class="modal-btn primary" onclick="reconnectGmail()">Connect Gmail</button>';
   }
 }
+
+function switchGmailMode(){
+  var current = state.owner.connection_mode || 'session';
+  var next = current === 'session' ? 'persistent' : 'session';
+  state.owner.connection_mode = next;
+  saveOwner();
+  // Tell server about the mode change so its TTL behavior aligns
+  fetch('/api/onboard?update=' + encodeURIComponent(state.owner.slug || slugify(state.owner.name)), {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name: state.owner.name, email: state.owner.email,
+      slug: state.owner.slug || slugify(state.owner.name),
+      role: state.owner.role, context: state.owner.specifically || '',
+      goals:'', team: mawdSession.type === 'guest' ? 'guest' : 'fanded',
+      socials: {}, connection_mode: next
+    })
+  }).catch(function(){});
+  if (next === 'session') startIdleTimer(); else stopIdleTimer();
+  renderGmailSection();
+  showToast('Switched to ' + (next === 'session' ? 'session only' : 'persistent') + ' mode');
+}
+
+function disconnectGmail(){
+  var slug = state.owner.slug || slugify(state.owner.name);
+  fetch('/api/chat?action=disconnect-gmail&slug=' + encodeURIComponent(slug), { method:'POST' })
+    .catch(function(){});
+  state.owner.gmail_connected = false;
+  saveOwner();
+  stopIdleTimer();
+  renderGmailSection();
+  showToast('Disconnected. I no longer have access to your inbox. Your MAWD session stays, come back anytime.');
+}
+
+function reconnectGmail(){
+  closeSettings();
+  document.getElementById('reconnectBackdrop').classList.remove('open');
+  // Route back through onboarding at the Gmail connect step. For simplicity
+  // we just kick them to /onboard.html which will resume-from-OAuth if they
+  // complete the flow.
+  window.location.href = '/onboard.html?reconnect=1';
+}
+
+function resetFromReconnect(){
+  document.getElementById('reconnectBackdrop').classList.remove('open');
+  doReset(true); // disconnect gmail too
+}
+
+// ── Reset flow ──
+function openResetConfirm(){
+  document.getElementById('alsoDisconnectGmail').checked = false;
+  document.getElementById('resetBackdrop').classList.add('open');
+}
+function closeResetConfirm(){ document.getElementById('resetBackdrop').classList.remove('open'); }
+function confirmReset(){
+  var alsoDisconnect = document.getElementById('alsoDisconnectGmail').checked;
+  closeResetConfirm();
+  closeSettings();
+  doReset(alsoDisconnect);
+}
+function doReset(alsoDisconnect){
+  var slug = state.owner.slug || slugify(state.owner.name || '');
+  if (alsoDisconnect && slug) {
+    try { navigator.sendBeacon && navigator.sendBeacon('/api/chat?action=disconnect-gmail&slug=' + encodeURIComponent(slug)); } catch(e){}
+  }
+  sessionStore().removeItem(ownerKey());
+  try { localStorage.removeItem('mawd_dossier_cache'); } catch(e){}
+  state.dossier = null;
+  state.drafts = [];
+  window.location.href = '/onboard.html';
+}
+
+// ── Guest session ──
+function openGuestSession(){
+  closeSettings();
+  // sessionStorage is per-tab so opening in a new tab gives a fresh isolated session.
+  var url = '/onboard.html?mode=guest';
+  var w = window.open(url, '_blank');
+  if (!w) {
+    // Popup blocked — navigate current tab with a warning
+    showToast('Popup blocked. Opening guest session in this tab.');
+    setTimeout(function(){ window.location.href = url; }, 800);
+  }
+}
+
+// ── Change role ──
+function changeRole(){
+  var r = prompt('Role (founder, influencer, actor, musician, creator, other):', getRole());
+  if (r && ROLES[r.toLowerCase()]) {
+    state.owner.role = r.toLowerCase();
+    saveOwner();
+    closeSettings();
+    renderSidebar();
+    setView(ROLES[getRole()].sidebar[0].key);
+  }
+}
+
+function slugify(name){ return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function showToast(msg){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -799,18 +1113,52 @@ function showToast(msg){
 
 function needsOnboarding(){
   try {
-    var saved = JSON.parse(localStorage.getItem('mawd_owner')||'null');
+    var saved = JSON.parse(sessionStore().getItem(ownerKey())||'null');
     return !saved || !saved.name || !saved.role;
   } catch(e){ return true; }
 }
 
+// ── Session-mode enforcement ──
+// Session mode = token lives server-side but the client asks the server to
+// clear it on tab close and after 30 minutes of idle. This is not a true
+// zero-server-storage session (that would require refresh tokens in
+// sessionStorage, which XSS makes unsafe). It's a best-effort leash.
+var IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+var idleTimerId = null;
+function startIdleTimer(){
+  stopIdleTimer();
+  idleTimerId = setTimeout(function(){
+    var slug = state.owner.slug || slugify(state.owner.name || '');
+    try { navigator.sendBeacon && navigator.sendBeacon('/api/chat?action=disconnect-gmail&slug=' + encodeURIComponent(slug)); } catch(e){}
+    state.owner.gmail_connected = false;
+    saveOwner();
+    if (document.getElementById('reconnectBackdrop')) {
+      document.getElementById('reconnectBackdrop').classList.add('open');
+    }
+  }, IDLE_TIMEOUT_MS);
+}
+function stopIdleTimer(){ if (idleTimerId) { clearTimeout(idleTimerId); idleTimerId = null; } }
+function resetIdleTimer(){ if (state.owner.connection_mode === 'session' && state.owner.gmail_connected) startIdleTimer(); }
+
 (function init(){
   var qp = new URLSearchParams(window.location.search);
+
+  // Guest banner
+  if (mawdSession.type === 'guest') {
+    var banner = document.getElementById('guestBanner');
+    if (banner) banner.style.display = 'flex';
+    // Guest mode is always session-mode for Gmail. Hardcode it.
+    state.owner.connection_mode = 'session';
+  }
+
   if (qp.get('name')) {
     state.owner.name = qp.get('name');
     state.owner.email = qp.get('email') || state.owner.email;
     state.owner.role = (qp.get('role')||state.owner.role).toLowerCase();
     state.owner.specifically = qp.get('specifically') || '';
+    state.owner.slug = qp.get('slug') || slugify(state.owner.name);
+    if (qp.get('connection_mode')) state.owner.connection_mode = qp.get('connection_mode');
+    if (qp.get('gmail') === '1') state.owner.gmail_connected = true;
     saveOwner();
     if (window.history && window.history.replaceState) {
       window.history.replaceState({}, '', window.location.pathname);
@@ -820,7 +1168,8 @@ function needsOnboarding(){
   }
 
   if (needsOnboarding()) {
-    window.location.href = '/onboard.html';
+    var guestSuffix = mawdSession.type === 'guest' ? '?mode=guest' : '';
+    window.location.href = '/onboard.html' + guestSuffix;
     return;
   }
 
@@ -834,11 +1183,36 @@ function needsOnboarding(){
     if (e.key === 'Enter') sendMessage();
   });
 
-  // On first paint, scan silently. If there's no Gmail refresh token on the
-  // server side, the API returns { needsConnect: true } and we leave the
-  // empty-state cards visible instead of flashing a misleading "MAWD is
-  // reading your inbox..." toast.
-  setTimeout(function(){ scanInbox(true); }, 400);
+  // Idle timer: only runs for users in session mode with Gmail connected.
+  ['mousemove','touchstart','keydown','scroll'].forEach(function(ev){
+    window.addEventListener(ev, resetIdleTimer, { passive: true });
+  });
+  if (state.owner.connection_mode === 'session' && state.owner.gmail_connected) {
+    startIdleTimer();
+  }
+
+  // Tab-close beacon: ask the server to drop the token immediately if the
+  // user is in session mode. Best-effort — mobile Safari is unreliable here.
+  window.addEventListener('beforeunload', function(){
+    if (state.owner.connection_mode !== 'session' || !state.owner.gmail_connected) return;
+    try {
+      var slug = state.owner.slug || slugify(state.owner.name || '');
+      navigator.sendBeacon && navigator.sendBeacon('/api/chat?action=disconnect-gmail&slug=' + encodeURIComponent(slug));
+    } catch(e){}
+  });
+
+  // First-paint silent scan. If server reports needsConnect (because session
+  // mode beacon fired previously), show the reconnect prompt.
+  setTimeout(function(){
+    if (state.owner.gmail_connected === false) return; // never connected — empty state handles this
+    scanInbox(true, function(data){
+      if (data && data.needsReconnect) {
+        state.owner.gmail_connected = false;
+        saveOwner();
+        document.getElementById('reconnectBackdrop').classList.add('open');
+      }
+    });
+  }, 400);
 })();
 </script>
 </body>

@@ -3,6 +3,23 @@
 // GET: returns MAWD profile by ?id= or ?slug=
 import { supabaseQuery } from '../lib/supabase.js';
 
+// Retry a Supabase write without optional fields if the first attempt fails
+// with an unknown-column error. Keeps onboarding usable even if the schema
+// migration for connection_mode + team hasn't been applied yet.
+async function supabaseWriteWithSchemaFallback(path, options, optionalKeys) {
+  try {
+    return await supabaseQuery(path, options);
+  } catch (err) {
+    const msg = String(err?.message || '');
+    const looksLikeSchema = /column|does not exist|schema cache|PGRST204|PGRST205/i.test(msg);
+    if (!looksLikeSchema || !options?.body || !optionalKeys?.length) throw err;
+    const cleaned = Object.assign({}, options.body);
+    for (const k of optionalKeys) delete cleaned[k];
+    console.warn('[onboard] Supabase write fell back without keys:', optionalKeys, '— run migration supabase-migration-connection-mode.sql');
+    return supabaseQuery(path, Object.assign({}, options, { body: cleaned }));
+  }
+}
+
 // Shared company context that every Fanded team MAWD knows
 const FANDED_SHARED_BRAIN = `
 FANDED INC (shared company context, all team MAWDs have access):
@@ -54,8 +71,12 @@ export default async function handler(req, res) {
 
     // POST — create or update a MAWD
     if (req.method === 'POST') {
-      const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption } = req.body;
+      const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption, connection_mode } = req.body;
       const updateSlug = req.query?.update;
+      // Normalize connection_mode. Guests always 'session'. Unknown values fall back to 'session'.
+      const connMode = (team === 'guest')
+        ? 'session'
+        : (connection_mode === 'persistent' ? 'persistent' : 'session');
 
       if (!name || !email) {
         return res.status(400).json({ error: 'name and email required' });
@@ -91,10 +112,12 @@ export default async function handler(req, res) {
       let instance;
       const mawdUrl = `https://fanded-mawd-chat.vercel.app/v2.html?mawd=${mawdSlug}`;
 
+      const optionalCols = ['connection_mode', 'team'];
+
       if (updateSlug) {
         // PATCH existing instance (pre-created during OAuth flow)
         // Preserves google_refresh_token, google_scopes, google_email set by OAuth callback
-        instance = await supabaseQuery(`mawd_instances?slug=eq.${updateSlug}`, {
+        instance = await supabaseWriteWithSchemaFallback(`mawd_instances?slug=eq.${updateSlug}`, {
           method: 'PATCH',
           body: {
             name,
@@ -103,15 +126,17 @@ export default async function handler(req, res) {
             personal_brain: personalBrain,
             shared_brain: FANDED_SHARED_BRAIN,
             full_brain: fullBrain,
+            connection_mode: connMode,
+            team: team || 'fanded',
             active: true
           }
-        });
+        }, optionalCols);
       } else {
         // Check if slug already exists (avoid duplicates)
         const existing = await supabaseQuery(`mawd_instances?slug=eq.${mawdSlug}&select=slug`);
         if (existing.length > 0) {
           // Update existing
-          instance = await supabaseQuery(`mawd_instances?slug=eq.${mawdSlug}`, {
+          instance = await supabaseWriteWithSchemaFallback(`mawd_instances?slug=eq.${mawdSlug}`, {
             method: 'PATCH',
             body: {
               name,
@@ -120,12 +145,14 @@ export default async function handler(req, res) {
               personal_brain: personalBrain,
               shared_brain: FANDED_SHARED_BRAIN,
               full_brain: fullBrain,
+              connection_mode: connMode,
+              team: team || 'fanded',
               active: true
             }
-          });
+          }, optionalCols);
         } else {
           // Create new
-          instance = await supabaseQuery('mawd_instances', {
+          instance = await supabaseWriteWithSchemaFallback('mawd_instances', {
             method: 'POST',
             body: {
               name,
@@ -135,10 +162,12 @@ export default async function handler(req, res) {
               personal_brain: personalBrain,
               shared_brain: FANDED_SHARED_BRAIN,
               full_brain: fullBrain,
+              connection_mode: connMode,
+              team: team || 'fanded',
               created_at: new Date().toISOString(),
               active: true
             }
-          });
+          }, optionalCols);
         }
       }
 

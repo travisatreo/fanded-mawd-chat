@@ -224,6 +224,14 @@ export default async function handler(req, res) {
     return handleInboxScan(req, res);
   }
 
+  // Disconnect-gmail sub-route (POST /api/chat?action=disconnect-gmail&slug=X)
+  // Clears the server-side google_refresh_token for a given slug. Called by
+  // the Settings Disconnect button, the Start-over "also disconnect" flow,
+  // the beforeunload beacon (session mode), and the 30-min idle timer.
+  if (req.method === 'POST' && req.query && req.query.action === 'disconnect-gmail') {
+    return handleDisconnectGmail(req, res);
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -1174,17 +1182,23 @@ async function handleInboxScan(req, res) {
     const config = INBOX_SCAN_ROLE_PROMPTS[role] || INBOX_SCAN_ROLE_PROMPTS.other;
 
     let refreshToken = null;
+    let instanceRow = null;
     if (ownerEmail) {
       try {
         const rows = await supabaseQuery(`mawd_instances?email=eq.${encodeURIComponent(ownerEmail)}`);
-        if (rows && rows.length && rows[0].google_refresh_token) {
-          refreshToken = rows[0].google_refresh_token;
+        if (rows && rows.length) {
+          instanceRow = rows[0];
+          if (rows[0].google_refresh_token) refreshToken = rows[0].google_refresh_token;
         }
       } catch (_) {}
     }
 
     if (!refreshToken) {
-      return res.status(200).json({ needsConnect: true, dossier: null });
+      // Distinguish "never connected" from "session mode, token cleared."
+      // If the row exists and connection_mode is session, the token likely
+      // was cleared by a beforeunload beacon or idle timer — ask for reconnect.
+      const needsReconnect = instanceRow && instanceRow.connection_mode === 'session';
+      return res.status(200).json({ needsConnect: !needsReconnect, needsReconnect, dossier: null });
     }
 
     let emails = [];
@@ -1298,4 +1312,36 @@ function inboxScanFallbackDossier(config, emails) {
       }
     }))
   };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Disconnect-gmail sub-route: POST /api/chat?action=disconnect-gmail&slug=X
+// Clears the google_refresh_token on the mawd_instances row. Used by:
+//   - Settings → Disconnect Gmail button
+//   - Start over → "Also disconnect Gmail" checkbox
+//   - beforeunload beacon (session mode)
+//   - 30-min idle timer (session mode)
+// Accepts POST or sendBeacon (which sends POST with empty body).
+// ────────────────────────────────────────────────────────────────────────────
+async function handleDisconnectGmail(req, res) {
+  try {
+    const slug = req.query.slug || '';
+    if (!slug) return res.status(400).json({ error: 'slug required' });
+    // Set google_refresh_token to null. The row persists so the user's
+    // MAWD session + dossier + preferences stay intact; only Gmail access
+    // is removed.
+    try {
+      await supabaseQuery(`mawd_instances?slug=eq.${encodeURIComponent(slug)}`, {
+        method: 'PATCH',
+        body: { google_refresh_token: null }
+      });
+    } catch (err) {
+      console.error('disconnect-gmail failed:', err.message);
+      return res.status(500).json({ error: 'could not clear token' });
+    }
+    return res.status(200).json({ disconnected: true });
+  } catch (err) {
+    console.error('disconnect-gmail error:', err);
+    return res.status(500).json({ error: err.message });
+  }
 }

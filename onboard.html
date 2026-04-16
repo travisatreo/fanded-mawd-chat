@@ -179,6 +179,38 @@ textarea.field{min-height:80px;resize:vertical;}
 @media (max-width: 420px){
   .headline{font-size:24px;}
 }
+
+/* Connection-mode choice */
+.mode-card{
+  display:flex;flex-direction:column;gap:4px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:14px;padding:16px 18px;
+  cursor:pointer;text-align:left;color:var(--text);
+  transition:border-color 0.15s,background 0.15s;
+  font-family:inherit;
+  margin-bottom:10px;width:100%;
+}
+.mode-card:hover{border-color:var(--border-hover);}
+.mode-card.recommended{border-color:var(--color-brand-primary);box-shadow:0 0 0 3px rgba(59,173,228,0.15);}
+.mode-card-row{display:flex;align-items:center;gap:10px;}
+.mode-card-dot{width:8px;height:8px;border-radius:50%;background:var(--text-4);flex-shrink:0;}
+.mode-card.recommended .mode-card-dot{background:var(--color-brand-primary);box-shadow:0 0 8px var(--color-brand-primary);}
+.mode-card-title{font-size:15px;font-weight:600;color:var(--text);}
+.mode-card-sub{font-size:12.5px;color:var(--text-3);margin-top:2px;line-height:1.45;padding-left:18px;}
+.mode-footer{font-size:11.5px;color:var(--text-4);text-align:center;margin-top:8px;}
+
+/* Guest session banner */
+.guest-banner{
+  position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  background:rgba(139,92,246,0.08);
+  border:1px solid rgba(139,92,246,0.25);
+  color:var(--c-1);
+  padding:6px 12px;border-radius:999px;
+  font-size:11px;font-weight:600;letter-spacing:0.04em;
+  display:flex;align-items:center;gap:6px;
+  z-index:50;font-family:var(--font-mono);
+}
+.guest-banner .dot{width:6px;height:6px;border-radius:50%;background:var(--c-1);}
 </style>
 </head>
 <body>
@@ -246,8 +278,30 @@ textarea.field{min-height:80px;resize:vertical;}
       <div class="connect-sub">I only read. You approve anything that sends.</div>
     </div>
     <div class="btn-row" style="flex-direction:column;gap:10px;">
-      <button class="btn primary" onclick="connectGmail()">Connect Gmail</button>
+      <button class="btn primary" onclick="goToModeChoice()">Connect Gmail</button>
       <button class="btn link" onclick="skipGmail()">Not yet</button>
+    </div>
+  </section>
+
+  <section class="screen" id="s-mode">
+    <div class="headline" style="font-size:22px;">How long do you want me connected?</div>
+    <button class="mode-card recommended" id="modeSessionCard" type="button" onclick="pickConnectionMode('session', this)">
+      <div class="mode-card-row">
+        <span class="mode-card-dot"></span>
+        <span class="mode-card-title">Just for this session</span>
+      </div>
+      <div class="mode-card-sub">Disconnect automatically when I close the app.</div>
+    </button>
+    <button class="mode-card" id="modePersistentCard" type="button" onclick="pickConnectionMode('persistent', this)">
+      <div class="mode-card-row">
+        <span class="mode-card-dot"></span>
+        <span class="mode-card-title">Keep me connected</span>
+      </div>
+      <div class="mode-card-sub">Stay signed in until I disconnect manually.</div>
+    </button>
+    <div class="mode-footer">You can change this anytime in Settings.</div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn ghost" onclick="show('s-gmail')">Back</button>
     </div>
   </section>
 
@@ -274,14 +328,34 @@ textarea.field{min-height:80px;resize:vertical;}
     <a class="result-link" id="done-link" href="/">Open MAWD</a>
   </section>
 
+  <div id="guestBanner" class="guest-banner" style="display:none;"><span class="dot"></span><span>Guest session</span></div>
+
 </div>
 
 <script>
 var state = {
   name:'', email:'', slug:'',
   findings:[], inferredRole:'', dossierText:'',
-  dossierConfirmed:false, gmailConnected:false, handles:{}
+  dossierConfirmed:false, gmailConnected:false, handles:{},
+  connectionMode: 'session' // default to safer session mode
 };
+
+// Session type detection. Guest mode = ?mode=guest, always session Gmail.
+var mawdSession = { type: 'user' };
+(function detectSession(){
+  var qp = new URLSearchParams(window.location.search);
+  if (qp.get('mode') === 'guest' || qp.get('guest') === '1' || sessionStorage.getItem('mawd_is_guest') === '1') {
+    mawdSession.type = 'guest';
+    sessionStorage.setItem('mawd_is_guest', '1');
+    var b = document.getElementById('guestBanner');
+    if (b) b.style.display = 'flex';
+    state.connectionMode = 'session'; // locked for guests
+  }
+})();
+
+function ownerKey(){ return mawdSession.type === 'guest' ? 'mawd_guest_owner' : 'mawd_owner'; }
+function sessionStore(){ return mawdSession.type === 'guest' ? sessionStorage : localStorage; }
+function slugPrefix(){ return mawdSession.type === 'guest' ? 'guest-' : ''; }
 
 (function resumeFromOAuth(){
   var params = new URLSearchParams(window.location.search);
@@ -291,6 +365,7 @@ var state = {
     state.inferredRole = sessionStorage.getItem('mawd_onboard_role') || '';
     state.dossierText = sessionStorage.getItem('mawd_onboard_dossier') || '';
     state.email = params.get('email') || sessionStorage.getItem('mawd_onboard_email') || '';
+    state.connectionMode = sessionStorage.getItem('mawd_onboard_connection_mode') || 'session';
     state.gmailConnected = true;
     if (window.history && window.history.replaceState) window.history.replaceState({}, '', '/onboard.html');
     show('s-inbox');
@@ -308,7 +383,8 @@ function submitName(){
   if (!v || v.split(/\s+/).length < 2) { err.classList.add('show'); return; }
   err.classList.remove('show');
   state.name = v;
-  state.slug = v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  var baseSlug = v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  state.slug = slugPrefix() + baseSlug + (mawdSession.type === 'guest' ? ('-' + Math.random().toString(36).slice(2,8)) : '');
   state.email = v.toLowerCase().replace(/[^a-z0-9]/g,'') + '@mawd.fanded.com';
   show('s-crawl');
   runCrawl();
@@ -463,19 +539,42 @@ function submitFallback(){
   });
 }
 
-function connectGmail(){
+function goToModeChoice(){
+  // Guests skip the choice screen and go straight to OAuth in session mode.
+  if (mawdSession.type === 'guest') {
+    pickConnectionMode('session');
+    return;
+  }
+  show('s-mode');
+}
+
+function pickConnectionMode(mode, btn){
+  state.connectionMode = mode;
+  // Highlight selection visually then briefly before firing OAuth
+  if (btn){
+    document.querySelectorAll('.mode-card').forEach(function(c){ c.classList.remove('recommended'); });
+    btn.classList.add('recommended');
+  }
+  setTimeout(firePreconfiguredOAuth, 180);
+}
+
+function firePreconfiguredOAuth(){
   sessionStorage.setItem('mawd_onboard_name', state.name);
   sessionStorage.setItem('mawd_onboard_slug', state.slug);
   sessionStorage.setItem('mawd_onboard_role', state.inferredRole);
   sessionStorage.setItem('mawd_onboard_dossier', state.dossierText);
   sessionStorage.setItem('mawd_onboard_email', state.email);
+  sessionStorage.setItem('mawd_onboard_connection_mode', state.connectionMode);
 
   fetch('/api/onboard', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       name: state.name, email: state.email, slug: state.slug,
-      role: state.inferredRole, context: state.dossierText, goals: '', team: 'fanded',
-      socials: {}, crawlData: { findings: state.findings, inferred_role: state.inferredRole }
+      role: state.inferredRole, context: state.dossierText, goals: '',
+      team: mawdSession.type === 'guest' ? 'guest' : 'fanded',
+      socials: {},
+      crawlData: { findings: state.findings, inferred_role: state.inferredRole },
+      connection_mode: state.connectionMode
     })
   }).finally(function(){
     window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(state.slug);
@@ -484,22 +583,28 @@ function connectGmail(){
 
 function skipGmail(){
   try {
-    localStorage.setItem('mawd_owner', JSON.stringify({
-      name: state.name, email: state.email,
+    sessionStore().setItem(ownerKey(), JSON.stringify({
+      name: state.name, email: state.email, slug: state.slug,
       role: state.inferredRole || 'other',
-      specifically: state.dossierText || ''
+      specifically: state.dossierText || '',
+      connection_mode: state.connectionMode,
+      gmail_connected: false
     }));
   } catch(e){}
   fetch('/api/onboard', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       name: state.name, email: state.email, slug: state.slug,
-      role: state.inferredRole, context: state.dossierText, goals: '', team: 'fanded', socials: {}
+      role: state.inferredRole, context: state.dossierText, goals: '',
+      team: mawdSession.type === 'guest' ? 'guest' : 'fanded',
+      socials: {}, connection_mode: state.connectionMode
     })
   }).finally(function(){
     var params = new URLSearchParams();
     params.set('name', state.name);
+    params.set('slug', state.slug);
     params.set('role', state.inferredRole || 'other');
+    if (mawdSession.type === 'guest') params.set('mode', 'guest');
     window.location.href = '/?' + params.toString();
   });
 }
@@ -526,10 +631,12 @@ function runInboxScan(){
     markLastActive(stack);
     appendStatus(stack, 'Ranking by relevance.', 'active');
     try {
-      localStorage.setItem('mawd_owner', JSON.stringify({
-        name: state.name, email: state.email,
+      sessionStore().setItem(ownerKey(), JSON.stringify({
+        name: state.name, email: state.email, slug: state.slug,
         role: state.inferredRole || 'other',
-        specifically: state.dossierText || ''
+        specifically: state.dossierText || '',
+        connection_mode: state.connectionMode,
+        gmail_connected: true
       }));
     } catch(e){}
     setTimeout(showHandleAsk, 1000);
@@ -636,14 +743,20 @@ function landInCanvas(){
   var params = new URLSearchParams();
   params.set('name', state.name);
   params.set('email', state.email);
+  params.set('slug', state.slug);
   params.set('role', state.inferredRole || 'other');
+  params.set('connection_mode', state.connectionMode);
+  if (state.gmailConnected) params.set('gmail', '1');
   if (state.dossierText) params.set('specifically', state.dossierText);
+  if (mawdSession.type === 'guest') params.set('mode', 'guest');
   var url = '/?' + params.toString();
   try {
-    localStorage.setItem('mawd_owner', JSON.stringify({
-      name: state.name, email: state.email,
+    sessionStore().setItem(ownerKey(), JSON.stringify({
+      name: state.name, email: state.email, slug: state.slug,
       role: state.inferredRole || 'other',
-      specifically: state.dossierText || ''
+      specifically: state.dossierText || '',
+      connection_mode: state.connectionMode,
+      gmail_connected: !!state.gmailConnected
     }));
   } catch(e){}
   document.getElementById('done-link').href = url;
