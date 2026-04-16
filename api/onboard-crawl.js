@@ -664,15 +664,22 @@ function pretty(source){
 // only fire when the data actually supports the insight — no speculation.
 function parseFollowers(snippet){
   if (!snippet) return null;
-  // Match "Followers: 29,000", "Subscribers: 316K", "followers: 1.2M", etc.
-  const m = /(?:followers|subscribers|monthly listeners)[:\s]+([\d,.]+\s*[kmKM]?)/i.exec(snippet);
-  if (!m) return null;
-  const raw = m[1].replace(/,/g, '').trim();
-  const num = parseFloat(raw);
-  if (isNaN(num)) return null;
-  if (/k$/i.test(raw)) return num * 1000;
-  if (/m$/i.test(raw)) return num * 1000000;
-  return num;
+  const s = String(snippet);
+  const toNum = (raw) => {
+    const clean = raw.replace(/,/g, '').trim();
+    const n = parseFloat(clean);
+    if (isNaN(n)) return null;
+    if (/k$/i.test(clean)) return n * 1000;
+    if (/m$/i.test(clean)) return n * 1000000;
+    return n;
+  };
+  // Pattern A: "Followers: 29,000" / "Subscribers: 316K" / "Monthly listeners: 1.2M"
+  let m = /(?:followers|subscribers|monthly listeners)[:\s]+([\d,.]+\s*[kmKM]?)/i.exec(s);
+  if (m) { const n = toNum(m[1]); if (n) return n; }
+  // Pattern B: "45K followers" / "316K subscribers" / "1.2M monthly listeners"
+  m = /([\d,.]+\s*[kmKM]?)\s+(?:followers|subscribers|monthly listeners)/i.exec(s);
+  if (m) { const n = toNum(m[1]); if (n) return n; }
+  return null;
 }
 function parseVideoOrPostCount(snippet){
   const m = /(?:videos?|posts?|tracks?|releases?)[:\s]+([\d,]+)/i.exec(snippet || '');
