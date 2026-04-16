@@ -6,7 +6,7 @@ import { supabaseQuery } from '../lib/supabase.js';
 // Shared company context that every Fanded team MAWD knows
 const FANDED_SHARED_BRAIN = `
 FANDED INC (shared company context, all team MAWDs have access):
-- Fanded is an agentic AI chief of staff platform for musicians, athletes, and actors
+- Fanded is an AI Talent Manager platform for musicians, athletes, and actors. MAWD is the product: a team of private AI agents tuned specifically for creatives. It runs the artist's business so they can stay creating.
 - Co-founded by Travis Atreo (CEO) and Kevin (CTO)
 - Raising $1.5M at $15M cap SAFE
 - Jason Kwon (CSO, OpenAI) and Dave Lu (Hyphen Capital) are in the round
@@ -14,7 +14,7 @@ FANDED INC (shared company context, all team MAWDs have access):
 - 150+ talent live, 29K superfans unified, $1.4M tracked fan LTV, zero paid marketing
 - Vision: network of AI agents (MAWDs) that coordinate with each other, becoming the protocol layer for the creative economy
 - 65% of Gen Z are creators, 62% want to make it a living. Fanded is the institution for the creator middle class.
-- Core product: MAWD (AI chief of staff per user), podcast/music distribution, fan relationship management
+- Core product: MAWD (AI Talent Manager per user, launching with Content agent; CFO, Legal, Ops, Distro, Tax activate as artists grow), podcast/music distribution, fan relationship management
 - StoryBrand: Fanded/MAWD = guide, Artist = hero. Help them survive first (take weight off), then thrive (fan relationships, income they control).
 - Team: Travis Atreo (CEO), Kevin (CTO), Lewis (lewis@fanded.com), Kevin (kevin@fanded.com)
 
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       const mawdSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       // Build the personal brain from onboarding data
-      let personalBrain = `You are MAWD, ${name}'s AI chief of staff.\n\n`;
+      let personalBrain = `You are MAWD, ${name}'s AI Talent Manager.\n\n`;
       personalBrain += `OWNER PROFILE:\n`;
       personalBrain += `- Name: ${name}\n`;
       personalBrain += `- Email: ${email}\n`;

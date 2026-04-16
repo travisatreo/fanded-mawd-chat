@@ -2,1384 +2,668 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Set Up Your MAWD</title>
+<title>MAWD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #09090B;
-    color: #E4E4E7;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .container {
-    width: 100%;
-    max-width: 520px;
-    padding: 40px 24px;
-  }
-  .logo {
-    text-align: center;
-    margin-bottom: 32px;
-  }
-  .logo h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: #C4953A;
-    letter-spacing: 3px;
-  }
-  .logo .byline {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: #52525B;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .logo p {
-    color: #71717A;
-    font-size: 14px;
-    margin-top: 6px;
-  }
-  .step {
-    display: none;
-    animation: fadeIn 0.3s ease;
-  }
-  .step.active { display: block; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#09090B;
+  --surface:#111113;
+  --surface-2:#18181B;
+  --surface-3:#1F1F23;
+  --border:#27272A;
+  --border-hover:#3F3F46;
+  --text:#FAFAFA;
+  --text-2:#A1A1AA;
+  --text-3:#71717A;
+  --text-4:#52525B;
+  --color-brand-primary:#3BADE4;
+  --color-brand-primary-hover:#5BC0F0;
+  --color-brand-primary-active:#2B8FC3;
+  --color-brand-primary-dim:rgba(59,173,228,0.14);
+  /* legacy aliases */
+  --gold:var(--color-brand-primary);
+  --gold-dim:var(--color-brand-primary-dim);
+  --c-1:#8B5CF6;
+  --c-2:#3B82F6;
+  --c-3:#EC4899;
+  --c-4:#22C55E;
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'Space Grotesk','DM Sans',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+input,textarea{font-family:inherit;color:inherit;background:none;border:none;outline:none;width:100%;}
 
-  .question {
-    font-size: 20px;
-    font-weight: 600;
-    color: #FAFAFA;
-    margin-bottom: 8px;
-  }
-  .hint {
-    color: #71717A;
-    font-size: 13px;
-    margin-bottom: 16px;
-    line-height: 1.4;
-  }
-  input, textarea {
-    width: 100%;
-    background: #18181B;
-    border: 1px solid #27272A;
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: #FAFAFA;
-    font-size: 16px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, textarea:focus {
-    border-color: #C4953A;
-  }
-  textarea {
-    min-height: 80px;
-    resize: vertical;
-  }
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 24px;
-  }
-  .btn {
-    flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-next {
-    background: linear-gradient(135deg, #C4953A, #D4A843);
-    color: #09090B;
-  }
-  .btn-next:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(196,149,58,0.3); }
-  .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-  .btn-back {
-    background: #18181B;
-    color: #71717A;
-    border: 1px solid #27272A;
-    flex: 0.4;
-  }
-  .btn-back:hover { border-color: #3F3F46; color: #A1A1AA; }
-  .btn-skip {
-    background: none;
-    border: none;
-    color: #52525B;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 8px;
-    margin-top: 8px;
-  }
-  .btn-skip:hover { color: #71717A; }
+body{display:flex;justify-content:center;align-items:center;min-height:100vh;padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));}
+.container{width:100%;max-width:520px;}
 
-  /* Role selector */
-  .role-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  .role-btn {
-    background: #111113;
-    border: 1.5px solid #27272A;
-    border-radius: 14px;
-    padding: 18px 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, transform 0.12s;
-    color: #E4E4E7;
-    font-family: inherit;
-    text-align: left;
-  }
-  .role-btn:hover { border-color: #3F3F46; background: #18181B; }
-  .role-btn.selected {
-    border-color: #C4953A;
-    background: linear-gradient(135deg, #1a1508, #111113);
-    box-shadow: 0 0 0 3px rgba(196,149,58,0.15);
-  }
-  .role-btn-emoji { font-size: 22px; line-height: 1; }
-  .role-btn-label { font-size: 15px; font-weight: 600; color: #FAFAFA; }
-  .role-btn-sub { font-size: 11.5px; color: #71717A; line-height: 1.4; }
-  .role-other {
-    grid-column: 1 / -1;
-  }
-  .specifically-wrap {
-    margin-top: 12px;
-  }
-  .specifically-label {
-    font-size: 12px;
-    color: #A1A1AA;
-    margin-bottom: 8px;
-    display: block;
-  }
+.brand-row{display:flex;align-items:center;gap:10px;margin-bottom:44px;}
+.brand-mark{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:15px;color:var(--gold);
+}
+.brand-name{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-0.01em;}
+.brand-by{font-size:10.5px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;}
 
-  .progress {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    margin-bottom: 32px;
-  }
-  .progress .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #27272A;
-    transition: background 0.3s;
-  }
-  .progress .dot.done { background: #C4953A; }
-  .progress .dot.current { background: #D4A843; box-shadow: 0 0 8px rgba(196,149,58,0.5); }
+.screen{display:none;animation:fade 0.4s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
-  /* Social link inputs */
-  .social-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .social-label {
-    min-width: 72px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    background: #18181B;
-    border: 1px solid #27272A;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: #71717A;
-    flex-shrink: 0;
-  }
-  .social-row input { flex: 1; }
+.headline{
+  font-size:28px;font-weight:600;color:var(--text);
+  letter-spacing:-0.02em;line-height:1.18;margin-bottom:10px;
+}
+.sub{font-size:14.5px;color:var(--text-2);line-height:1.55;margin-bottom:24px;}
 
-  /* Brain building animation */
-  .brain-build {
-    display: none;
-    text-align: center;
-    animation: fadeIn 0.4s ease;
-  }
-  .brain-build.active { display: block; }
-  .brain-orb {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #D4A843 0%, #C4953A 40%, #09090B 100%);
-    margin: 0 auto 24px;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.1); opacity: 1; }
-  }
-  .scan-log {
-    text-align: left;
-    background: #111113;
-    border: 1px solid #1E1E21;
-    border-radius: 12px;
-    padding: 16px;
-    margin-top: 20px;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  .scan-line {
-    font-size: 13px;
-    color: #52525B;
-    padding: 4px 0;
-    animation: fadeIn 0.3s ease;
-  }
-  .scan-line.active { color: #C4953A; }
-  .scan-line.done { color: #3F3F46; }
-  .scan-line::before {
-    content: '';
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #27272A;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  .scan-line.active::before { background: #C4953A; }
-  .scan-line.done::before { background: #2a5a2a; }
+.input-wrap{margin-bottom:20px;}
+.field{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:16px 18px;font-size:16px;color:var(--text);
+  transition:border-color 0.15s;
+}
+.field:focus{border-color:var(--border-hover);}
+.field::placeholder{color:var(--text-4);}
+textarea.field{min-height:80px;resize:vertical;}
 
-  /* Synthesis / aha moment */
-  .synthesis-card {
-    display: none;
-    animation: fadeIn 0.5s ease;
-  }
-  .synthesis-card.active { display: block; }
-  .synthesis-text {
-    background: #111113;
-    border: 1px solid #27272A;
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 16px;
-    line-height: 1.6;
-    font-size: 15px;
-    color: #A1A1AA;
-  }
-  .insight-card {
-    background: linear-gradient(135deg, #1a1508, #14140a);
-    border: 1px solid #3a3010;
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  .insight-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: #C4953A;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .insight-text {
-    font-size: 15px;
-    color: #e0d8c0;
-    line-height: 1.5;
-  }
+.btn-row{display:flex;gap:10px;}
+.btn{
+  padding:14px 20px;border-radius:12px;
+  font-size:15px;font-weight:600;
+  transition:transform 0.08s,background 0.15s,border-color 0.15s;
+  flex:1;
+}
+.btn:active{transform:scale(0.98);}
+.btn.primary{background:var(--gold);color:#0A0A0A;}
+.btn.primary:hover{background:var(--color-brand-primary-hover);}
+.btn.primary:disabled{background:var(--surface-2);color:var(--text-4);cursor:not-allowed;}
+.btn.ghost{background:var(--surface);border:1px solid var(--border);color:var(--text-2);}
+.btn.ghost:hover{border-color:var(--border-hover);color:var(--text);}
+.btn.link{background:none;color:var(--text-3);font-weight:500;font-size:13px;padding:10px;flex:none;width:100%;}
+.btn.link:hover{color:var(--text-2);}
 
-  /* Email pitch card */
-  .email-pitch {
-    background: linear-gradient(135deg, #111113, #18181B);
-    border: 1px solid #C4953A;
-    border-radius: 16px;
-    padding: 24px;
-    margin: 24px 0;
-    text-align: center;
-  }
-  .email-pitch-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-  }
-  .email-pitch h3 {
-    font-size: 18px;
-    font-weight: 700;
-    color: #FAFAFA;
-    margin-bottom: 8px;
-  }
-  .email-pitch p {
-    font-size: 14px;
-    color: #A1A1AA;
-    line-height: 1.5;
-    margin-bottom: 0;
-  }
+.orb{
+  width:72px;height:72px;border-radius:50%;
+  background:radial-gradient(circle,rgba(196,149,58,0.9) 0%,rgba(196,149,58,0.3) 45%,transparent 75%);
+  margin:0 auto 28px;animation:orbPulse 2.2s ease-in-out infinite;
+}
+@keyframes orbPulse{0%,100%{transform:scale(1);opacity:0.85;}50%{transform:scale(1.08);opacity:1;}}
+.status-stack{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:14px 16px;margin-bottom:14px;
+  min-height:160px;
+}
+.status-line{
+  font-size:13.5px;color:var(--text-3);padding:6px 0;
+  display:flex;align-items:center;gap:10px;
+  opacity:0;transform:translateY(4px);
+  animation:lineIn 0.35s ease forwards;
+}
+@keyframes lineIn{to{opacity:1;transform:translateY(0);}}
+.status-line .dot{width:6px;height:6px;border-radius:50%;background:var(--text-4);flex-shrink:0;}
+.status-line.active{color:var(--text);}
+.status-line.active .dot{background:var(--gold);box-shadow:0 0 10px var(--gold);}
+.status-line.done .dot{background:var(--c-4);}
+.caption{font-size:12px;color:var(--text-4);line-height:1.5;text-align:center;margin-top:12px;}
 
-  /* Connect step */
-  .connect-card {
-    background: #111113;
-    border: 1px solid #27272A;
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .connect-card:hover {
-    border-color: #C4953A;
-    background: #151510;
-  }
-  .connect-card.connected {
-    border-color: #2a5a2a;
-    background: #0a150a;
-  }
-  .connect-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: #18181B;
-    border: 1px solid #27272A;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .connect-info { flex: 1; }
-  .connect-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #FAFAFA;
-    margin-bottom: 3px;
-  }
-  .connect-desc {
-    font-size: 12px;
-    color: #71717A;
-    line-height: 1.3;
-  }
-  .connect-badge {
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-  .connect-badge.ready {
-    color: #C4953A;
-    background: #1a1508;
-    border: 1px solid #3a3010;
-  }
-  .connect-badge.done {
-    color: #4ade80;
-    background: #0a150a;
-    border: 1px solid #2a5a2a;
-  }
+.dossier-card{
+  background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  border:1px solid var(--gold-dim);
+  border-radius:16px;padding:22px 20px;
+  margin-bottom:16px;position:relative;
+}
+.dossier-card::before{
+  content:"";position:absolute;left:0;top:18px;bottom:18px;width:3px;
+  background:var(--gold);border-radius:0 3px 3px 0;
+}
+.dossier-from{
+  font-size:10.5px;color:var(--gold);letter-spacing:0.08em;text-transform:uppercase;
+  margin-bottom:8px;font-family:var(--font-mono);
+}
+.dossier-text{
+  font-size:16px;line-height:1.55;color:var(--text);
+  white-space:pre-wrap;outline:none;border-radius:6px;
+  transition:background 0.15s;
+}
+.dossier-text[contenteditable="true"]{background:var(--bg);padding:10px 12px;border:1px solid var(--border-hover);}
+.dossier-findings{font-size:11.5px;color:var(--text-4);margin-top:12px;line-height:1.5;}
+.confirm-stack{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.confirm-stack .btn{flex:none;width:100%;}
 
-  /* Email option cards */
-  .option-card {
-    background: #111113;
-    border: 1px solid #27272A;
-    border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-  }
-  .option-card:hover {
-    border-color: #C4953A;
-    background: #151510;
-    transform: translateY(-1px);
-  }
-  .option-card.selected {
-    border-color: #C4953A;
-    background: #1a1508;
-    box-shadow: 0 0 20px rgba(196,149,58,0.1);
-  }
-  .option-emoji {
-    font-size: 24px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .option-content {}
-  .option-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #FAFAFA;
-    margin-bottom: 4px;
-  }
-  .option-desc {
-    font-size: 13px;
-    color: #71717A;
-    line-height: 1.4;
-  }
+.handle-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+.handle-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;
+}
+.handle-label{font-size:11.5px;font-weight:600;color:var(--text-3);min-width:78px;letter-spacing:0.03em;}
+.handle-row input{flex:1;font-size:14px;}
 
-  /* Result */
-  .result {
-    display: none;
-    text-align: center;
-    animation: fadeIn 0.4s ease;
-  }
-  .result.active { display: block; }
-  .result h2 {
-    font-size: 24px;
-    color: #C4953A;
-    margin-bottom: 12px;
-  }
-  .result p {
-    color: #A1A1AA;
-    margin-bottom: 24px;
-    line-height: 1.5;
-  }
-  .result-link {
-    display: block;
-    background: #18181B;
-    border: 1px solid #C4953A;
-    border-radius: 12px;
-    padding: 16px;
-    color: #C4953A;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 15px;
-    margin-bottom: 16px;
-    transition: all 0.2s;
-  }
-  .result-link:hover { background: #1f1a10; }
-  .copy-btn {
-    background: none;
-    border: 1px solid #3F3F46;
-    color: #A1A1AA;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  .copy-btn:hover { border-color: #71717A; color: #FAFAFA; }
+.connect-card{
+  background:var(--surface);border:1px solid var(--gold-dim);
+  border-radius:14px;padding:22px 20px;margin-bottom:18px;text-align:center;
+}
+.connect-icon{
+  width:48px;height:48px;border-radius:12px;background:var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;color:var(--gold);
+}
+.connect-icon svg{width:26px;height:26px;}
+.connect-headline{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:-0.01em;}
+.connect-sub{font-size:13.5px;color:var(--text-3);line-height:1.5;}
 
-  .homescreen-prompt {
-    margin-top: 28px;
-    padding: 20px;
-    background: #111113;
-    border: 1px solid #27272A;
-    border-radius: 14px;
-    text-align: center;
-    animation: fadeIn 0.5s ease 1.5s both;
-  }
+.result-title{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.015em;margin-bottom:8px;}
+.result-sub{font-size:14px;color:var(--text-2);line-height:1.5;margin-bottom:20px;}
+.result-link{
+  display:block;width:100%;text-align:center;
+  background:var(--gold);color:#0A0A0A;
+  padding:14px 20px;border-radius:12px;
+  font-size:15px;font-weight:600;text-decoration:none;
+}
 
-  .spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #27272A;
-    border-top-color: #C4953A;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+.error-note{
+  font-size:12.5px;color:var(--c-3);
+  margin-top:10px;background:rgba(236,72,153,0.08);
+  border:1px solid rgba(236,72,153,0.2);
+  padding:10px 12px;border-radius:10px;display:none;
+}
+.error-note.show{display:block;}
 
-  /* Headline for email step */
-  .email-headline {
-    font-size: 22px;
-    font-weight: 700;
-    color: #FAFAFA;
-    text-align: center;
-    margin-bottom: 6px;
-    line-height: 1.3;
-  }
-  .email-subhead {
-    font-size: 14px;
-    color: #71717A;
-    text-align: center;
-    margin-bottom: 24px;
-    line-height: 1.5;
-  }
-
-  /* Google button style */
-  .btn-google {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #27272A;
-    background: #FAFAFA;
-    color: #09090B;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 12px;
-  }
-  .btn-google:hover { background: #E4E4E7; transform: translateY(-1px); }
-  .btn-google svg { flex-shrink: 0; }
+@media (max-width: 420px){
+  .headline{font-size:24px;}
+}
 </style>
 </head>
 <body>
+
 <div class="container">
-  <div class="logo">
-    <h1>MAWD</h1>
-    <div class="byline">by Fanded</div>
-    <p>Your AI chief of staff. Let's set yours up.</p>
+
+  <div class="brand-row">
+    <div class="brand-mark">M</div>
+    <div>
+      <div class="brand-name">MAWD</div>
+      <div class="brand-by">by Fanded</div>
+    </div>
   </div>
 
-  <div class="progress" id="progress">
-    <div class="dot current"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-  </div>
-
-  <!-- Step 0: Name -->
-  <div class="step active" id="step-0">
-    <div class="question">What's your name?</div>
-    <div class="hint">First and last. This is how your MAWD will address you.</div>
-    <input type="text" id="q-name" placeholder="e.g. Travis Atreo" autocomplete="name">
+  <section class="screen active" id="s-name">
+    <div class="headline">Hi. What's your name?</div>
+    <div class="input-wrap">
+      <input type="text" class="field" id="q-name" placeholder="First and last" autocomplete="name" autocapitalize="words">
+    </div>
     <div class="btn-row">
-      <button class="btn btn-next" onclick="nextStep()">Next</button>
+      <button class="btn primary" onclick="submitName()">Next</button>
     </div>
-  </div>
+    <div class="error-note" id="err-name">Please include both first and last name.</div>
+  </section>
 
-  <!-- Step 0b: Role selector -->
-  <div class="step" id="step-role">
-    <div class="question">What do you do?</div>
-    <div class="hint">MAWD adapts to your role. Pick the closest one.</div>
+  <section class="screen" id="s-crawl">
+    <div class="orb"></div>
+    <div class="headline" id="crawl-headline" style="text-align:center;font-size:22px;">One sec.</div>
+    <div class="status-stack" id="crawl-status"></div>
+    <div class="caption">I'm reading your public footprint. Some of this I'll get right, some I might miss. You'll correct me as we go.</div>
+  </section>
 
-    <div class="role-grid">
-      <button class="role-btn" type="button" data-role="musician" onclick="pickRole(this,'musician')">
-        <div class="role-btn-emoji">🎵</div>
-        <div class="role-btn-label">Musician</div>
-        <div class="role-btn-sub">Artist, producer, songwriter</div>
-      </button>
-      <button class="role-btn" type="button" data-role="influencer" onclick="pickRole(this,'influencer')">
-        <div class="role-btn-emoji">✨</div>
-        <div class="role-btn-label">Influencer</div>
-        <div class="role-btn-sub">Creator, brand partnerships</div>
-      </button>
-      <button class="role-btn" type="button" data-role="actor" onclick="pickRole(this,'actor')">
-        <div class="role-btn-emoji">🎬</div>
-        <div class="role-btn-label">Actor</div>
-        <div class="role-btn-sub">Film, TV, theater, voiceover</div>
-      </button>
-      <button class="role-btn" type="button" data-role="founder" onclick="pickRole(this,'founder')">
-        <div class="role-btn-emoji">🚀</div>
-        <div class="role-btn-label">Founder</div>
-        <div class="role-btn-sub">Building a company, raising</div>
-      </button>
-      <button class="role-btn role-other" type="button" data-role="other" onclick="pickRole(this,'other')">
-        <div class="role-btn-emoji">✦</div>
-        <div class="role-btn-label">Other</div>
-        <div class="role-btn-sub">Something else. MAWD still adapts.</div>
-      </button>
+  <section class="screen" id="s-dossier">
+    <div class="headline" style="font-size:20px;margin-bottom:14px;">Here's what I pieced together.</div>
+    <div class="dossier-card">
+      <div class="dossier-from">MAWD</div>
+      <div class="dossier-text" id="dossier-text"></div>
+      <div class="dossier-findings" id="dossier-findings"></div>
     </div>
-
-    <div class="specifically-wrap">
-      <label class="specifically-label" for="q-specifically">And specifically...</label>
-      <input type="text" id="q-specifically" placeholder="e.g. touring drummer, tech founder raising seed, indie actor...">
+    <div class="confirm-stack">
+      <button class="btn primary" onclick="confirmDossier()">Yes, that's me</button>
+      <button class="btn ghost" id="btn-edit" onclick="editDossier()">Close — let me correct</button>
+      <button class="btn link" onclick="notMe()">Not me</button>
     </div>
+  </section>
 
+  <section class="screen" id="s-fallback">
+    <div class="headline" style="font-size:20px;">Tell me who you are.</div>
+    <div class="sub">A link, a handle, or a sentence about what you do works.</div>
+    <div class="input-wrap">
+      <textarea class="field" id="q-fallback" placeholder="e.g. https://linkedin.com/in/trav or I run a seed-stage AI startup"></textarea>
+    </div>
     <div class="btn-row">
-      <button class="btn btn-back" onclick="prevStep()">Back</button>
-      <button class="btn btn-next" id="btn-role-next" onclick="nextStep()" disabled>Next</button>
+      <button class="btn ghost" onclick="backToDossier()">Back</button>
+      <button class="btn primary" onclick="submitFallback()">Try again</button>
     </div>
-  </div>
+  </section>
 
-  <!-- Step 1: What do you do + what's drowning you -->
-  <div class="step" id="step-1">
-    <div class="question">What do you do?</div>
-    <div class="hint">Musician, YouTuber, business owner, freelancer... and what's piling up that you wish someone else would handle?</div>
-    <textarea id="q-context" placeholder="e.g. I'm a musician with 300K monthly listeners. I have 500+ unanswered emails, brand deals I haven't followed up on, and no idea what my finances look like."></textarea>
-    <div class="btn-row">
-      <button class="btn btn-back" onclick="prevStep()">Back</button>
-      <button class="btn btn-next" onclick="nextStep()">Next</button>
-    </div>
-  </div>
-
-  <!-- Step 2: Social Links -->
-  <div class="step" id="step-2">
-    <div class="question">Where can we find you online?</div>
-    <div class="hint">MAWD will scan every public source it can to learn about your business. The more you give it, the smarter it starts.</div>
-
-    <div class="social-row">
-      <div class="social-label">YouTube</div>
-      <input type="text" id="s-youtube" placeholder="e.g. @YourChannel">
-    </div>
-    <div class="social-row">
-      <div class="social-label">Instagram</div>
-      <input type="text" id="s-instagram" placeholder="e.g. @yourhandle">
-    </div>
-    <div class="social-row">
-      <div class="social-label">TikTok</div>
-      <input type="text" id="s-tiktok" placeholder="e.g. @yourhandle">
-    </div>
-    <div class="social-row">
-      <div class="social-label">Spotify</div>
-      <input type="text" id="s-spotify" placeholder="e.g. open.spotify.com/artist/...">
-    </div>
-    <div class="social-row">
-      <div class="social-label">X</div>
-      <input type="text" id="s-twitter" placeholder="e.g. @yourhandle">
-    </div>
-    <div class="social-row">
-      <div class="social-label">Website</div>
-      <input type="text" id="s-website" placeholder="e.g. yoursite.com">
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-back" onclick="prevStep()">Back</button>
-      <button class="btn btn-next" onclick="startBrainBuild()">Build my MAWD</button>
-    </div>
-    <div style="text-align:center;">
-      <button class="btn-skip" onclick="startBrainBuild()">Skip, I'll add these later</button>
-    </div>
-  </div>
-
-  <!-- Step 3: Brain Building (animated) -->
-  <div class="brain-build" id="step-3">
-    <div class="brain-orb"></div>
-    <div class="question">Building your brain...</div>
-    <div class="hint">MAWD is scanning your public data and learning about your business.</div>
-    <div class="scan-log" id="scan-log"></div>
-  </div>
-
-  <!-- Step 4: Synthesis + Email Pitch -->
-  <div class="synthesis-card" id="step-4">
-    <div class="question" style="margin-bottom:16px;">Here's what I found.</div>
-
-    <div class="synthesis-text" id="synthesis-text"></div>
-
-    <div class="insight-card">
-      <div class="insight-label">Insight</div>
-      <div class="insight-text" id="insight-text"></div>
-    </div>
-
-    <div class="email-pitch">
-      <div class="email-pitch-icon">📧</div>
-      <h3>Let me start with your email.</h3>
-      <p>The fastest way I can help right now is by reading your inbox, finding what matters, and drafting replies in your voice. You approve everything before it sends.</p>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-next" onclick="goToConnect()">Connect my email</button>
-    </div>
-    <div style="text-align:center;">
-      <button class="btn-skip" onclick="skipToOptions()">I'll connect later</button>
-    </div>
-  </div>
-
-  <!-- Step 5: Connect Gmail + Calendar -->
-  <div class="step" id="step-5">
-    <div class="email-headline">Connect your accounts</div>
-    <div class="email-subhead">MAWD reads your email and calendar so it can work for you. You stay in control of everything.</div>
-
-    <div class="connect-card" id="card-gmail" onclick="connectGmail()">
+  <section class="screen" id="s-gmail">
+    <div class="connect-card">
       <div class="connect-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="#C4953A"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>
       </div>
-      <div class="connect-info">
-        <div class="connect-title">Gmail</div>
-        <div class="connect-desc">Read inbox, draft replies, send emails on your behalf. You approve before anything sends.</div>
-      </div>
-      <div class="connect-badge ready" id="badge-gmail">Connect</div>
+      <div class="connect-headline">To find who you should reach back out to, I need your Gmail.</div>
+      <div class="connect-sub">I only read. You approve anything that sends.</div>
     </div>
-
-    <div class="connect-card" id="card-calendar" onclick="connectCalendar()">
-      <div class="connect-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V8H19V19ZM9 12H7V10H9V12ZM13 12H11V10H13V12ZM17 12H15V10H17V12ZM9 16H7V14H9V16ZM13 16H11V14H13V16ZM17 16H15V14H17V16Z" fill="#C4953A"/></svg>
-      </div>
-      <div class="connect-info">
-        <div class="connect-title">Google Calendar</div>
-        <div class="connect-desc">See your schedule, find free time, prep for meetings, send invites.</div>
-      </div>
-      <div class="connect-badge ready" id="badge-calendar">Connect</div>
+    <div class="btn-row" style="flex-direction:column;gap:10px;">
+      <button class="btn primary" onclick="connectGmail()">Connect Gmail</button>
+      <button class="btn link" onclick="skipGmail()">Not yet</button>
     </div>
+  </section>
 
-    <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:14px 16px;margin-top:16px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V11H13V17ZM13 9H11V7H13V9Z" fill="#52525B"/></svg>
-        <span style="font-size:12px;font-weight:600;color:#71717A;">Your data is yours</span>
-      </div>
-      <p style="font-size:12px;color:#52525B;line-height:1.4;margin:0;">MAWD never stores email content. It reads, processes, and forgets. Drafts need your approval. You can disconnect anytime.</p>
+  <section class="screen" id="s-inbox">
+    <div class="orb"></div>
+    <div class="headline" style="text-align:center;font-size:22px;">Reading your inbox.</div>
+    <div class="status-stack" id="inbox-status"></div>
+    <div class="caption">Only reading. Nothing sends without your approval.</div>
+  </section>
+
+  <section class="screen" id="s-handles">
+    <div class="headline" style="font-size:22px;">One more thing.</div>
+    <div class="sub">To sharpen what I know about you, drop a few handles. Skip any you don't have.</div>
+    <div class="handle-grid" id="handle-grid"></div>
+    <div class="btn-row" style="flex-direction:column;gap:10px;">
+      <button class="btn primary" onclick="submitHandles()">Connect these</button>
+      <button class="btn link" onclick="skipHandles()">Skip for now</button>
     </div>
+  </section>
 
-    <div class="btn-row" style="margin-top:24px;">
-      <button class="btn btn-back" onclick="backFromConnect()">Back</button>
-      <button class="btn btn-next" onclick="goToEmailOptions()" id="btn-continue-connect">Continue</button>
-    </div>
-  </div>
+  <section class="screen" id="s-done">
+    <div class="result-title" id="done-title">Okay. Here's what I'm looking at.</div>
+    <div class="result-sub" id="done-sub">Tap anything to dig in.</div>
+    <a class="result-link" id="done-link" href="/">Open MAWD</a>
+  </section>
 
-  <!-- Step 6: How should MAWD start? (email-focused options) -->
-  <div class="step" id="step-6">
-    <div class="question">How should I start?</div>
-    <div class="hint" id="email-options-hint">Pick how you want MAWD to tackle your inbox first.</div>
-
-    <div id="email-options-container">
-      <div class="option-card" onclick="pickOption(0, this)">
-        <div class="option-emoji">📬</div>
-        <div class="option-content">
-          <div class="option-title">What needs replies?</div>
-          <div class="option-desc">Scan my inbox, find the emails that actually need a response, and draft replies for me to approve.</div>
-        </div>
-      </div>
-
-      <div class="option-card" onclick="pickOption(1, this)">
-        <div class="option-emoji">🎯</div>
-        <div class="option-content">
-          <div class="option-title">Focus on someone specific</div>
-          <div class="option-desc">Find all emails from a specific person or about a topic I've been meaning to respond to.</div>
-        </div>
-      </div>
-
-      <div class="option-card" onclick="pickOption(2, this)">
-        <div class="option-emoji">⏰</div>
-        <div class="option-content">
-          <div class="option-title">Follow-ups I'm behind on</div>
-          <div class="option-desc">Find threads where someone is waiting on me. Help me catch up without the guilt spiral.</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="custom-options-container" style="display:none;"></div>
-
-    <div class="btn-row" style="margin-top:20px;">
-      <button class="btn btn-back" onclick="backFromOptions()">Back</button>
-      <button class="btn btn-next" onclick="finishOnboarding()" id="btn-finish" disabled>Create my MAWD</button>
-    </div>
-  </div>
-
-  <!-- Result -->
-  <div class="result" id="result">
-    <h2 id="result-title">Your MAWD is live.</h2>
-    <p id="result-desc">MAWD is ready to start handling your email. Open it and tell it what to do.</p>
-    <a class="result-link" id="result-link" href="#" target="_blank">Open your MAWD</a>
-    <button class="copy-btn" onclick="copyLink()">Copy link</button>
-
-    <div class="homescreen-prompt" id="homescreen-prompt" style="display:none;">
-      <div style="width:40px;height:40px;background:linear-gradient(135deg,#C4953A,#D4A843);border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
-      </div>
-      <p style="color:#FAFAFA;font-size:15px;font-weight:600;margin-bottom:6px;">Add to Home Screen</p>
-      <p id="homescreen-instructions" style="color:#71717A;font-size:13px;line-height:1.5;margin-bottom:0;"></p>
-    </div>
-  </div>
 </div>
 
 <script>
-var currentStep = 0;
-var totalSteps = 8;
-var crawlResult = null;
-var selectedOption = null;
-var gmailConnected = false;
-var calendarConnected = false;
-var pickedRole = '';
+var state = {
+  name:'', email:'', slug:'',
+  findings:[], inferredRole:'', dossierText:'',
+  dossierConfirmed:false, gmailConnected:false, handles:{}
+};
 
-function pickRole(btn, role) {
-  pickedRole = role;
-  document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('selected'); });
-  btn.classList.add('selected');
-  document.getElementById('btn-role-next').disabled = false;
-  try { sessionStorage.setItem('mawd_onboard_role', role); } catch(e){}
-}
-
-// ── Resume after OAuth redirect ──
-// Google OAuth redirects back with ?gmail=connected&mawd=slug&email=user@email.com
-(function resumeFromOAuth() {
+(function resumeFromOAuth(){
   var params = new URLSearchParams(window.location.search);
   if (params.get('gmail') === 'connected') {
-    // Restore saved state
-    var savedName = sessionStorage.getItem('mawd_onboard_name');
-    var savedContext = sessionStorage.getItem('mawd_onboard_context');
-    var savedCrawl = sessionStorage.getItem('mawd_onboard_crawl');
-    var savedSocials = sessionStorage.getItem('mawd_onboard_socials');
-    var connectedEmail = params.get('email') || '';
-
-    if (savedName) {
-      document.getElementById('q-name').value = savedName;
-    }
-    if (savedContext) {
-      document.getElementById('q-context').value = savedContext;
-    }
-    if (savedCrawl && savedCrawl !== 'null') {
-      try { crawlResult = JSON.parse(savedCrawl); } catch(e) {}
-    }
-    if (savedSocials) {
-      try {
-        var socials = JSON.parse(savedSocials);
-        var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
-        for (var key in fields) {
-          if (socials[key]) document.getElementById(fields[key]).value = socials[key];
-        }
-      } catch(e) {}
-    }
-    // Restore role + specifically from pre-OAuth state
-    var savedRole = sessionStorage.getItem('mawd_onboard_role');
-    var savedSpecifically = sessionStorage.getItem('mawd_onboard_specifically');
-    if (savedRole) pickedRole = savedRole;
-    if (savedSpecifically) document.getElementById('q-specifically').value = savedSpecifically;
-
-    // Mark Gmail as connected
-    gmailConnected = true;
-    var badge = document.getElementById('badge-gmail');
-    var card = document.getElementById('card-gmail');
-    if (badge) {
-      badge.textContent = connectedEmail || 'Connected';
-      badge.className = 'connect-badge done';
-    }
-    if (card) card.classList.add('connected');
-
-    // Jump to step 5 (connect page, showing Gmail as connected)
-    currentStep = 5;
-    // Hide step 0, show step 5
-    setTimeout(function() {
-      document.querySelectorAll('.step').forEach(function(s) { s.style.display = 'none'; });
-      showStep(5);
-      updateProgress();
-    }, 100);
-
-    // Clean up URL
-    window.history.replaceState({}, '', '/onboard.html');
-    sessionStorage.removeItem('mawd_onboard_name');
-    sessionStorage.removeItem('mawd_onboard_context');
-    sessionStorage.removeItem('mawd_onboard_step');
-    sessionStorage.removeItem('mawd_onboard_crawl');
-    sessionStorage.removeItem('mawd_onboard_socials');
+    state.name = sessionStorage.getItem('mawd_onboard_name') || '';
+    state.slug = sessionStorage.getItem('mawd_onboard_slug') || '';
+    state.inferredRole = sessionStorage.getItem('mawd_onboard_role') || '';
+    state.dossierText = sessionStorage.getItem('mawd_onboard_dossier') || '';
+    state.email = params.get('email') || sessionStorage.getItem('mawd_onboard_email') || '';
+    state.gmailConnected = true;
+    if (window.history && window.history.replaceState) window.history.replaceState({}, '', '/onboard.html');
+    show('s-inbox');
+    runInboxScan();
   }
 })();
 
-function updateProgress() {
-  var dots = document.querySelectorAll('.progress .dot');
-  // Map: 0 -> dot 0 (name), 0.5 -> dot 1 (role), 1 -> dot 2 (context), 2 -> dot 3 (socials),
-  // 3 -> dot 4 (brain), 4 -> dot 5 (synthesis), 5 -> dot 6 (connect), 6 -> dot 7 (options)
-  var activeDot = currentStep === 0 ? 0 :
-                  currentStep === 0.5 ? 1 :
-                  currentStep + 1;
-  dots.forEach(function(dot, i) {
-    dot.className = 'dot';
-    if (i < activeDot) dot.className = 'dot done';
-    if (i === activeDot) dot.className = 'dot current';
-  });
+document.getElementById('q-name').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') submitName();
+});
+
+function submitName(){
+  var v = document.getElementById('q-name').value.trim();
+  var err = document.getElementById('err-name');
+  if (!v || v.split(/\s+/).length < 2) { err.classList.add('show'); return; }
+  err.classList.remove('show');
+  state.name = v;
+  state.slug = v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  state.email = v.toLowerCase().replace(/[^a-z0-9]/g,'') + '@mawd.fanded.com';
+  show('s-crawl');
+  runCrawl();
 }
 
-// Step sequence uses numeric ids PLUS the named "role" step inserted after 0.
-// Logical order: 0 (name) -> role -> 1 (context) -> 2 (socials) -> 3 (brain) -> 4 (synthesis) -> 5 (connect) -> 6 (options)
-function nextStep() {
-  // From name, go to role step
-  if (currentStep === 0) {
-    if (!document.getElementById('q-name').value.trim()) return;
-    hideStep(0);
-    showNamedStep('step-role');
-    currentStep = 0.5; // sentinel for role step
-    updateProgress();
-    return;
-  }
-  // From role, go to context (step 1)
-  if (currentStep === 0.5) {
-    if (!pickedRole) return;
-    hideNamedStep('step-role');
-    currentStep = 1;
-    showStep(1);
-    updateProgress();
-    return;
-  }
-  if (currentStep === 1 && !document.getElementById('q-context').value.trim()) return;
+function runCrawl(){
+  var stack = document.getElementById('crawl-status');
+  stack.innerHTML = '';
+  appendStatus(stack, 'Searching for ' + state.name.split(' ')[0] + '...', 'active');
 
-  hideStep(currentStep);
-  currentStep++;
-  showStep(currentStep);
-  updateProgress();
-}
+  var hardTimeout = setTimeout(function(){
+    state.dossierText = "I couldn't pin you down from the open web. Tell me what you do and I'll try again.";
+    state.findings = [];
+    state.inferredRole = 'other';
+    show('s-fallback');
+  }, 18000);
 
-function prevStep() {
-  if (currentStep === 0.5) {
-    hideNamedStep('step-role');
-    currentStep = 0;
-    showStep(0);
-    updateProgress();
-    return;
-  }
-  if (currentStep === 1) {
-    hideStep(1);
-    showNamedStep('step-role');
-    currentStep = 0.5;
-    updateProgress();
-    return;
-  }
-  if (currentStep <= 0) return;
-  hideStep(currentStep);
-  currentStep--;
-  showStep(currentStep);
-  updateProgress();
-}
-
-function hideStep(n) {
-  var el = document.getElementById('step-' + n);
-  if (el) {
-    el.classList.remove('active');
-    el.style.display = 'none';
-  }
-}
-
-function showStep(n) {
-  var el = document.getElementById('step-' + n);
-  if (el) {
-    el.style.display = '';
-    setTimeout(function() { el.classList.add('active'); }, 10);
-  }
-}
-
-function hideNamedStep(id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.remove('active'); el.style.display = 'none'; }
-}
-function showNamedStep(id) {
-  var el = document.getElementById(id);
-  if (el) { el.style.display = ''; setTimeout(function(){ el.classList.add('active'); }, 10); }
-}
-
-function getFallbackData(name) {
-  return {
-    synthesis: 'I found some public information about ' + name + '. Once you connect your email, I\'ll really get to work.',
-    insight: 'The creators who break through aren\'t the ones who work harder. They\'re the ones who stop drowning in admin. That\'s what I\'m here for.',
-    options: []
-  };
-}
-
-// Step 3: Brain building with animated scan log
-function startBrainBuild() {
-  hideStep(2);
-  currentStep = 3;
-  var el = document.getElementById('step-3');
-  el.style.display = 'block';
-  el.classList.add('active');
-  updateProgress();
-
-  var log = document.getElementById('scan-log');
-  log.innerHTML = '';
-
-  var name = document.getElementById('q-name').value.trim();
-  var socials = {
-    youtube: document.getElementById('s-youtube').value.trim(),
-    instagram: document.getElementById('s-instagram').value.trim(),
-    tiktok: document.getElementById('s-tiktok').value.trim(),
-    spotify: document.getElementById('s-spotify').value.trim(),
-    twitter: document.getElementById('s-twitter').value.trim(),
-    website: document.getElementById('s-website').value.trim()
-  };
-  var context = document.getElementById('q-context').value.trim();
-
-  // Animate scan lines
-  var scanSteps = ['Searching the web for ' + name + '...'];
-  if (socials.youtube) scanSteps.push('Scanning YouTube channel...');
-  if (socials.instagram) scanSteps.push('Reading Instagram profile...');
-  if (socials.tiktok) scanSteps.push('Analyzing TikTok presence...');
-  if (socials.spotify) scanSteps.push('Pulling Spotify data...');
-  if (socials.twitter) scanSteps.push('Checking X / Twitter...');
-  if (socials.website) scanSteps.push('Crawling website...');
-  scanSteps.push('Cross-referencing public data...');
-  scanSteps.push('Building your personal brain...');
-  scanSteps.push('Generating insights...');
-
-  var currentScan = 0;
-  function addScanLine() {
-    if (currentScan > 0) {
-      var prev = log.children[currentScan - 1];
-      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
-    }
-    if (currentScan < scanSteps.length) {
-      var line = document.createElement('div');
-      line.className = 'scan-line active';
-      line.textContent = scanSteps[currentScan];
-      log.appendChild(line);
-      log.scrollTop = log.scrollHeight;
-      currentScan++;
-      setTimeout(addScanLine, 800 + Math.random() * 600);
-    }
-  }
-  addScanLine();
-
-  // Call the crawl API
   fetch('/api/onboard-crawl', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name, socials: socials, focus: context })
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: state.name })
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.error || !data.synthesis) {
-      data = getFallbackData(name);
-    }
-    crawlResult = data;
-    var remaining = scanSteps.length - currentScan;
-    var waitTime = Math.max(0, remaining * 1000) + 1500;
-    setTimeout(function() { showSynthesis(data); }, waitTime);
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    clearTimeout(hardTimeout);
+    if (data.error) throw new Error(data.error);
+    state.findings = data.findings || [];
+    state.inferredRole = data.inferred_role || 'other';
+    state.dossierText = data.dossier_text || '';
+    markLastActive(stack);
+    var msgs = buildStatusMessagesFromFindings(state.findings);
+    var i = 0;
+    (function next(){
+      if (i >= msgs.length) { setTimeout(showDossier, 350); return; }
+      appendStatus(stack, msgs[i], 'active');
+      i++;
+      setTimeout(function(){ markLastActive(stack); next(); }, 720 + Math.random()*360);
+    })();
   })
-  .catch(function(err) {
-    crawlResult = getFallbackData(name);
-    var remaining = scanSteps.length - currentScan;
-    var waitTime = Math.max(0, remaining * 1000) + 1500;
-    setTimeout(function() { showSynthesis(crawlResult); }, waitTime);
+  .catch(function(err){
+    clearTimeout(hardTimeout);
+    console.error('crawl failed:', err);
+    state.dossierText = "I couldn't pin you down from the open web. Tell me what you do and I'll try again.";
+    state.findings = [];
+    state.inferredRole = 'other';
+    setTimeout(function(){ show('s-fallback'); }, 400);
   });
 }
 
-function showSynthesis(data) {
-  hideStep(3);
-  currentStep = 4;
-  updateProgress();
-
-  document.getElementById('synthesis-text').textContent = data.synthesis || '';
-  document.getElementById('insight-text').textContent = data.insight || '';
-
-  showStep(4);
+function buildStatusMessagesFromFindings(findings){
+  if (!findings || !findings.length) return ['Piecing it together.'];
+  var buckets = {
+    music: /spotify|apple ?music|soundcloud|bandcamp|musician|artist|song|album|single|ep/i,
+    video: /youtube|vimeo|twitch/i,
+    podcast: /podcast|apple podcasts/i,
+    company: /crunchbase|pitchbook|startup|founder|ceo|co-?founder/i,
+    linkedin: /linkedin/i,
+    film: /imdb|variety|deadline|hollywood|actor|actress/i,
+    social: /instagram|tiktok|twitter|x\.com/i,
+    news: /wikipedia|forbes|nytimes|techcrunch|bloomberg|rolling ?stone|billboard/i
+  };
+  var seen = new Set();
+  findings.forEach(function(f){
+    var blob = ((f.source||'') + ' ' + (f.title||'') + ' ' + (f.snippet||'') + ' ' + (f.url||'')).toLowerCase();
+    for (var k in buckets) { if (buckets[k].test(blob)) seen.add(k); }
+  });
+  var msgs = [];
+  if (seen.has('music')) msgs.push('Found your music.');
+  if (seen.has('video')) msgs.push('Found your video channel.');
+  if (seen.has('podcast')) msgs.push('Found your podcast.');
+  if (seen.has('company')) msgs.push('Found your company.');
+  if (seen.has('linkedin') && !seen.has('company')) msgs.push('Found your LinkedIn.');
+  if (seen.has('film')) msgs.push('Found your film credits.');
+  if (seen.has('news')) msgs.push('Found press coverage.');
+  if (seen.has('social')) msgs.push('Found your social profiles.');
+  msgs.push('Piecing it together.');
+  return msgs;
 }
 
-function goToConnect() {
-  hideStep(4);
-  currentStep = 5;
-  showStep(5);
-  updateProgress();
+function appendStatus(stack, text, klass){
+  var el = document.createElement('div');
+  el.className = 'status-line ' + (klass || '');
+  el.innerHTML = '<span class="dot"></span><span>' + escapeHtml(text) + '</span>';
+  stack.appendChild(el);
+  stack.scrollTop = stack.scrollHeight;
+}
+function markLastActive(stack){
+  var nodes = stack.querySelectorAll('.status-line.active');
+  nodes.forEach(function(n){ n.classList.remove('active'); n.classList.add('done'); });
 }
 
-function skipToOptions() {
-  hideStep(4);
-  currentStep = 6;
-  // Show custom options from crawl if no email connected
-  showEmailOptions(false);
-  showStep(6);
-  updateProgress();
+function showDossier(){
+  document.getElementById('dossier-text').textContent = state.dossierText;
+  var findingsEl = document.getElementById('dossier-findings');
+  var sources = uniqueSources(state.findings).slice(0, 6);
+  findingsEl.textContent = sources.length ? ('Pulled from: ' + sources.join(', ')) : '';
+  show('s-dossier');
 }
 
-function backFromConnect() {
-  hideStep(5);
-  currentStep = 4;
-  showStep(4);
-  updateProgress();
+function uniqueSources(findings){
+  var s = new Set();
+  (findings||[]).forEach(function(f){ if (f.source) s.add(f.source); });
+  return Array.from(s);
 }
 
-function backFromOptions() {
-  hideStep(6);
-  if (gmailConnected || calendarConnected) {
-    currentStep = 5;
-    showStep(5);
+function editDossier(){
+  var el = document.getElementById('dossier-text');
+  var btn = document.getElementById('btn-edit');
+  if (el.getAttribute('contenteditable') === 'true') {
+    state.dossierText = el.textContent.trim();
+    el.setAttribute('contenteditable', 'false');
+    state.dossierConfirmed = true;
+    show('s-gmail');
   } else {
-    currentStep = 4;
-    showStep(4);
+    el.setAttribute('contenteditable', 'true');
+    el.focus();
+    var sel = window.getSelection(), range = document.createRange();
+    range.selectNodeContents(el); range.collapse(false);
+    sel.removeAllRanges(); sel.addRange(range);
+    if (btn) btn.textContent = 'Save and continue';
   }
-  updateProgress();
 }
 
-// Gmail OAuth connection — real OAuth flow
-// Creates the MAWD instance first (so OAuth callback can store tokens), then redirects to Google
-function connectGmail() {
-  if (gmailConnected) return;
+function confirmDossier(){ state.dossierConfirmed = true; show('s-gmail'); }
+function notMe(){ show('s-fallback'); }
+function backToDossier(){ show('s-dossier'); }
 
-  var name = document.getElementById('q-name').value.trim();
-  var context = document.getElementById('q-context').value.trim();
-  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+function submitFallback(){
+  var hint = document.getElementById('q-fallback').value.trim();
+  if (!hint) return;
+  show('s-crawl');
+  var stack = document.getElementById('crawl-status');
+  stack.innerHTML = '';
+  appendStatus(stack, 'Trying again with your hint...', 'active');
 
-  // Save onboarding state to sessionStorage so we can resume after OAuth redirect
-  sessionStorage.setItem('mawd_onboard_name', name);
-  sessionStorage.setItem('mawd_onboard_context', context);
-  sessionStorage.setItem('mawd_onboard_step', currentStep);
-  sessionStorage.setItem('mawd_onboard_crawl', JSON.stringify(crawlResult || null));
-  sessionStorage.setItem('mawd_onboard_slug', slug);
-  sessionStorage.setItem('mawd_onboard_role', pickedRole || '');
-  var specIn = document.getElementById('q-specifically');
-  sessionStorage.setItem('mawd_onboard_specifically', (specIn && specIn.value.trim()) || '');
+  fetch('/api/onboard-crawl', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: state.name, fallbackHint: hint })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    state.findings = data.findings || [];
+    state.inferredRole = data.inferred_role || 'other';
+    state.dossierText = data.dossier_text || "Let's start with your inbox anyway.";
+    markLastActive(stack);
+    appendStatus(stack, 'Piecing it together.', 'active');
+    setTimeout(showDossier, 550);
+  })
+  .catch(function(){
+    state.dossierText = "Let's start with your inbox anyway.";
+    state.findings = [];
+    setTimeout(showDossier, 550);
+  });
+}
 
-  // Save social links
-  var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
-  var socials = {};
-  for (var key in fields) {
-    var el = document.getElementById(fields[key]);
-    if (el && el.value.trim()) socials[key] = el.value.trim();
-  }
-  sessionStorage.setItem('mawd_onboard_socials', JSON.stringify(socials));
-
-  // Create the MAWD instance FIRST so OAuth callback has a row to store tokens in
-  var email = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '@mawd.fanded.com';
-  var brainContext = '';
-  if (crawlResult && crawlResult.synthesis) brainContext += 'MAWD scanned public data and found: ' + crawlResult.synthesis + '\n';
-  if (context) brainContext += 'About them: ' + context + '\n';
+function connectGmail(){
+  sessionStorage.setItem('mawd_onboard_name', state.name);
+  sessionStorage.setItem('mawd_onboard_slug', state.slug);
+  sessionStorage.setItem('mawd_onboard_role', state.inferredRole);
+  sessionStorage.setItem('mawd_onboard_dossier', state.dossierText);
+  sessionStorage.setItem('mawd_onboard_email', state.email);
 
   fetch('/api/onboard', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      name: name,
-      email: email,
-      slug: slug,
-      role: pickedRole || '',
-      context: brainContext,
-      goals: context,
-      team: 'fanded',
-      socials: socials,
-      crawlData: crawlResult ? crawlResult.crawledData : null
+      name: state.name, email: state.email, slug: state.slug,
+      role: state.inferredRole, context: state.dossierText, goals: '', team: 'fanded',
+      socials: {}, crawlData: { findings: state.findings, inferred_role: state.inferredRole }
     })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    // Instance created (or already exists), now redirect to OAuth
-    sessionStorage.setItem('mawd_instance_created', 'true');
-    window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
-  })
-  .catch(function(err) {
-    // Even if instance creation fails, try OAuth anyway (might already exist)
-    console.error('Pre-create failed:', err);
-    window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(slug);
+  }).finally(function(){
+    window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(state.slug);
   });
 }
 
-function connectCalendar() {
-  if (calendarConnected) return;
-  // Calendar scopes are included in the Gmail OAuth flow,
-  // so if Gmail is connected, calendar is too
-  if (gmailConnected) {
-    var badge = document.getElementById('badge-calendar');
-    var card = document.getElementById('card-calendar');
-    badge.textContent = 'Connected';
-    badge.className = 'connect-badge done';
-    card.classList.add('connected');
-    calendarConnected = true;
-  } else {
-    // If Gmail not connected yet, trigger the full OAuth flow
-    connectGmail();
-  }
-}
-
-function goToEmailOptions() {
-  hideStep(5);
-  currentStep = 6;
-  showEmailOptions(gmailConnected);
-  showStep(6);
-  updateProgress();
-}
-
-function showEmailOptions(hasEmail) {
-  if (hasEmail) {
-    // Show email-focused options
-    document.getElementById('email-options-container').style.display = '';
-    document.getElementById('custom-options-container').style.display = 'none';
-    document.getElementById('email-options-hint').textContent = 'Pick how you want MAWD to tackle your inbox first.';
-  } else {
-    // Show crawl-based options if no email connected
-    document.getElementById('email-options-container').style.display = 'none';
-    var container = document.getElementById('custom-options-container');
-    container.style.display = '';
-    container.innerHTML = '';
-    document.getElementById('email-options-hint').textContent = 'What do you want MAWD to tackle first?';
-
-    var options = (crawlResult && crawlResult.options && crawlResult.options.length)
-      ? crawlResult.options
-      : [
-          { emoji: '📧', title: 'Email Triage', description: 'Connect my email later and let MAWD handle my inbox.' },
-          { emoji: '📊', title: 'Business Snapshot', description: 'Show me a breakdown of where my business stands right now.' },
-          { emoji: '💰', title: 'Money Map', description: 'Help me understand my revenue streams and where money is leaking.' }
-        ];
-
-    options.forEach(function(opt, i) {
-      var card = document.createElement('div');
-      card.className = 'option-card';
-      card.onclick = function() { pickOption(i, card); };
-      card.innerHTML =
-        '<div class="option-emoji">' + (opt.emoji || '🎯') + '</div>' +
-        '<div class="option-content">' +
-          '<div class="option-title">' + opt.title + '</div>' +
-          '<div class="option-desc">' + opt.description + '</div>' +
-        '</div>';
-      container.appendChild(card);
-    });
-  }
-}
-
-function pickOption(index, card) {
-  selectedOption = index;
-  document.querySelectorAll('.option-card').forEach(function(c) { c.classList.remove('selected'); });
-  card.classList.add('selected');
-  document.getElementById('btn-finish').disabled = false;
-}
-
-function finishOnboarding() {
-  var name = document.getElementById('q-name').value.trim();
-  var context = document.getElementById('q-context').value.trim();
-
-  // Build context from crawl + selected option
-  var brainContext = '';
-  if (crawlResult && crawlResult.synthesis) {
-    brainContext += 'MAWD scanned public data and found: ' + crawlResult.synthesis + '\n';
-  }
-  if (crawlResult && crawlResult.insight) {
-    brainContext += 'Key insight: ' + crawlResult.insight + '\n';
-  }
-  if (context) {
-    brainContext += 'About them: ' + context + '\n';
-  }
-
-  // Determine selected option text
-  var optionData = null;
-  if (selectedOption !== null) {
-    if (gmailConnected) {
-      var emailOpts = [
-        { title: 'Inbox Triage', description: 'Scan inbox, find emails needing replies, draft responses for approval.' },
-        { title: 'Focused Search', description: 'Find all emails from a specific person or topic to respond to.' },
-        { title: 'Follow-up Catch-up', description: 'Find threads where someone is waiting on a reply.' }
-      ];
-      optionData = emailOpts[selectedOption];
-    } else if (crawlResult && crawlResult.options && crawlResult.options[selectedOption]) {
-      optionData = crawlResult.options[selectedOption];
-    }
-  }
-
-  if (optionData) {
-    brainContext += 'First priority: ' + optionData.title + ' - ' + optionData.description + '\n';
-  }
-
-  brainContext += 'Email connected: ' + (gmailConnected ? 'yes' : 'no') + '\n';
-  brainContext += 'Calendar connected: ' + (calendarConnected ? 'yes' : 'no') + '\n';
-
-  // Collect social links
-  var socials = {};
-  var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
-  for (var key in fields) {
-    var val = document.getElementById(fields[key]).value.trim();
-    if (val) socials[key] = val;
-  }
-
-  var btn = document.getElementById('btn-finish');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Creating...';
-
-  // Use name to derive an email (they'll connect real one via OAuth)
-  var email = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '@mawd.fanded.com';
-  var slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  var instanceAlreadyCreated = sessionStorage.getItem('mawd_instance_created') === 'true';
-
-  // If instance was pre-created during OAuth flow, PATCH it with final data
-  // Otherwise create fresh
-  var endpoint = instanceAlreadyCreated ? '/api/onboard?update=' + encodeURIComponent(slug) : '/api/onboard';
-
-  fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+function skipGmail(){
+  try {
+    localStorage.setItem('mawd_owner', JSON.stringify({
+      name: state.name, email: state.email,
+      role: state.inferredRole || 'other',
+      specifically: state.dossierText || ''
+    }));
+  } catch(e){}
+  fetch('/api/onboard', {
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      name: name,
-      email: email,
-      slug: slug,
-      role: pickedRole || '',
-      context: brainContext,
-      goals: context,
-      team: 'fanded',
-      socials: socials,
-      crawlData: crawlResult ? crawlResult.crawledData : null,
-      selectedOption: optionData
+      name: state.name, email: state.email, slug: state.slug,
+      role: state.inferredRole, context: state.dossierText, goals: '', team: 'fanded', socials: {}
     })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.error) {
-      btn.disabled = false;
-      btn.textContent = 'Create my MAWD';
-      alert('Error: ' + data.error);
-      return;
-    }
+  }).finally(function(){
+    var params = new URLSearchParams();
+    params.set('name', state.name);
+    params.set('role', state.inferredRole || 'other');
+    window.location.href = '/?' + params.toString();
+  });
+}
 
-    hideStep(6);
-    document.getElementById('progress').style.display = 'none';
+function runInboxScan(){
+  var stack = document.getElementById('inbox-status');
+  stack.innerHTML = '';
+  appendStatus(stack, 'Reading your inbox...', 'active');
 
-    // Persist owner profile to localStorage so index.html skips onboarding on next load.
-    var role = pickedRole || (sessionStorage.getItem('mawd_onboard_role') || '');
-    var specifically = (document.getElementById('q-specifically') && document.getElementById('q-specifically').value.trim()) || '';
+  var scanPromise = fetch('/api/chat?action=inbox-scan&role=' + encodeURIComponent(state.inferredRole||'other') + '&owner=' + encodeURIComponent(state.email))
+    .then(function(r){ return r.json(); });
+
+  var messages = inboxMessagesForRole(state.inferredRole || 'other');
+  var idx = 0;
+  var revealInterval = setInterval(function(){
+    if (idx >= messages.length) { clearInterval(revealInterval); return; }
+    markLastActive(stack);
+    appendStatus(stack, messages[idx], 'active');
+    idx++;
+  }, 2200);
+
+  scanPromise.then(function(data){
+    clearInterval(revealInterval);
+    markLastActive(stack);
+    appendStatus(stack, 'Ranking by relevance.', 'active');
     try {
       localStorage.setItem('mawd_owner', JSON.stringify({
-        name: name,
-        email: email,
-        role: role,
-        specifically: specifically
+        name: state.name, email: state.email,
+        role: state.inferredRole || 'other',
+        specifically: state.dossierText || ''
       }));
     } catch(e){}
-
-    var params = new URLSearchParams();
-    params.set('name', name);
-    params.set('email', email);
-    if (role) params.set('role', role);
-    if (specifically) params.set('specifically', specifically);
-    var url = '/?' + params.toString();
-    document.getElementById('result-link').href = url;
-    document.getElementById('result-link').textContent = 'Open ' + name.split(' ')[0] + "'s MAWD";
-    document.getElementById('result-title').textContent = name.split(' ')[0] + "'s MAWD is live.";
-
-    if (gmailConnected) {
-      document.getElementById('result-desc').textContent = 'MAWD is ready to handle your email. Open it and say "check my inbox."';
-    } else {
-      document.getElementById('result-desc').textContent = 'Bookmark this link. When you\'re ready to connect your email, MAWD will walk you through it.';
-    }
-
-    document.getElementById('result').classList.add('active');
-    window._mawdUrl = url;
-
-    // Show Add to Home Screen prompt
-    setTimeout(function() {
-      var prompt = document.getElementById('homescreen-prompt');
-      var instructions = document.getElementById('homescreen-instructions');
-      var ua = navigator.userAgent;
-      if (/iPhone|iPad|iPod/.test(ua)) {
-        instructions.innerHTML = 'Tap the <strong style="color:#C4953A;">Share</strong> button at the bottom of Safari, then tap <strong style="color:#C4953A;">Add to Home Screen</strong>.';
-      } else if (/Android/.test(ua)) {
-        instructions.innerHTML = 'Tap the <strong style="color:#C4953A;">menu (three dots)</strong> in Chrome, then tap <strong style="color:#C4953A;">Add to Home Screen</strong>.';
-      } else {
-        instructions.innerHTML = 'On your phone, open this link in Safari or Chrome and add it to your home screen for instant access.';
-      }
-      prompt.style.display = 'block';
-    }, 800);
-  })
-  .catch(function(err) {
-    btn.disabled = false;
-    btn.textContent = 'Create my MAWD';
-    alert('Connection error. Try again.');
+    setTimeout(showHandleAsk, 1000);
+  }).catch(function(err){
+    console.error('inbox scan failed:', err);
+    clearInterval(revealInterval);
+    appendStatus(stack, 'Have enough to get started.', 'done');
+    setTimeout(showHandleAsk, 1200);
   });
 }
 
-function copyLink() {
-  var url = window._mawdUrl;
-  if (url) {
-    navigator.clipboard.writeText(url).then(function() {
-      var btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(function() { btn.textContent = 'Copy link'; }, 2000);
-    });
+function inboxMessagesForRole(role){
+  switch(role){
+    case 'founder': return ['Scanning for investor threads.', 'Scanning for dormant pipeline.', 'Checking who is waiting on you.'];
+    case 'influencer': return ['Scanning for brand conversations.', 'Flagging stalled deals.', 'Checking agency and manager threads.'];
+    case 'musician': return ['Scanning for collaborators.', 'Checking sync and licensing leads.', 'Pulling venue and promoter contacts.'];
+    case 'actor': return ['Scanning for casting threads.', 'Checking producer pitches.', 'Pulling rep and manager contacts.'];
+    case 'creator': return ['Scanning for brand and partner threads.', 'Checking audience DMs and replies.', 'Flagging stalled opportunities.'];
+    default: return ['Scanning for people who paid you.', 'Finding warm threads.', 'Flagging who is waiting on you.'];
   }
 }
 
-// Auto-focus first input
-document.getElementById('q-name').focus();
+function showHandleAsk(){
+  var grid = document.getElementById('handle-grid');
+  grid.innerHTML = '';
+  var handles = handlesForRole(state.inferredRole || 'other');
+  handles.forEach(function(h){
+    var row = document.createElement('div');
+    row.className = 'handle-row';
+    row.innerHTML =
+      '<div class="handle-label">' + h.label + '</div>' +
+      '<input type="text" data-key="' + h.key + '" placeholder="' + h.placeholder + '" autocomplete="off" autocapitalize="off">';
+    grid.appendChild(row);
+  });
+  show('s-handles');
+}
 
-// Enter key advances steps
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    if (currentStep === 3 || currentStep === 4) return;
-    var active = document.querySelector('.step.active, .synthesis-card.active');
-    if (active && active.querySelector('textarea') === document.activeElement) return;
-    e.preventDefault();
-    if (currentStep < 2) nextStep();
-    else if (currentStep === 2) startBrainBuild();
-    else if (currentStep === 6) {
-      if (!document.getElementById('btn-finish').disabled) finishOnboarding();
-    }
+function handlesForRole(role){
+  switch(role){
+    case 'musician': return [
+      {key:'instagram', label:'Instagram', placeholder:'@handle'},
+      {key:'tiktok', label:'TikTok', placeholder:'@handle'},
+      {key:'youtube', label:'YouTube', placeholder:'@channel'},
+      {key:'spotify', label:'Spotify', placeholder:'open.spotify.com/artist/...'}
+    ];
+    case 'influencer': return [
+      {key:'instagram', label:'Instagram', placeholder:'@handle'},
+      {key:'tiktok', label:'TikTok', placeholder:'@handle'},
+      {key:'youtube', label:'YouTube', placeholder:'@channel'},
+      {key:'website', label:'Website', placeholder:'yoursite.com'}
+    ];
+    case 'founder': return [
+      {key:'linkedin', label:'LinkedIn', placeholder:'linkedin.com/in/you'},
+      {key:'twitter', label:'X', placeholder:'@handle'},
+      {key:'website', label:'Company', placeholder:'yourcompany.com'},
+      {key:'crunchbase', label:'Crunchbase', placeholder:'crunchbase.com/person/...'}
+    ];
+    case 'actor': return [
+      {key:'imdb', label:'IMDb', placeholder:'imdb.com/name/...'},
+      {key:'instagram', label:'Instagram', placeholder:'@handle'},
+      {key:'website', label:'Website', placeholder:'yoursite.com'},
+      {key:'reps', label:'Reps', placeholder:'agent or manager URL'}
+    ];
+    case 'creator': return [
+      {key:'instagram', label:'Instagram', placeholder:'@handle'},
+      {key:'youtube', label:'YouTube', placeholder:'@channel'},
+      {key:'tiktok', label:'TikTok', placeholder:'@handle'},
+      {key:'website', label:'Website', placeholder:'yoursite.com'}
+    ];
+    default: return [
+      {key:'instagram', label:'Instagram', placeholder:'@handle'},
+      {key:'linkedin', label:'LinkedIn', placeholder:'linkedin.com/in/you'},
+      {key:'website', label:'Website', placeholder:'yoursite.com'}
+    ];
   }
-});
+}
+
+function submitHandles(){
+  var handles = {};
+  document.querySelectorAll('#handle-grid input').forEach(function(i){
+    var v = i.value.trim();
+    if (v) handles[i.getAttribute('data-key')] = v;
+  });
+  state.handles = handles;
+  if (Object.keys(handles).length) {
+    fetch('/api/onboard-crawl', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name: state.name, socials: handles })
+    }).catch(function(){});
+    fetch('/api/onboard?update=' + encodeURIComponent(state.slug), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: state.name, email: state.email, slug: state.slug,
+        role: state.inferredRole, context: state.dossierText, goals: '', team: 'fanded', socials: handles
+      })
+    }).catch(function(){});
+  }
+  landInCanvas();
+}
+
+function skipHandles(){ landInCanvas(); }
+
+function landInCanvas(){
+  var params = new URLSearchParams();
+  params.set('name', state.name);
+  params.set('email', state.email);
+  params.set('role', state.inferredRole || 'other');
+  if (state.dossierText) params.set('specifically', state.dossierText);
+  var url = '/?' + params.toString();
+  try {
+    localStorage.setItem('mawd_owner', JSON.stringify({
+      name: state.name, email: state.email,
+      role: state.inferredRole || 'other',
+      specifically: state.dossierText || ''
+    }));
+  } catch(e){}
+  document.getElementById('done-link').href = url;
+  show('s-done');
+  setTimeout(function(){ window.location.href = url; }, 900);
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  window.scrollTo(0, 0);
+}
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+
+setTimeout(function(){ var n = document.getElementById('q-name'); if (n) n.focus(); }, 100);
 </script>
 </body>
 </html>

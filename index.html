@@ -21,9 +21,15 @@
   --text-2:#A1A1AA;
   --text-3:#71717A;
   --text-4:#52525B;
-  --gold:#C4953A;
-  --gold-dim:rgba(196,149,58,0.14);
-  --gold-glow:rgba(196,149,58,0.08);
+  --color-brand-primary:#3BADE4;
+  --color-brand-primary-hover:#5BC0F0;
+  --color-brand-primary-active:#2B8FC3;
+  --color-brand-primary-dim:rgba(59,173,228,0.14);
+  --color-brand-primary-glow:rgba(59,173,228,0.08);
+  /* legacy aliases — keep until all call sites are migrated */
+  --gold:var(--color-brand-primary);
+  --gold-dim:var(--color-brand-primary-dim);
+  --gold-glow:var(--color-brand-primary-glow);
   --c-1:#8B5CF6;
   --c-2:#3B82F6;
   --c-3:#EC4899;
@@ -244,7 +250,7 @@ input,textarea{font-family:inherit;color:inherit;background:none;border:none;out
 }
 .draft-btn:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-hover);}
 .draft-btn.primary{background:var(--gold);color:#0A0A0A;border-color:var(--gold);}
-.draft-btn.primary:hover{background:#D4A843;}
+.draft-btn.primary:hover{background:var(--color-brand-primary-hover);}
 .draft-btn.ghost{color:var(--text-3);}
 
 .coming-preview{
@@ -291,7 +297,7 @@ input,textarea{font-family:inherit;color:inherit;background:none;border:none;out
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:background 0.12s,transform 0.12s;
 }
-.send-btn:hover{background:#D4A843;}
+.send-btn:hover{background:var(--color-brand-primary-hover);}
 .send-btn:active{transform:scale(0.96);}
 .send-btn svg{width:16px;height:16px;}
 .chatbar-foot{
@@ -441,7 +447,7 @@ var ROLES = {
     label:'Musician',
     sidebar:[
       {key:'fans',label:'Fans',color:'c-1',primary:true,
-        dossierEyebrow:'THE PULSE',dossierTitle:'Who are your highest-value fans?',
+        dossierEyebrow:'THE ROOM',dossierTitle:'Who are your highest-value fans?',
         dossierSub:'MAWD scanned emails, DMs, and subscriptions to find fans who pay you, fans who show up, and fans who introduce you.'},
       {key:'collabs',label:'Collabs',color:'c-2',
         preview:{title:'Collabs',desc:'Every artist, producer, and feature conversation. Who replied, who went quiet, who still owes stems.',items:['Days-since-last-touch per collaborator','Stem + session file tracker','Re-engage drafts in your voice']}},
@@ -651,6 +657,14 @@ function updateDraftBody(id, val){
 
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 
+// Strip legacy agent-label prefixes from Claude replies. The system prompt
+// currently instructs Claude to prefix responses with [DOLLAR], [PULSE], etc.
+// The new canonical agents are Content / CFO / Legal / Distro / Ops / Tax,
+// with only Content active at launch. Users should never see the old names.
+function stripLegacyAgentTags(text){
+  return String(text||'').replace(/\[\s*(DOLLAR|PULSE|SCOUT|COMPASS|HYPE|LEDGER)\s*\]\s*/gi, '');
+}
+
 function sendMessage(){
   var input = document.getElementById('chatInput');
   var text = (input.value||'').trim();
@@ -678,8 +692,9 @@ function callChat(text){
     })
   }).then(function(r){ return r.json(); }).then(function(data){
     if (data && data.reply) {
-      pushInsight({tag:'MAWD',tagClass:'t-pulse',headline:data.reply,sub:'Just now'});
-      maybeExtractDraft(data.reply);
+      var clean = stripLegacyAgentTags(data.reply);
+      pushInsight({tag:'MAWD',tagClass:'t-pulse',headline:clean,sub:'Just now'});
+      maybeExtractDraft(clean);
     } else if (data && data.error) {
       showToast('MAWD had trouble: ' + data.error);
     }
@@ -726,7 +741,7 @@ function rewriteDraft(id){
       assistantName:'MAWD'
     })
   }).then(function(r){ return r.json(); }).then(function(data){
-    if (data && data.reply) { d.body = data.reply.trim(); renderCanvasPrimary(); showToast('Rewritten'); }
+    if (data && data.reply) { d.body = stripLegacyAgentTags(data.reply).trim(); renderCanvasPrimary(); showToast('Rewritten'); }
   });
 }
 function skipDraft(id){
