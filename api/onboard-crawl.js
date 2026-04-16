@@ -112,6 +112,12 @@ function normalize(s){ return String(s||'').toLowerCase().trim().replace(/\s+/g,
 const HIGH_WEIGHT_TYPES = new Set(['wikipedia', 'imdb', 'spotify', 'crunchbase', 'linkedin', 'press']);
 
 function classifyConfidenceTier(findings) {
+  // "Strong anchor" types uniquely identify the person behind the name:
+  // IMDb/Spotify/Crunchbase have one page per real entity, and press
+  // articles usually discuss one specific person. Wikipedia and LinkedIn
+  // are weaker anchors because many people share a name.
+  const STRONG_ANCHOR_TYPES = new Set(['imdb', 'spotify', 'crunchbase', 'press']);
+
   const uniqueHighTypes = new Set();
   const wikipediaEntries = [];
   for (const f of (findings || [])) {
@@ -121,23 +127,29 @@ function classifyConfidenceTier(findings) {
     if (f.source === 'wikipedia') wikipediaEntries.push(f);
   }
 
-  // Staleness heuristic: when the ONLY high-weight signal is Wikipedia and
-  // everything else is handle probes, treat as medium. Wikipedia can be
-  // accurate but dated, and we want to invite the user to sharpen.
-  const onlyWiki = uniqueHighTypes.size === 1 && uniqueHighTypes.has('wikipedia');
+  const hasStrongAnchor = Array.from(uniqueHighTypes).some(t => STRONG_ANCHOR_TYPES.has(t));
+  // 3+ wiki hits = likely disambiguation (multiple people share the name),
+  // regardless of whether LinkedIn also matched. Promotion to 'high' in
+  // this case requires a separate strong anchor (IMDb/Spotify/press).
+  const wikipediaAmbiguous = wikipediaEntries.length >= 3;
 
   let tier = 'low';
   if (uniqueHighTypes.size >= 3) tier = 'high';
-  else if (uniqueHighTypes.size >= 2 && !onlyWiki) tier = 'high';
+  else if (uniqueHighTypes.size >= 2 && hasStrongAnchor) tier = 'high';
   else if (uniqueHighTypes.size >= 1) tier = 'medium';
+
+  // Demotion: even if we hit 'high' by count, if the evidence is a bunch of
+  // Wikipedia pages (disambiguation) with no singular anchor, drop to medium.
+  if (tier === 'high' && wikipediaAmbiguous && !hasStrongAnchor) tier = 'medium';
 
   return {
     tier,
     debug: {
       high_types: Array.from(uniqueHighTypes),
       high_type_count: uniqueHighTypes.size,
-      only_wikipedia_high: onlyWiki,
-      wikipedia_entry_count: wikipediaEntries.length
+      has_strong_anchor: hasStrongAnchor,
+      wikipedia_entry_count: wikipediaEntries.length,
+      wikipedia_ambiguous: wikipediaAmbiguous
     }
   };
 }
