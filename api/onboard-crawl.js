@@ -71,6 +71,9 @@ export default async function handler(req, res) {
     // 2. Claude Opus synthesis
     const synthesis = await synthesizeDossier(apiKey, name, findings, socials, fallbackHint);
 
+    // 3. Confidence tiering
+    const tier = classifyConfidenceTier(findings);
+
     const result = {
       findings: findings.slice(0, 12).map(f => ({
         source: f.source,
@@ -80,7 +83,9 @@ export default async function handler(req, res) {
         weight: f.weight
       })),
       inferred_role: synthesis.inferred_role || 'other',
-      dossier_text: synthesis.dossier_text || ''
+      dossier_text: synthesis.dossier_text || '',
+      confidence_tier: tier.tier,
+      confidence_debug: tier.debug  // server-side diagnostics; client can ignore
     };
 
     CACHE.set(cacheKey, { result, at: Date.now() });
@@ -92,6 +97,50 @@ export default async function handler(req, res) {
 }
 
 function normalize(s){ return String(s||'').toLowerCase().trim().replace(/\s+/g,' '); }
+
+// ── Confidence tiering ─────────────────────────────────────────────────────
+// Classify the crawl into one of three tiers to drive UI behavior:
+//   high:    3+ unique high-weight source TYPES (e.g. wikipedia + imdb + press).
+//            Present dossier confidently, no link ask.
+//   medium:  1-2 unique high-weight source types, OR only linkedin/wikipedia
+//            alone (risk of stale or narrow). Offer an optional link to sharpen.
+//   low:     0 high-weight findings (handle probes only). Ask for a link.
+//
+// Source types considered "high-weight":
+//   wikipedia, imdb, spotify, crunchbase, linkedin, press
+// (These are the categories that typically anchor identity claims.)
+const HIGH_WEIGHT_TYPES = new Set(['wikipedia', 'imdb', 'spotify', 'crunchbase', 'linkedin', 'press']);
+
+function classifyConfidenceTier(findings) {
+  const uniqueHighTypes = new Set();
+  const wikipediaEntries = [];
+  for (const f of (findings || [])) {
+    if (HIGH_WEIGHT_TYPES.has(f.source) && (f.weight || 0) >= 8) {
+      uniqueHighTypes.add(f.source);
+    }
+    if (f.source === 'wikipedia') wikipediaEntries.push(f);
+  }
+
+  // Staleness heuristic: when the ONLY high-weight signal is Wikipedia and
+  // everything else is handle probes, treat as medium. Wikipedia can be
+  // accurate but dated, and we want to invite the user to sharpen.
+  const onlyWiki = uniqueHighTypes.size === 1 && uniqueHighTypes.has('wikipedia');
+
+  let tier = 'low';
+  if (uniqueHighTypes.size >= 3) tier = 'high';
+  else if (uniqueHighTypes.size >= 2 && !onlyWiki) tier = 'high';
+  else if (uniqueHighTypes.size >= 1) tier = 'medium';
+
+  return {
+    tier,
+    debug: {
+      high_types: Array.from(uniqueHighTypes),
+      high_type_count: uniqueHighTypes.size,
+      only_wikipedia_high: onlyWiki,
+      wikipedia_entry_count: wikipediaEntries.length
+    }
+  };
+}
 
 // ── Public footprint crawl (parallel fan-out) ──────────────────────────────
 async function crawlPublicFootprint(name, socials, fallbackHint) {
