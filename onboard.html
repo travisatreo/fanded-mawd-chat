@@ -72,6 +72,7 @@ body{display:flex;justify-content:center;align-items:center;min-height:100vh;pad
 .field:focus{border-color:var(--border-hover);}
 .field::placeholder{color:var(--text-4);}
 textarea.field{min-height:80px;resize:vertical;}
+.field-caption{font-size:12px;color:var(--text-4);line-height:1.5;margin-top:8px;padding-left:4px;}
 
 .btn-row{display:flex;gap:10px;}
 .btn{
@@ -228,12 +229,13 @@ textarea.field{min-height:80px;resize:vertical;}
   <section class="screen active" id="s-name">
     <div class="headline">Hi. What's your name?</div>
     <div class="input-wrap">
-      <input type="text" class="field" id="q-name" placeholder="First and last" autocomplete="name" autocapitalize="words">
+      <input type="text" class="field" id="q-name" placeholder="First and last, stage name, or handle" autocomplete="name" autocapitalize="words">
+      <div class="field-caption">Whatever name you go by online works. Legal, stage, or handle all fine.</div>
     </div>
     <div class="btn-row">
       <button class="btn primary" onclick="submitName()">Next</button>
     </div>
-    <div class="error-note" id="err-name">Please include both first and last name.</div>
+    <div class="error-note" id="err-name">Type a name or handle to continue.</div>
   </section>
 
   <section class="screen" id="s-crawl">
@@ -266,6 +268,17 @@ textarea.field{min-height:80px;resize:vertical;}
     <div class="btn-row">
       <button class="btn ghost" onclick="backToDossier()">Back</button>
       <button class="btn primary" onclick="submitFallback()">Try again</button>
+    </div>
+  </section>
+
+  <section class="screen" id="s-preferred">
+    <div class="headline" style="font-size:22px;">What should I call you?</div>
+    <div class="sub">Just your first name or whatever you prefer.</div>
+    <div class="input-wrap">
+      <input type="text" class="field" id="q-preferred" placeholder="Your first name" autocomplete="given-name" autocapitalize="words">
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="submitPreferred()">Continue</button>
     </div>
   </section>
 
@@ -334,11 +347,46 @@ textarea.field{min-height:80px;resize:vertical;}
 
 <script>
 var state = {
-  name:'', email:'', slug:'',
+  name:'',          // what they typed in Screen 1 (= public_name)
+  publicName:'',    // alias of name — what MAWD uses for public crawl + signatures
+  preferredName:'', // from Screen 3.5 — what MAWD uses for greetings
+  accountName:'',   // from Google OAuth userinfo — legal identity for inbox matching
+  email:'', slug:'',
   findings:[], inferredRole:'', dossierText:'',
   dossierConfirmed:false, gmailConnected:false, handles:{},
   connectionMode: 'session' // default to safer session mode
 };
+
+// Returns true if the input looks like a handle or stage name, rather than a
+// legal first-last pair. Heuristic, not strict. Examples:
+//   "@mayasbrand"           -> handle
+//   "maya_b"                -> handle-like
+//   "mayasbrand"            -> single-word, could be a stage name
+//   "Travis Atreo"          -> legal name pair
+//   "Trav"                  -> single first name (we treat as legal for skip purposes)
+function looksLikeHandle(input){
+  var v = String(input||'').trim();
+  if (!v) return false;
+  if (v.startsWith('@')) return true;
+  if (/[_\.\/\\]/.test(v)) return true;
+  if (/\d/.test(v)) return true;
+  // Single token with a lowercase first letter reads as a handle ("mayasbrand")
+  if (!/\s/.test(v) && /^[a-z]/.test(v) && v.length >= 4) return true;
+  return false;
+}
+// Strip a leading @ from handles for display.
+function stripAt(v){ return String(v||'').replace(/^@+/, ''); }
+// Best-guess first name from whatever the user typed.
+function deriveFirstNameCandidate(input){
+  var v = stripAt(String(input||'').trim());
+  if (!v) return '';
+  // Handles with separators: split and take first meaningful part
+  var parts = v.split(/[\s_\.\-\/]+/).filter(Boolean);
+  if (!parts.length) return '';
+  var first = parts[0];
+  // Title-case
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
 
 // Session type detection. Guest mode = ?mode=guest, always session Gmail.
 var mawdSession = { type: 'user' };
@@ -366,6 +414,9 @@ function slugPrefix(){ return mawdSession.type === 'guest' ? 'guest-' : ''; }
     state.dossierText = sessionStorage.getItem('mawd_onboard_dossier') || '';
     state.email = params.get('email') || sessionStorage.getItem('mawd_onboard_email') || '';
     state.connectionMode = sessionStorage.getItem('mawd_onboard_connection_mode') || 'session';
+    state.publicName = sessionStorage.getItem('mawd_onboard_public_name') || state.name;
+    state.preferredName = sessionStorage.getItem('mawd_onboard_preferred_name') || '';
+    state.accountName = params.get('account_name') || '';
     state.gmailConnected = true;
     if (window.history && window.history.replaceState) window.history.replaceState({}, '', '/onboard.html');
     show('s-inbox');
@@ -380,12 +431,15 @@ document.getElementById('q-name').addEventListener('keydown', function(e){
 function submitName(){
   var v = document.getElementById('q-name').value.trim();
   var err = document.getElementById('err-name');
-  if (!v || v.split(/\s+/).length < 2) { err.classList.add('show'); return; }
+  // Accept any non-empty input now that handles and stage names are allowed.
+  if (!v || v.length < 2) { err.classList.add('show'); return; }
   err.classList.remove('show');
+  // state.name stays as the raw typed input (= public_name for the crawl).
   state.name = v;
-  var baseSlug = v.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  state.publicName = v;
+  var baseSlug = stripAt(v).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'user';
   state.slug = slugPrefix() + baseSlug + (mawdSession.type === 'guest' ? ('-' + Math.random().toString(36).slice(2,8)) : '');
-  state.email = v.toLowerCase().replace(/[^a-z0-9]/g,'') + '@mawd.fanded.com';
+  state.email = stripAt(v).toLowerCase().replace(/[^a-z0-9]/g,'') + '@mawd.fanded.com';
   show('s-crawl');
   runCrawl();
 }
@@ -496,7 +550,7 @@ function editDossier(){
     state.dossierText = el.textContent.trim();
     el.setAttribute('contenteditable', 'false');
     state.dossierConfirmed = true;
-    show('s-gmail');
+    proceedAfterDossier();
   } else {
     el.setAttribute('contenteditable', 'true');
     el.focus();
@@ -507,7 +561,46 @@ function editDossier(){
   }
 }
 
-function confirmDossier(){ state.dossierConfirmed = true; show('s-gmail'); }
+function confirmDossier(){ state.dossierConfirmed = true; proceedAfterDossier(); }
+
+// After dossier confirmation, decide whether to ask for a preferred name.
+// Skip if the typed input is already clearly a simple first name so we don't
+// add friction for users who typed "Trav" or "Maya Akana".
+function proceedAfterDossier(){
+  var typed = state.publicName || state.name || '';
+  if (!looksLikeHandle(typed)) {
+    // Legal-name-ish input. Default preferred to the first token. Skip asking.
+    state.preferredName = deriveFirstNameCandidate(typed);
+    show('s-gmail');
+    adaptGmailCopy();
+    return;
+  }
+  // Handle-ish input. Pre-fill a reasonable candidate and show Screen 3.5.
+  document.getElementById('q-preferred').value = deriveFirstNameCandidate(typed);
+  show('s-preferred');
+}
+
+function submitPreferred(){
+  var v = (document.getElementById('q-preferred').value || '').trim();
+  // Field is optional. If empty, fall back to the candidate we pre-filled.
+  if (!v) v = deriveFirstNameCandidate(state.publicName || state.name);
+  state.preferredName = v;
+  show('s-gmail');
+  adaptGmailCopy();
+}
+
+// Conditional Screen 4 copy: if the typed input looks like a handle, add the
+// "The one tied to [public_name], or a different one works too." line so a
+// user whose Gmail is under their legal name isn't confused.
+function adaptGmailCopy(){
+  var headline = document.querySelector('#s-gmail .connect-headline');
+  if (!headline) return;
+  if (looksLikeHandle(state.publicName || state.name)) {
+    headline.textContent = 'To find who you should reach back out to, I need your Gmail. The one tied to ' + (state.publicName || state.name) + ', or a different one works too.';
+  } else {
+    headline.textContent = 'To find who you should reach back out to, I need your Gmail.';
+  }
+}
 function notMe(){ show('s-fallback'); }
 function backToDossier(){ show('s-dossier'); }
 
@@ -565,6 +658,8 @@ function firePreconfiguredOAuth(){
   sessionStorage.setItem('mawd_onboard_dossier', state.dossierText);
   sessionStorage.setItem('mawd_onboard_email', state.email);
   sessionStorage.setItem('mawd_onboard_connection_mode', state.connectionMode);
+  sessionStorage.setItem('mawd_onboard_public_name', state.publicName || state.name);
+  sessionStorage.setItem('mawd_onboard_preferred_name', state.preferredName || '');
 
   fetch('/api/onboard', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -574,7 +669,9 @@ function firePreconfiguredOAuth(){
       team: mawdSession.type === 'guest' ? 'guest' : 'fanded',
       socials: {},
       crawlData: { findings: state.findings, inferred_role: state.inferredRole },
-      connection_mode: state.connectionMode
+      connection_mode: state.connectionMode,
+      public_name: state.publicName || state.name,
+      preferred_name: state.preferredName || ''
     })
   }).finally(function(){
     window.location.href = '/api/google-auth?mawd=' + encodeURIComponent(state.slug);
@@ -588,7 +685,9 @@ function skipGmail(){
       role: state.inferredRole || 'other',
       specifically: state.dossierText || '',
       connection_mode: state.connectionMode,
-      gmail_connected: false
+      gmail_connected: false,
+      public_name: state.publicName || state.name,
+      preferred_name: state.preferredName || ''
     }));
   } catch(e){}
   fetch('/api/onboard', {
@@ -597,13 +696,17 @@ function skipGmail(){
       name: state.name, email: state.email, slug: state.slug,
       role: state.inferredRole, context: state.dossierText, goals: '',
       team: mawdSession.type === 'guest' ? 'guest' : 'fanded',
-      socials: {}, connection_mode: state.connectionMode
+      socials: {}, connection_mode: state.connectionMode,
+      public_name: state.publicName || state.name,
+      preferred_name: state.preferredName || ''
     })
   }).finally(function(){
     var params = new URLSearchParams();
     params.set('name', state.name);
     params.set('slug', state.slug);
     params.set('role', state.inferredRole || 'other');
+    if (state.preferredName) params.set('preferred_name', state.preferredName);
+    if (state.publicName) params.set('public_name', state.publicName);
     if (mawdSession.type === 'guest') params.set('mode', 'guest');
     window.location.href = '/?' + params.toString();
   });
@@ -636,7 +739,10 @@ function runInboxScan(){
         role: state.inferredRole || 'other',
         specifically: state.dossierText || '',
         connection_mode: state.connectionMode,
-        gmail_connected: true
+        gmail_connected: true,
+        public_name: state.publicName || state.name,
+        preferred_name: state.preferredName || '',
+        account_name: state.accountName || ''
       }));
     } catch(e){}
     setTimeout(showHandleAsk, 1000);
@@ -748,6 +854,9 @@ function landInCanvas(){
   params.set('connection_mode', state.connectionMode);
   if (state.gmailConnected) params.set('gmail', '1');
   if (state.dossierText) params.set('specifically', state.dossierText);
+  if (state.publicName) params.set('public_name', state.publicName);
+  if (state.preferredName) params.set('preferred_name', state.preferredName);
+  if (state.accountName) params.set('account_name', state.accountName);
   if (mawdSession.type === 'guest') params.set('mode', 'guest');
   var url = '/?' + params.toString();
   try {
@@ -756,7 +865,10 @@ function landInCanvas(){
       role: state.inferredRole || 'other',
       specifically: state.dossierText || '',
       connection_mode: state.connectionMode,
-      gmail_connected: !!state.gmailConnected
+      gmail_connected: !!state.gmailConnected,
+      public_name: state.publicName || state.name,
+      preferred_name: state.preferredName || '',
+      account_name: state.accountName || ''
     }));
   } catch(e){}
   document.getElementById('done-link').href = url;

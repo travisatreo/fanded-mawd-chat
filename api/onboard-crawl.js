@@ -1,17 +1,49 @@
 // MAWD Identity Crawl — name-first public footprint scan.
-// Pre-OAuth discovery: given just a name, search the public web,
-// synthesize a dossier, and infer the user's primary role.
+// Given a name, search the public web in parallel across multiple sources,
+// weight findings by quality, and have Claude Opus synthesize a warm, factual
+// first-person dossier.
 //
 // POST /api/onboard-crawl
-//   body: { name: string, socials?: {...} }
+//   body: { name: string, socials?: {...}, fallbackHint?: string }
 // Response:
-//   { findings: [{source,title,url,snippet}], inferred_role, dossier_text }
+//   { findings: [{source,title,url,snippet,weight}], inferred_role, dossier_text }
 //
-// When `socials` is present this runs a "deepen" pass: it re-synthesizes
-// using the provided handles as additional anchors.
+// Source strategy (parallel):
+//   - Tavily Search API (primary): broad LLM-tuned web search, handles Vercel IP
+//     blocks cleanly since that's what Tavily is built for. Free tier: 1000/mo.
+//   - Wikipedia REST API: best single-source for notable public figures.
+//   - Known-platform probes: LinkedIn, Instagram, Twitter/X, YouTube, TikTok,
+//     GitHub. Light signal but useful for confirming a handle exists.
+//   - DuckDuckGo HTML (legacy backstop): usually blocked on Vercel but cheap
+//     to keep in case Tavily is rate-limited or the key is missing.
+//
+// If TAVILY_API_KEY is not configured, we fall back to Wikipedia + probes
+// only (current behavior) and log a warning.
 
 const CACHE = new Map(); // key: normalized name, value: { result, at }
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Source weights (1-10). Used in the Claude prompt to help it lead with
+// high-signal facts instead of random handle hits.
+const SOURCE_WEIGHTS = {
+  wikipedia: 10,
+  imdb: 9,
+  spotify: 9,
+  crunchbase: 8,
+  linkedin: 8,
+  press: 8,       // nyt, forbes, billboard, etc. (detected heuristically)
+  tavily: 7,      // general web result from Tavily
+  youtube: 6,
+  podcast: 6,
+  twitter: 5,
+  instagram: 5,
+  tiktok: 5,
+  ddg: 5,
+  company: 6,
+  github: 3,
+  other: 2
+};
+const PRESS_DOMAINS = /(nytimes|forbes|billboard|rollingstone|variety|deadline|hollywood|techcrunch|bloomberg|wsj|bbc|npr|theverge|wired|pitchfork|stereogum|axios|reuters|gq|vogue|vanityfair)/i;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,7 +53,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
     const { name, socials, fallbackHint } = req.body || {};
@@ -33,18 +65,19 @@ export default async function handler(req, res) {
       return res.status(200).json(hit.result);
     }
 
-    // 1. Crawl DDG HTML for the name. If it returns nothing, probe predictable handle URLs.
+    // 1. Parallel crawl across all sources
     const findings = await crawlPublicFootprint(name, socials, fallbackHint);
 
-    // 2. Claude Opus synthesis: dossier + inferred role
+    // 2. Claude Opus synthesis
     const synthesis = await synthesizeDossier(apiKey, name, findings, socials, fallbackHint);
 
     const result = {
-      findings: findings.slice(0, 10).map(f => ({
+      findings: findings.slice(0, 12).map(f => ({
         source: f.source,
         title: f.title,
         url: f.url,
-        snippet: (f.snippet || '').slice(0, 280)
+        snippet: (f.snippet || '').slice(0, 300),
+        weight: f.weight
       })),
       inferred_role: synthesis.inferred_role || 'other',
       dossier_text: synthesis.dossier_text || ''
@@ -60,50 +93,136 @@ export default async function handler(req, res) {
 
 function normalize(s){ return String(s||'').toLowerCase().trim().replace(/\s+/g,' '); }
 
-// ── Public footprint crawl ─────────────────────────────────────────────────
+// ── Public footprint crawl (parallel fan-out) ──────────────────────────────
 async function crawlPublicFootprint(name, socials, fallbackHint) {
-  // Run all sources in parallel. DDG blocks many serverless IPs; we used to
-  // fall back to handle probes only when DDG returned <3 results, but that
-  // means a Vercel-blocked DDG silently produced near-empty dossiers. Now
-  // everything fires at once.
   const query = [name, socials?.website, fallbackHint].filter(Boolean).join(' ');
-  const [ddg, wiki, probes] = await Promise.all([
-    ddgSearch(query, 10).catch(err => { console.error('DDG failed:', err.message); return []; }),
-    wikipediaLookup(name, fallbackHint).catch(err => { console.error('Wiki failed:', err.message); return []; }),
-    Promise.all(buildHandleProbes(name).map(probeUrl)).then(r => r.filter(Boolean)).catch(() => [])
+
+  const [tavily, wiki, probes, ddg] = await Promise.all([
+    tavilySearch(query, name).catch(err => { console.warn('Tavily skipped:', err.message); return []; }),
+    wikipediaLookup(name, fallbackHint).catch(err => { console.warn('Wiki skipped:', err.message); return []; }),
+    Promise.all(buildHandleProbes(name).map(probeUrl)).then(r => r.filter(Boolean)).catch(() => []),
+    ddgSearch(query, 10).catch(() => [])
   ]);
 
-  const findings = [...ddg, ...wiki, ...probes];
+  let findings = [...tavily, ...wiki, ...probes, ...ddg];
 
-  // If user supplied socials (deepen pass), add them as ground-truth anchors
+  // If user supplied socials (deepen pass), add as ground-truth anchors.
   if (socials) {
     for (const [k, v] of Object.entries(socials)) {
-      if (v) findings.push({ source: k, title: `${k}: ${v}`, url: v.startsWith('http') ? v : '', snippet: `User-provided ${k} handle.` });
+      if (v) findings.push({
+        source: k,
+        title: `${k}: ${v}`,
+        url: v.startsWith('http') ? v : '',
+        snippet: `User-provided ${k} handle.`,
+        weight: SOURCE_WEIGHTS[k] || 6
+      });
     }
   }
 
-  // Deduplicate by URL, then source+title
+  // Ensure every finding has a weight. Detect press domains for upgraded weighting.
+  findings = findings.map(f => {
+    if (f.weight !== undefined) return f;
+    if (f.source === 'tavily' && PRESS_DOMAINS.test(f.url || '')) {
+      return { ...f, source: 'press', weight: SOURCE_WEIGHTS.press };
+    }
+    return { ...f, weight: SOURCE_WEIGHTS[f.source] || SOURCE_WEIGHTS.other };
+  });
+
+  // Deduplicate by URL (first), then source+title
   const seen = new Set();
-  return findings.filter(f => {
+  findings = findings.filter(f => {
     const key = f.url || (f.source + '|' + f.title);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Sort by weight desc so highest-signal sources go to Claude first.
+  findings.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+
+  return findings;
 }
 
-// Wikipedia REST API. Free, unauth, returns structured JSON including
-// extract (first paragraph) and description. Best single public source
-// for real public figures.
+// ── Tavily Search API ──────────────────────────────────────────────────────
+// Tavily is built for LLM agents on serverless. One POST returns ranked,
+// cleaned results with full title+content. Free tier: 1000 credits/mo.
+// Docs: https://docs.tavily.com/documentation/api-reference/endpoint/search
+async function tavilySearch(query, primaryName) {
+  const key = process.env.TAVILY_API_KEY;
+  if (!key) return []; // silently skip if not configured
+
+  const resp = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      query: `${primaryName || query} biography`,
+      search_depth: 'advanced',
+      max_results: 12,
+      include_answer: false,
+      include_raw_content: false,
+      // Bias toward high-quality identity sources. Tavily still returns
+      // other domains; this just weights priority.
+      include_domains: [
+        'wikipedia.org', 'linkedin.com', 'imdb.com', 'spotify.com',
+        'open.spotify.com', 'crunchbase.com', 'pitchbook.com',
+        'instagram.com', 'youtube.com', 'billboard.com', 'rollingstone.com',
+        'variety.com', 'deadline.com', 'techcrunch.com', 'forbes.com'
+      ]
+    })
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`Tavily ${resp.status}: ${text.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  const results = Array.isArray(data?.results) ? data.results : [];
+  return results.map(r => {
+    const host = hostOf(r.url);
+    const source = sourceFromHost(host) || 'tavily';
+    return {
+      source,
+      title: r.title || host,
+      url: r.url || '',
+      snippet: r.content || '',
+      weight: SOURCE_WEIGHTS[source] || SOURCE_WEIGHTS.tavily
+    };
+  });
+}
+
+function hostOf(u){
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch(_) { return ''; }
+}
+function sourceFromHost(host){
+  if (!host) return null;
+  if (host.endsWith('wikipedia.org')) return 'wikipedia';
+  if (host.endsWith('imdb.com')) return 'imdb';
+  if (host.endsWith('spotify.com')) return 'spotify';
+  if (host.endsWith('crunchbase.com')) return 'crunchbase';
+  if (host.endsWith('pitchbook.com')) return 'crunchbase';
+  if (host.endsWith('linkedin.com')) return 'linkedin';
+  if (host.endsWith('youtube.com') || host.endsWith('youtu.be')) return 'youtube';
+  if (host.endsWith('instagram.com')) return 'instagram';
+  if (host.endsWith('twitter.com') || host.endsWith('x.com')) return 'twitter';
+  if (host.endsWith('tiktok.com')) return 'tiktok';
+  if (host.endsWith('github.com')) return 'github';
+  if (PRESS_DOMAINS.test(host)) return 'press';
+  return null;
+}
+
+// ── Wikipedia REST API ─────────────────────────────────────────────────────
 async function wikipediaLookup(name, hint) {
   const out = [];
   const candidates = [
     name.trim().replace(/\s+/g, '_'),
-    name.trim().split(/\s+/).map(s => s[0].toUpperCase() + s.slice(1).toLowerCase()).join('_')
+    name.trim().split(/\s+/).map(s => s[0] ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s).join('_')
   ];
   const seen = new Set();
   for (const title of candidates) {
-    if (seen.has(title)) continue;
+    if (!title || seen.has(title)) continue;
     seen.add(title);
     try {
       const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
@@ -111,40 +230,97 @@ async function wikipediaLookup(name, hint) {
       if (!resp.ok) continue;
       const data = await resp.json();
       if (data.type === 'disambiguation') {
-        // Disambiguation page = name matches multiple people. Useful signal.
         out.push({
           source: 'wikipedia',
           title: `Wikipedia disambiguation: ${data.title}`,
           url: data.content_urls?.desktop?.page || url,
-          snippet: (data.extract || 'Multiple public figures share this name.').slice(0, 300)
+          snippet: (data.extract || 'Multiple public figures share this name.').slice(0, 400),
+          weight: 4 // lower — ambiguous
         });
       } else if (data.extract) {
         out.push({
           source: 'wikipedia',
           title: `Wikipedia: ${data.title}${data.description ? ' — ' + data.description : ''}`,
           url: data.content_urls?.desktop?.page || url,
-          snippet: (data.extract || '').slice(0, 400)
+          snippet: (data.extract || '').slice(0, 500),
+          weight: SOURCE_WEIGHTS.wikipedia
         });
-        break; // First hit wins
+        break;
       }
     } catch (_) { /* try next */ }
   }
   return out;
 }
 
+// ── Handle probes ──────────────────────────────────────────────────────────
+function buildHandleProbes(name){
+  const parts = String(name||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) {
+    // Single token (e.g. "@travisatreo" → "travisatreo"). Probe as-is.
+    const h = String(name||'').replace(/[@\s]/g, '').toLowerCase();
+    if (!h) return [];
+    return [
+      { source:'instagram', url:`https://www.instagram.com/${h}/`, title:`Instagram: @${h}` },
+      { source:'twitter',   url:`https://twitter.com/${h}`, title:`X: @${h}` },
+      { source:'youtube',   url:`https://www.youtube.com/@${h}`, title:`YouTube: @${h}` },
+      { source:'tiktok',    url:`https://www.tiktok.com/@${h}`, title:`TikTok: @${h}` },
+      { source:'github',    url:`https://github.com/${h}`, title:`GitHub: @${h}` }
+    ];
+  }
+  const [first, ...rest] = parts;
+  const last = rest[rest.length - 1];
+  const flat = `${first}${last}`;
+  const dot  = `${first}.${last}`;
+  const und  = `${first}_${last}`;
+  const dash = `${first}-${last}`;
+  const urls = [
+    { source:'linkedin', url:`https://www.linkedin.com/in/${dash}/`, title:`LinkedIn: /in/${dash}` },
+    { source:'instagram', url:`https://www.instagram.com/${flat}/`, title:`Instagram: @${flat}` },
+    { source:'instagram', url:`https://www.instagram.com/${dot}/`, title:`Instagram: @${dot}` },
+    { source:'instagram', url:`https://www.instagram.com/${und}/`, title:`Instagram: @${und}` },
+    { source:'twitter',   url:`https://twitter.com/${flat}`, title:`X: @${flat}` },
+    { source:'twitter',   url:`https://twitter.com/${und}`, title:`X: @${und}` },
+    { source:'youtube',   url:`https://www.youtube.com/@${flat}`, title:`YouTube: @${flat}` },
+    { source:'tiktok',    url:`https://www.tiktok.com/@${flat}`, title:`TikTok: @${flat}` },
+    { source:'tiktok',    url:`https://www.tiktok.com/@${und}`, title:`TikTok: @${und}` },
+    { source:'github',    url:`https://github.com/${flat}`, title:`GitHub: @${flat}` },
+    { source:'github',    url:`https://github.com/${dash}`, title:`GitHub: @${dash}` }
+  ];
+  return urls;
+}
+
+async function probeUrl({ source, url, title }){
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Range': 'bytes=0-16384'
+      }
+    });
+    if (!resp.ok && resp.status !== 206) return null;
+    const text = await resp.text().catch(() => '');
+    if (/page not found|sorry, this page|this page isn't available|couldn't find this account|user not found/i.test(text)) return null;
+    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const snippet = titleMatch ? titleMatch[1].trim().slice(0, 200) : 'Handle URL responded.';
+    return { source, url, title, snippet, weight: SOURCE_WEIGHTS[source] || 3 };
+  } catch(_){}
+  return null;
+}
+
+// ── DDG backstop (usually blocked on Vercel but cheap to try) ──────────────
 async function ddgSearch(query, maxResults) {
   const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query);
   const resp = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'Accept': 'text/html',
       'Accept-Language': 'en-US,en;q=0.9'
     }
   });
-  if (!resp.ok) throw new Error('DDG status ' + resp.status);
+  if (!resp.ok) return [];
   const html = await resp.text();
-
-  // Parse result blocks
   const results = [];
   const blockRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
   let m;
@@ -154,18 +330,20 @@ async function ddgSearch(query, maxResults) {
     const title = stripTags(m[2]).trim();
     const snippet = stripTags(m[3]).trim();
     if (!title) continue;
+    const host = hostOf(realUrl);
+    const source = sourceFromHost(host) || 'ddg';
     results.push({
-      source: sourceFromUrl(realUrl),
-      title: title,
+      source,
+      title,
       url: realUrl,
-      snippet: snippet
+      snippet,
+      weight: SOURCE_WEIGHTS[source] || SOURCE_WEIGHTS.ddg
     });
   }
   return results;
 }
 
 function rewriteDdgRedirect(u){
-  // DDG wraps results in a redirect: //duckduckgo.com/l/?uddg=<ENCODED>&...
   try {
     const m = /[?&]uddg=([^&]+)/.exec(u);
     if (m) return decodeURIComponent(m[1]);
@@ -173,14 +351,6 @@ function rewriteDdgRedirect(u){
   if (u.startsWith('//')) return 'https:' + u;
   return u;
 }
-
-function sourceFromUrl(u){
-  try {
-    const host = new URL(u.startsWith('http') ? u : ('https:' + u)).hostname.replace(/^www\./,'');
-    return host.split('.')[0];
-  } catch(_) { return 'web'; }
-}
-
 function stripTags(s){ return String(s||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' '); }
 function decodeHtmlEntities(s){
   return String(s||'')
@@ -192,70 +362,19 @@ function decodeHtmlEntities(s){
     .replace(/&#x2F;/g,'/');
 }
 
-function buildHandleProbes(name){
-  const parts = String(name||'').toLowerCase().trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return [];
-  const [first, ...rest] = parts;
-  const last = rest[rest.length - 1];
-  const flat = `${first}${last}`;
-  const dot  = `${first}.${last}`;
-  const und  = `${first}_${last}`;
-  const dash = `${first}-${last}`;
-  // Build probes. Platform ordering prioritizes richer identity signal first.
-  const urls = [];
-  // Wikipedia-like handle convention not a real probe (covered by wiki API).
-  // LinkedIn: most profiles use first-last
-  urls.push({ source:'linkedin', url:`https://www.linkedin.com/in/${dash}/`, title:`LinkedIn: /in/${dash}` });
-  // Instagram
-  urls.push({ source:'instagram', url:`https://www.instagram.com/${flat}/`, title:`Instagram: @${flat}` });
-  urls.push({ source:'instagram', url:`https://www.instagram.com/${dot}/`, title:`Instagram: @${dot}` });
-  urls.push({ source:'instagram', url:`https://www.instagram.com/${und}/`, title:`Instagram: @${und}` });
-  // X / Twitter
-  urls.push({ source:'twitter',   url:`https://twitter.com/${flat}`, title:`X: @${flat}` });
-  urls.push({ source:'twitter',   url:`https://twitter.com/${und}`, title:`X: @${und}` });
-  // YouTube
-  urls.push({ source:'youtube',   url:`https://www.youtube.com/@${flat}`, title:`YouTube: @${flat}` });
-  urls.push({ source:'youtube',   url:`https://www.youtube.com/@${first}${last}`, title:`YouTube: @${first}${last}` });
-  // TikTok
-  urls.push({ source:'tiktok',    url:`https://www.tiktok.com/@${flat}`, title:`TikTok: @${flat}` });
-  urls.push({ source:'tiktok',    url:`https://www.tiktok.com/@${und}`, title:`TikTok: @${und}` });
-  // GitHub (useful for founder / engineer signal)
-  urls.push({ source:'github',    url:`https://github.com/${flat}`, title:`GitHub: @${flat}` });
-  urls.push({ source:'github',    url:`https://github.com/${dash}`, title:`GitHub: @${dash}` });
-  return urls;
-}
-
-async function probeUrl({ source, url, title }){
-  try {
-    // Use GET with range to confirm real pages (HEAD often returns 200 even
-    // for "user not found" pages on LinkedIn / Instagram which are SPA).
-    const resp = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Range': 'bytes=0-16384' // Just the head of the HTML
-      }
-    });
-    if (!resp.ok && resp.status !== 206) return null;
-    const text = await resp.text().catch(() => '');
-    // Reject known "user not found" heuristics
-    if (/page not found|sorry, this page|404|couldn't find this account|user not found/i.test(text)) return null;
-    // Try to extract <title>
-    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const snippet = titleMatch ? titleMatch[1].trim().slice(0, 200) : 'Handle URL responded.';
-    return { source, url, title, snippet };
-  } catch(_){}
-  return null;
-}
-
 // ── Claude Opus synthesis ──────────────────────────────────────────────────
 async function synthesizeDossier(apiKey, name, findings, socials, fallbackHint) {
-  const findingsText = findings.slice(0, 10).map((f, i) => {
-    return `[${i+1}] ${f.source}: ${f.title}\n    ${f.url}\n    ${(f.snippet||'').slice(0,240)}`;
+  // Findings are already sorted by weight desc. Take the top 10.
+  const top = findings.slice(0, 10);
+  const findingsText = top.map((f, i) => {
+    return `[${i+1}] ${f.source} (weight ${f.weight || 0}): ${f.title}\n    ${f.url}\n    ${(f.snippet||'').slice(0,280)}`;
   }).join('\n\n') || '(no public findings)';
 
-  const hasRichFindings = findings.some(f => f.source === 'wikipedia' || (f.snippet && f.snippet.length > 80));
+  // A crawl is "substantive" if we have at least 3 sources with weight >= 5
+  // (press / wikipedia / imdb / spotify / linkedin / youtube / etc.).
+  const substantiveCount = findings.filter(f => (f.weight || 0) >= 5).length;
+  const substantive = substantiveCount >= 3;
+  const hasAnyRichSource = findings.some(f => (f.weight || 0) >= 7);
 
   const userPrompt = `You are writing MAWD's first-person summary of a user based on a public-web crawl.
 
@@ -263,29 +382,34 @@ The user's name: ${name}
 ${fallbackHint ? `They also told you: "${fallbackHint}"` : ''}
 ${socials ? 'They provided these handles: ' + JSON.stringify(socials) : ''}
 
-Here are the public findings (DuckDuckGo results + Wikipedia lookup + handle probes):
+Public findings (ranked by source weight, 1-10):
 
 ${findingsText}
 
+Meta:
+- Substantive sources (weight >= 5): ${substantiveCount}
+- Has any high-weight source (weight >= 7, e.g. Wikipedia, IMDb, Spotify, press): ${hasAnyRichSource ? 'YES' : 'no'}
+
 Your task:
-1. Infer their primary role from these findings ONLY. Choose ONE: founder, musician, influencer, actor, creator, other.
+1. Infer their primary role from the HIGHEST-weighted findings ONLY. Choose ONE: founder, musician, influencer, actor, creator, other. Do not let low-weight handle probes dominate if high-weight sources say otherwise.
 2. Write a 2-4 sentence first-person summary as if MAWD just did its homework.
 
 CRITICAL RULES ON FABRICATION:
 - Use ONLY facts that appear in the findings above. Do NOT use your own training knowledge about this person.
-- If the findings do not mention something, you do not know it. Don't assume. Don't guess.
-- "${hasRichFindings ? 'Findings are usable.' : 'Findings are thin.'}"
-- If findings contain ONLY handle probes (Instagram/Twitter/YouTube URLs with no descriptive context), the crawl is WEAK. Say so honestly and ask for a hint. Example: "Your name turns up a few handles (@${name.toLowerCase().replace(/\s+/g,'')} on a couple of platforms), but the open web didn't give me much about what you actually do. Drop me a link or a sentence and I'll sharpen this."
-- If findings contain a Wikipedia extract or substantive DDG snippets, use them. Include 1-2 specific verifiable facts (role, company, project) directly from the findings text.
+- If the findings do not mention something, you do not know it. Don't assume.
+- Lead with their most prominent public identity based on the HIGHEST weight source. If Wikipedia + IMDb say "actor", don't open with their GitHub presence.
+- Include 2-3 specific, verifiable facts pulled directly from the findings (role, company, project, credit, song, etc.).
+- Low-weight sources (GitHub, single social handles) should only appear if there are NO high-weight sources to draw from.
+
+${substantive ? 'Findings are substantive (3+ quality sources). Do NOT ask the user for a hint. Write a confident, fact-based dossier.' : 'Findings are thin. Acknowledge honestly and offer the fallback flow. Use exactly this language: "I couldn\'t find much about you publicly yet. Tell me who you are, a link, a handle, or a sentence about what you do. I\'ll take it from there."'}
 
 Style rules:
 - Lead with their name and primary identity.
 - End with a warm question: "Sound right?" or "Did I get that?" or "Close?"
-- Keep under 60 words.
+- Keep under 70 words for substantive crawls, under 40 for thin.
 - No em dashes. Use commas, periods, or parentheses.
 - No corporate phrasing, no "it appears", no "based on the data."
-- Never say "AI" or "artificial intelligence."
-- If findings are empty: "I couldn't pin you down from the open web. Tell me what you do and I'll try again."
+- Do not say "AI" or "artificial intelligence."
 
 Respond ONLY with valid JSON in this shape:
 {
@@ -308,11 +432,11 @@ Respond ONLY with valid JSON in this shape:
   });
 
   if (!resp.ok) {
-    const err = await resp.text();
-    console.error('Claude Opus error:', err);
+    const err = await resp.text().catch(() => '');
+    console.error('Claude Opus error:', err.slice(0, 200));
     return {
       inferred_role: 'other',
-      dossier_text: `I couldn't pin you down from the open web. Tell me what you do and I'll try again.`
+      dossier_text: `I couldn't find much about you publicly yet. Tell me who you are, a link, a handle, or a sentence about what you do. I'll take it from there.`
     };
   }
 
@@ -328,6 +452,6 @@ Respond ONLY with valid JSON in this shape:
 
   return {
     inferred_role: 'other',
-    dossier_text: `I couldn't pin you down from the open web. Tell me what you do and I'll try again.`
+    dossier_text: `I couldn't find much about you publicly yet. Tell me who you are, a link, a handle, or a sentence about what you do. I'll take it from there.`
   };
 }

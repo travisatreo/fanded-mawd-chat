@@ -655,11 +655,24 @@ var ROLES = {
 };
 
 var state = {
-  owner:{name:'Travis',email:'travis@fanded.com',role:'musician',specifically:''},
+  owner:{
+    name:'Travis',email:'travis@fanded.com',role:'musician',specifically:'',
+    // Multi-identity fields. preferred_name wins for greetings, falls back to
+    // public_name, then the raw typed name. account_name is used only for
+    // inbox contact matching (OAuth-provided legal identity).
+    public_name:'', preferred_name:'', account_name:''
+  },
   activeView:null,
   dossier:null,
   drafts:[]
 };
+
+// Return whatever the UI should use when addressing the user.
+function displayName(){
+  return (state.owner.preferred_name || '').trim()
+      || (state.owner.public_name || '').split(/\s+/)[0]
+      || (state.owner.name || 'you').split(/\s+/)[0];
+}
 
 // ── Session type (user vs guest) + storage isolation ──
 var mawdSession = { type: 'user' };
@@ -703,7 +716,7 @@ function renderSidebar(){
     el.addEventListener('click', function(){ setView(item.key); });
     nav.appendChild(el);
   });
-  document.getElementById('ownerFirst').textContent = (state.owner.name||'you').split(' ')[0];
+  document.getElementById('ownerFirst').textContent = displayName();
 }
 
 function navIcon(key){
@@ -1157,6 +1170,9 @@ function resetIdleTimer(){ if (state.owner.connection_mode === 'session' && stat
     state.owner.role = (qp.get('role')||state.owner.role).toLowerCase();
     state.owner.specifically = qp.get('specifically') || '';
     state.owner.slug = qp.get('slug') || slugify(state.owner.name);
+    state.owner.public_name = qp.get('public_name') || state.owner.name;
+    state.owner.preferred_name = qp.get('preferred_name') || '';
+    state.owner.account_name = qp.get('account_name') || '';
     if (qp.get('connection_mode')) state.owner.connection_mode = qp.get('connection_mode');
     if (qp.get('gmail') === '1') state.owner.gmail_connected = true;
     saveOwner();

@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     // POST — create or update a MAWD
     if (req.method === 'POST') {
-      const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption, connection_mode } = req.body;
+      const { name, email, role, slug, context, goals, team, socials, crawlData, selectedOption, connection_mode, public_name, preferred_name, account_name } = req.body;
       const updateSlug = req.query?.update;
       // Normalize connection_mode. Guests always 'session'. Unknown values fall back to 'session'.
       const connMode = (team === 'guest')
@@ -112,14 +112,20 @@ export default async function handler(req, res) {
       let instance;
       const mawdUrl = `https://fanded-mawd-chat.vercel.app/v2.html?mawd=${mawdSlug}`;
 
-      const optionalCols = ['connection_mode', 'team'];
+      const optionalCols = ['connection_mode', 'team', 'public_name', 'preferred_name', 'account_name'];
+      // Shared body fragment for all three write paths.
+      const identityFields = {
+        public_name: public_name || name,
+        preferred_name: preferred_name || '',
+        account_name: account_name || ''
+      };
 
       if (updateSlug) {
         // PATCH existing instance (pre-created during OAuth flow)
         // Preserves google_refresh_token, google_scopes, google_email set by OAuth callback
         instance = await supabaseWriteWithSchemaFallback(`mawd_instances?slug=eq.${updateSlug}`, {
           method: 'PATCH',
-          body: {
+          body: Object.assign({
             name,
             email,
             role: role || '',
@@ -129,7 +135,7 @@ export default async function handler(req, res) {
             connection_mode: connMode,
             team: team || 'fanded',
             active: true
-          }
+          }, identityFields)
         }, optionalCols);
       } else {
         // Check if slug already exists (avoid duplicates)
@@ -138,7 +144,7 @@ export default async function handler(req, res) {
           // Update existing
           instance = await supabaseWriteWithSchemaFallback(`mawd_instances?slug=eq.${mawdSlug}`, {
             method: 'PATCH',
-            body: {
+            body: Object.assign({
               name,
               email,
               role: role || '',
@@ -148,13 +154,13 @@ export default async function handler(req, res) {
               connection_mode: connMode,
               team: team || 'fanded',
               active: true
-            }
+            }, identityFields)
           }, optionalCols);
         } else {
           // Create new
           instance = await supabaseWriteWithSchemaFallback('mawd_instances', {
             method: 'POST',
-            body: {
+            body: Object.assign({
               name,
               email,
               slug: mawdSlug,
@@ -166,7 +172,7 @@ export default async function handler(req, res) {
               team: team || 'fanded',
               created_at: new Date().toISOString(),
               active: true
-            }
+            }, identityFields)
           }, optionalCols);
         }
       }
