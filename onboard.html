@@ -121,6 +121,50 @@
   }
   .btn-skip:hover { color: #71717A; }
 
+  /* Role selector */
+  .role-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .role-btn {
+    background: #111113;
+    border: 1.5px solid #27272A;
+    border-radius: 14px;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    color: #E4E4E7;
+    font-family: inherit;
+    text-align: left;
+  }
+  .role-btn:hover { border-color: #3F3F46; background: #18181B; }
+  .role-btn.selected {
+    border-color: #C4953A;
+    background: linear-gradient(135deg, #1a1508, #111113);
+    box-shadow: 0 0 0 3px rgba(196,149,58,0.15);
+  }
+  .role-btn-emoji { font-size: 22px; line-height: 1; }
+  .role-btn-label { font-size: 15px; font-weight: 600; color: #FAFAFA; }
+  .role-btn-sub { font-size: 11.5px; color: #71717A; line-height: 1.4; }
+  .role-other {
+    grid-column: 1 / -1;
+  }
+  .specifically-wrap {
+    margin-top: 12px;
+  }
+  .specifically-label {
+    font-size: 12px;
+    color: #A1A1AA;
+    margin-bottom: 8px;
+    display: block;
+  }
+
   .progress {
     display: flex;
     gap: 6px;
@@ -497,6 +541,7 @@
     <div class="dot"></div>
     <div class="dot"></div>
     <div class="dot"></div>
+    <div class="dot"></div>
   </div>
 
   <!-- Step 0: Name -->
@@ -506,6 +551,50 @@
     <input type="text" id="q-name" placeholder="e.g. Travis Atreo" autocomplete="name">
     <div class="btn-row">
       <button class="btn btn-next" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 0b: Role selector -->
+  <div class="step" id="step-role">
+    <div class="question">What do you do?</div>
+    <div class="hint">MAWD adapts to your role. Pick the closest one.</div>
+
+    <div class="role-grid">
+      <button class="role-btn" type="button" data-role="musician" onclick="pickRole(this,'musician')">
+        <div class="role-btn-emoji">🎵</div>
+        <div class="role-btn-label">Musician</div>
+        <div class="role-btn-sub">Artist, producer, songwriter</div>
+      </button>
+      <button class="role-btn" type="button" data-role="influencer" onclick="pickRole(this,'influencer')">
+        <div class="role-btn-emoji">✨</div>
+        <div class="role-btn-label">Influencer</div>
+        <div class="role-btn-sub">Creator, brand partnerships</div>
+      </button>
+      <button class="role-btn" type="button" data-role="actor" onclick="pickRole(this,'actor')">
+        <div class="role-btn-emoji">🎬</div>
+        <div class="role-btn-label">Actor</div>
+        <div class="role-btn-sub">Film, TV, theater, voiceover</div>
+      </button>
+      <button class="role-btn" type="button" data-role="founder" onclick="pickRole(this,'founder')">
+        <div class="role-btn-emoji">🚀</div>
+        <div class="role-btn-label">Founder</div>
+        <div class="role-btn-sub">Building a company, raising</div>
+      </button>
+      <button class="role-btn role-other" type="button" data-role="other" onclick="pickRole(this,'other')">
+        <div class="role-btn-emoji">✦</div>
+        <div class="role-btn-label">Other</div>
+        <div class="role-btn-sub">Something else. MAWD still adapts.</div>
+      </button>
+    </div>
+
+    <div class="specifically-wrap">
+      <label class="specifically-label" for="q-specifically">And specifically...</label>
+      <input type="text" id="q-specifically" placeholder="e.g. touring drummer, tech founder raising seed, indie actor...">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep()">Back</button>
+      <button class="btn btn-next" id="btn-role-next" onclick="nextStep()" disabled>Next</button>
     </div>
   </div>
 
@@ -691,11 +780,20 @@
 
 <script>
 var currentStep = 0;
-var totalSteps = 7;
+var totalSteps = 8;
 var crawlResult = null;
 var selectedOption = null;
 var gmailConnected = false;
 var calendarConnected = false;
+var pickedRole = '';
+
+function pickRole(btn, role) {
+  pickedRole = role;
+  document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  document.getElementById('btn-role-next').disabled = false;
+  try { sessionStorage.setItem('mawd_onboard_role', role); } catch(e){}
+}
 
 // ── Resume after OAuth redirect ──
 // Google OAuth redirects back with ?gmail=connected&mawd=slug&email=user@email.com
@@ -727,6 +825,11 @@ var calendarConnected = false;
         }
       } catch(e) {}
     }
+    // Restore role + specifically from pre-OAuth state
+    var savedRole = sessionStorage.getItem('mawd_onboard_role');
+    var savedSpecifically = sessionStorage.getItem('mawd_onboard_specifically');
+    if (savedRole) pickedRole = savedRole;
+    if (savedSpecifically) document.getElementById('q-specifically').value = savedSpecifically;
 
     // Mark Gmail as connected
     gmailConnected = true;
@@ -759,15 +862,39 @@ var calendarConnected = false;
 
 function updateProgress() {
   var dots = document.querySelectorAll('.progress .dot');
+  // Map: 0 -> dot 0 (name), 0.5 -> dot 1 (role), 1 -> dot 2 (context), 2 -> dot 3 (socials),
+  // 3 -> dot 4 (brain), 4 -> dot 5 (synthesis), 5 -> dot 6 (connect), 6 -> dot 7 (options)
+  var activeDot = currentStep === 0 ? 0 :
+                  currentStep === 0.5 ? 1 :
+                  currentStep + 1;
   dots.forEach(function(dot, i) {
     dot.className = 'dot';
-    if (i < currentStep) dot.className = 'dot done';
-    if (i === currentStep) dot.className = 'dot current';
+    if (i < activeDot) dot.className = 'dot done';
+    if (i === activeDot) dot.className = 'dot current';
   });
 }
 
+// Step sequence uses numeric ids PLUS the named "role" step inserted after 0.
+// Logical order: 0 (name) -> role -> 1 (context) -> 2 (socials) -> 3 (brain) -> 4 (synthesis) -> 5 (connect) -> 6 (options)
 function nextStep() {
-  if (currentStep === 0 && !document.getElementById('q-name').value.trim()) return;
+  // From name, go to role step
+  if (currentStep === 0) {
+    if (!document.getElementById('q-name').value.trim()) return;
+    hideStep(0);
+    showNamedStep('step-role');
+    currentStep = 0.5; // sentinel for role step
+    updateProgress();
+    return;
+  }
+  // From role, go to context (step 1)
+  if (currentStep === 0.5) {
+    if (!pickedRole) return;
+    hideNamedStep('step-role');
+    currentStep = 1;
+    showStep(1);
+    updateProgress();
+    return;
+  }
   if (currentStep === 1 && !document.getElementById('q-context').value.trim()) return;
 
   hideStep(currentStep);
@@ -777,6 +904,20 @@ function nextStep() {
 }
 
 function prevStep() {
+  if (currentStep === 0.5) {
+    hideNamedStep('step-role');
+    currentStep = 0;
+    showStep(0);
+    updateProgress();
+    return;
+  }
+  if (currentStep === 1) {
+    hideStep(1);
+    showNamedStep('step-role');
+    currentStep = 0.5;
+    updateProgress();
+    return;
+  }
   if (currentStep <= 0) return;
   hideStep(currentStep);
   currentStep--;
@@ -798,6 +939,15 @@ function showStep(n) {
     el.style.display = '';
     setTimeout(function() { el.classList.add('active'); }, 10);
   }
+}
+
+function hideNamedStep(id) {
+  var el = document.getElementById(id);
+  if (el) { el.classList.remove('active'); el.style.display = 'none'; }
+}
+function showNamedStep(id) {
+  var el = document.getElementById(id);
+  if (el) { el.style.display = ''; setTimeout(function(){ el.classList.add('active'); }, 10); }
 }
 
 function getFallbackData(name) {
@@ -946,6 +1096,9 @@ function connectGmail() {
   sessionStorage.setItem('mawd_onboard_step', currentStep);
   sessionStorage.setItem('mawd_onboard_crawl', JSON.stringify(crawlResult || null));
   sessionStorage.setItem('mawd_onboard_slug', slug);
+  sessionStorage.setItem('mawd_onboard_role', pickedRole || '');
+  var specIn = document.getElementById('q-specifically');
+  sessionStorage.setItem('mawd_onboard_specifically', (specIn && specIn.value.trim()) || '');
 
   // Save social links
   var fields = {youtube:'s-youtube',instagram:'s-instagram',tiktok:'s-tiktok',spotify:'s-spotify',twitter:'s-twitter',website:'s-website'};
@@ -969,7 +1122,7 @@ function connectGmail() {
       name: name,
       email: email,
       slug: slug,
-      role: '',
+      role: pickedRole || '',
       context: brainContext,
       goals: context,
       team: 'fanded',
@@ -1125,7 +1278,7 @@ function finishOnboarding() {
       name: name,
       email: email,
       slug: slug,
-      role: '',
+      role: pickedRole || '',
       context: brainContext,
       goals: context,
       team: 'fanded',
@@ -1146,7 +1299,24 @@ function finishOnboarding() {
     hideStep(6);
     document.getElementById('progress').style.display = 'none';
 
-    var url = data.url || ('https://fanded-mawd-chat.vercel.app/v2.html?mawd=' + data.slug);
+    // Persist owner profile to localStorage so index.html skips onboarding on next load.
+    var role = pickedRole || (sessionStorage.getItem('mawd_onboard_role') || '');
+    var specifically = (document.getElementById('q-specifically') && document.getElementById('q-specifically').value.trim()) || '';
+    try {
+      localStorage.setItem('mawd_owner', JSON.stringify({
+        name: name,
+        email: email,
+        role: role,
+        specifically: specifically
+      }));
+    } catch(e){}
+
+    var params = new URLSearchParams();
+    params.set('name', name);
+    params.set('email', email);
+    if (role) params.set('role', role);
+    if (specifically) params.set('specifically', specifically);
+    var url = '/?' + params.toString();
     document.getElementById('result-link').href = url;
     document.getElementById('result-link').textContent = 'Open ' + name.split(' ')[0] + "'s MAWD";
     document.getElementById('result-title').textContent = name.split(' ')[0] + "'s MAWD is live.";

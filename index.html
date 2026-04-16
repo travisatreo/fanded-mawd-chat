@@ -3,1214 +3,823 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>MAWD — Your Chief of Staff</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MAWD (by Fanded)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#07070F;
-  --bg-bottom:#0A0A18;
-  --cream:#F5F1EA;
-  --cream-60:rgba(245,241,234,0.6);
-  --cream-40:rgba(245,241,234,0.4);
-  --cream-30:rgba(245,241,234,0.3);
+  --bg:#09090B;
+  --surface:#111113;
+  --surface-2:#18181B;
+  --surface-3:#1F1F23;
+  --border:#27272A;
+  --border-hover:#3F3F46;
+  --text:#FAFAFA;
+  --text-2:#A1A1AA;
+  --text-3:#71717A;
+  --text-4:#52525B;
   --gold:#C4953A;
-  --gold-2:#E8B84B;
-  --purple:#7C3AED;
-  --blue:#3BADE4;
-  --card:#0D0D1A;
-  --border:rgba(196,149,58,0.2);
-  --font-h:'Playfair Display',Georgia,serif;
-  --font-ui:'DM Sans',system-ui,sans-serif;
-  --dollar:#C4953A;
-  --pulse:#7C3AED;
-  --scout:#0D9488;
-  --compass:#3B82F6;
-  --hype:#EC4899;
-  --ledger:#22C55E;
+  --gold-dim:rgba(196,149,58,0.14);
+  --gold-glow:rgba(196,149,58,0.08);
+  --c-1:#8B5CF6;
+  --c-2:#3B82F6;
+  --c-3:#EC4899;
+  --c-4:#22C55E;
+  --c-5:#F97316;
+  --c-6:#EAB308;
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'Space Grotesk','DM Sans',monospace;
+  --radius:12px;
+  --radius-sm:8px;
+  --sidebar-w:240px;
 }
-html,body{
-  height:100%;
-  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-bottom) 100%);
-  color:var(--cream);
-  font-family:var(--font-ui);
-  -webkit-font-smoothing:antialiased;
-  overflow:hidden;
-}
-body{display:flex;justify-content:center;}
-#app{
-  width:100%;max-width:430px;height:100%;
-  display:flex;flex-direction:column;position:relative;
-  background:linear-gradient(180deg,var(--bg) 0%,var(--bg-bottom) 100%);
-}
-/* ── TOP BAR ── */
-#topBar{
-  flex-shrink:0;padding:12px 16px 0;
-  padding-top:max(12px,env(safe-area-inset-top));
-  display:flex;align-items:center;justify-content:space-between;
-  position:relative;z-index:10;
-}
-#topBar .logo{display:flex;align-items:center;gap:6px;}
-#topBar .logo img{width:22px;height:22px;border-radius:6px;}
-#topBar .logo span{
-  font-family:'Bricolage Grotesque','DM Sans',sans-serif;
-  font-weight:800;font-size:14px;color:var(--gold);
-  text-transform:lowercase;letter-spacing:0.3px;
-}
-#topBar .title{
-  font-family:'Space Grotesk',sans-serif;
-  font-weight:500;font-size:17px;color:var(--cream);letter-spacing:3px;
-}
-.agent-dots{display:flex;gap:5px;align-items:center;}
-.agent-dot{
-  width:7px;height:7px;border-radius:50%;opacity:0.4;
-  transition:opacity 0.4s,box-shadow 0.4s;
-}
-.agent-dot.active{opacity:1;animation:dotPulse 2s ease-in-out infinite;}
-.agent-dot[data-agent="dollar"]{background:var(--dollar);}
-.agent-dot[data-agent="pulse"]{background:var(--pulse);}
-.agent-dot[data-agent="scout"]{background:var(--scout);}
-.agent-dot[data-agent="compass"]{background:var(--compass);}
-.agent-dot[data-agent="hype"]{background:var(--hype);}
-.agent-dot[data-agent="ledger"]{background:var(--ledger);}
-@keyframes dotPulse{
-  0%,100%{box-shadow:0 0 0 0 currentColor;}
-  50%{box-shadow:0 0 6px 2px currentColor;}
-}
-#gradLine{flex-shrink:0;height:2px;width:100%;background:linear-gradient(90deg,var(--gold),var(--purple));margin-top:10px;}
-/* ── STATUS PILL ── */
-#statusPill{flex-shrink:0;display:flex;justify-content:center;padding:10px 0 6px;}
-#statusPill .pill{
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(196,149,58,0.15);border:1px solid rgba(196,149,58,0.3);
-  border-radius:50px;padding:5px 14px;font-size:11px;color:var(--gold);font-family:var(--font-ui);
-}
-#statusPill .pill .dot{
-  width:6px;height:6px;border-radius:50%;background:var(--gold);
-  animation:statusPulse 2s ease-in-out infinite;
-}
-@keyframes statusPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
-/* ── CHAT AREA ── */
-#chatArea{
-  flex:1;overflow-y:auto;overflow-x:hidden;
-  padding:12px 16px 8px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
-}
-#chatArea::-webkit-scrollbar{width:0;display:none;}
-.msg-wrap{
-  margin-bottom:16px;opacity:0;transform:translateY(12px);
-  animation:msgIn 0.3s ease-out forwards;
-}
-@keyframes msgIn{to{opacity:1;transform:translateY(0);}}
-/* MAWD message */
-.msg-mawd{display:flex;gap:10px;align-items:flex-start;}
-.mawd-avatar{
-  width:28px;height:28px;border-radius:50%;background:var(--gold);
-  display:flex;align-items:center;justify-content:center;
-  font-family:Arial Black,'Arial Bold',Arial,sans-serif;
-  font-size:12px;color:var(--cream);flex-shrink:0;margin-top:18px;
-}
-.mawd-content{flex:1;max-width:85%;}
-.agent-label{
-  font-family:var(--font-ui);font-size:9px;font-weight:700;
-  letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;padding-left:2px;
-}
-.mawd-bubble{
-  background:var(--card);border:1px solid rgba(196,149,58,0.15);
-  border-radius:4px 16px 16px 16px;padding:14px 16px;
-  font-family:'Space Grotesk',sans-serif;font-weight:400;
-  font-size:15px;line-height:1.65;color:var(--cream);
-}
-.mawd-bubble .typing-cursor{
-  display:inline-block;width:2px;height:18px;background:var(--gold);
-  margin-left:2px;vertical-align:text-bottom;
-  animation:cursorBlink 0.6s step-end infinite;
-}
-@keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
-/* Talent message */
-.msg-talent{display:flex;justify-content:flex-end;}
-.talent-bubble{
-  background:rgba(196,149,58,0.12);border:1px solid rgba(196,149,58,0.25);
-  border-radius:16px 4px 16px 16px;padding:12px 16px;
-  font-family:var(--font-ui);font-size:15px;color:var(--cream);
-  max-width:80%;line-height:1.5;
-}
-/* Timestamp */
-.timestamp{
-  text-align:center;font-size:10px;color:var(--cream-40);
-  font-family:var(--font-ui);margin:16px 0 12px;
-}
-/* Quick replies */
-.quick-replies{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-left:38px;}
-.qr-btn{
-  background:rgba(196,149,58,0.08);border:1px solid rgba(196,149,58,0.3);
-  color:var(--cream);font-family:var(--font-ui);font-size:13px;
-  padding:8px 16px;border-radius:50px;cursor:pointer;
-  transition:all 0.2s ease;-webkit-tap-highlight-color:transparent;
-}
-.qr-btn:hover{background:rgba(196,149,58,0.15);border-color:var(--gold);}
-.qr-btn:active,.qr-btn.selected{background:rgba(196,149,58,0.2);border-color:var(--gold);}
-/* Thinking */
-.thinking-wrap{
-  display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;
-  opacity:0;animation:msgIn 0.3s ease-out forwards;
-}
-.thinking-content{display:flex;flex-direction:column;gap:6px;padding-top:18px;}
-.thinking-dots{display:flex;gap:5px;padding-left:4px;}
-.thinking-dots span{
-  width:8px;height:8px;border-radius:50%;
-  animation:bounce 1.2s ease-in-out infinite;
-}
-.thinking-dots span:nth-child(2){animation-delay:0.15s;}
-.thinking-dots span:nth-child(3){animation-delay:0.3s;}
-@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-8px);}}
-.thinking-label{
-  font-size:11px;font-style:italic;font-family:var(--font-ui);
-  color:var(--cream-60);padding-left:2px;
-}
-/* ── JARGON TOOLTIPS ── */
-.jargon{
-  color:var(--gold-2);text-decoration:underline;text-decoration-style:dotted;
-  text-underline-offset:3px;text-decoration-color:rgba(232,184,75,0.4);
-  cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
-}
-.jargon-tip{
-  position:fixed;z-index:100;background:#13132A;
-  border:1px solid rgba(196,149,58,0.35);border-radius:12px;
-  padding:12px 14px;max-width:280px;width:max-content;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  opacity:0;transform:translateY(6px);
-  transition:opacity 0.2s ease,transform 0.2s ease;pointer-events:none;
-}
-.jargon-tip.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
-.jargon-tip .tip-term{
-  font-family:var(--font-ui);font-weight:700;font-size:11px;
-  color:var(--gold);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;
-}
-.jargon-tip .tip-def{font-family:var(--font-ui);font-size:13px;line-height:1.5;color:var(--cream);}
-.jargon-tip .tip-link{
-  display:inline-block;margin-top:6px;font-family:var(--font-ui);font-size:11px;
-  color:var(--gold);text-decoration:none;opacity:0.7;transition:opacity 0.15s;
-}
-.jargon-tip .tip-link:hover{opacity:1;}
-.jargon-tip .tip-close{
-  position:absolute;top:6px;right:8px;background:none;border:none;
-  color:var(--cream-40);font-size:16px;cursor:pointer;line-height:1;padding:2px;
-}
-/* ── INPUT BAR ── */
-#inputBar{
-  flex-shrink:0;background:var(--bg);border-top:1px solid var(--border);
-  padding:12px 16px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
-  display:flex;align-items:center;gap:10px;
-}
-#inputBar .mic-btn{
-  background:none;border:none;cursor:pointer;color:var(--gold);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;width:24px;height:24px;
-  -webkit-tap-highlight-color:transparent;
-}
-#inputBar .mic-btn svg{width:20px;height:20px;}
-#inputBar input{
-  flex:1;background:rgba(245,241,234,0.06);border:1px solid rgba(196,149,58,0.2);
-  border-radius:50px;padding:10px 16px;color:var(--cream);
-  font-family:var(--font-ui);font-size:15px;outline:none;transition:border-color 0.2s;
-}
-#inputBar input::placeholder{color:var(--cream-30);}
-#inputBar input:focus{border-color:rgba(196,149,58,0.5);}
-#inputBar .send-btn{
-  width:32px;height:32px;border-radius:50%;background:var(--gold);
-  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;transition:transform 0.15s,opacity 0.2s;-webkit-tap-highlight-color:transparent;
-}
-#inputBar .send-btn:active{transform:scale(0.9);}
-#inputBar .send-btn svg{width:16px;height:16px;}
-/* ── DOC ACTIONS (inline in chat) ── */
-.doc-actions{
-  display:flex;gap:8px;margin-top:10px;padding-left:38px;
-}
-.doc-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);
-  color:#22C55E;font-family:var(--font-ui);font-size:12px;font-weight:600;
-  padding:8px 14px;border-radius:50px;cursor:pointer;
-  transition:all 0.2s;-webkit-tap-highlight-color:transparent;
-}
-.doc-btn:hover{background:rgba(34,197,94,0.18);border-color:#22C55E;}
-.doc-btn:active{transform:scale(0.96);}
-.doc-btn svg{width:14px;height:14px;flex-shrink:0;}
-/* ── DOCUMENTS DRAWER ── */
-#docsOverlay{
-  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;
-  opacity:0;pointer-events:none;transition:opacity 0.3s;
-}
-#docsOverlay.open{opacity:1;pointer-events:auto;}
-#docsDrawer{
-  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:430px;max-height:80vh;
-  background:var(--bg);border:1px solid var(--border);
-  border-radius:20px 20px 0 0;z-index:201;
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+input,textarea{font-family:inherit;color:inherit;background:none;border:none;outline:none;}
+
+#app{display:flex;height:100%;position:relative;}
+
+#sidebar{
+  width:var(--sidebar-w);height:100%;
+  background:var(--bg);
+  border-right:1px solid var(--border);
   display:flex;flex-direction:column;
-  transform:translateX(-50%) translateY(100%);
-  transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+  padding:14px 0 0;
+  flex-shrink:0;z-index:40;
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
 }
-#docsOverlay.open + #docsDrawer,
-#docsDrawer.open{transform:translateX(-50%) translateY(0);}
-.drawer-handle{
-  width:36px;height:4px;border-radius:2px;background:rgba(245,241,234,0.2);
-  margin:10px auto 0;flex-shrink:0;
+.sidebar-top{padding:0 14px 10px;}
+.from-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 9px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border);
+  font-size:10.5px;color:var(--text-3);letter-spacing:0.03em;
+  margin-bottom:12px;
 }
-.drawer-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px 12px;flex-shrink:0;
-}
-.drawer-header h2{
-  font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;
-  color:var(--cream);letter-spacing:1px;
-}
-.drawer-close{
-  background:none;border:none;color:var(--cream-40);font-size:20px;
-  cursor:pointer;padding:4px 8px;-webkit-tap-highlight-color:transparent;
-}
-.drawer-list{
-  flex:1;overflow-y:auto;padding:0 16px 24px;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);
-}
-.drawer-list::-webkit-scrollbar{width:0;display:none;}
-.doc-item{
-  display:flex;align-items:center;gap:12px;
-  background:var(--card);border:1px solid var(--border);border-radius:12px;
-  padding:14px 16px;margin-bottom:10px;cursor:pointer;
-  transition:border-color 0.2s;-webkit-tap-highlight-color:transparent;
-}
-.doc-item:hover{border-color:var(--gold);}
-.doc-icon{
-  width:36px;height:36px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  font-size:16px;
-}
-.doc-icon.pnl,.doc-icon.expense-report{background:rgba(34,197,94,0.12);color:#22C55E;}
-.doc-icon.tax-summary{background:rgba(196,149,58,0.12);color:var(--gold);}
-.doc-icon.email{background:rgba(236,72,153,0.12);color:#EC4899;}
-.doc-icon.plan,.doc-icon.contract{background:rgba(59,130,246,0.12);color:#3B82F6;}
-.doc-info{flex:1;min-width:0;}
-.doc-info .doc-title{
-  font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--cream);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.doc-info .doc-meta{font-size:11px;color:var(--cream-40);margin-top:2px;}
-.doc-item-actions{display:flex;gap:6px;}
-.doc-item-btn{
-  background:rgba(245,241,234,0.06);border:1px solid rgba(245,241,234,0.1);
-  border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--cream-60);
-  transition:all 0.15s;-webkit-tap-highlight-color:transparent;
-}
-.doc-item-btn:hover{background:rgba(245,241,234,0.1);color:var(--cream);}
-.doc-item-btn svg{width:14px;height:14px;display:block;}
-.drawer-empty{
-  text-align:center;padding:40px 20px;color:var(--cream-40);font-size:14px;
-}
-/* ── DOCS BUTTON (top bar) ── */
-.docs-badge{
-  position:relative;background:none;border:none;cursor:pointer;
-  color:var(--cream-40);padding:0;display:flex;align-items:center;
-  -webkit-tap-highlight-color:transparent;transition:color 0.2s;
-}
-.docs-badge:hover{color:var(--cream);}
-.docs-badge svg{width:18px;height:18px;}
-.docs-badge .badge-count{
-  position:absolute;top:-4px;right:-6px;
-  min-width:14px;height:14px;border-radius:7px;
-  background:#22C55E;color:#fff;font-size:9px;font-weight:700;
+.from-pill-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);}
+.brand-row{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+  border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;
-  padding:0 3px;display:none;
+  font-weight:700;font-size:15px;color:var(--gold);
+  letter-spacing:-0.02em;
 }
-.docs-badge .badge-count.has-docs{display:flex;}
-/* ── TOAST ── */
+.brand-name{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-0.01em;}
+.brand-by{font-size:10.5px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;}
+
+.sidebar-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 10px;border-radius:8px;
+  font-size:13.5px;color:var(--text-2);
+  cursor:pointer;position:relative;
+  transition:background 0.12s,color 0.12s;
+}
+.nav-item:hover{background:var(--surface);color:var(--text);}
+.nav-item.active{background:var(--surface-2);color:var(--text);}
+.nav-item.active::before{
+  content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;
+  background:var(--accent);border-radius:2px;
+}
+.nav-icon{
+  width:18px;height:18px;flex-shrink:0;
+  color:var(--accent);opacity:0.9;
+  display:flex;align-items:center;justify-content:center;
+}
+.nav-icon svg{width:100%;height:100%;}
+.nav-label{flex:1;}
+.nav-badge{
+  min-width:18px;height:18px;padding:0 5px;
+  border-radius:9px;background:var(--accent);
+  color:#fff;font-size:10.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);
+}
+.nav-coming{
+  font-size:9.5px;color:var(--text-4);
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+
+.sidebar-bottom{padding:10px 10px max(14px,env(safe-area-inset-bottom));border-top:1px solid var(--border);}
+.settings-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:8px;width:100%;
+  font-size:13px;color:var(--text-3);
+}
+.settings-btn:hover{background:var(--surface);color:var(--text-2);}
+.settings-btn svg{width:16px;height:16px;}
+
+#main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 12px;
+  position:relative;
+}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.menu-btn{
+  display:none;width:32px;height:32px;border-radius:8px;
+  align-items:center;justify-content:center;color:var(--text-2);
+}
+.menu-btn:hover{background:var(--surface);color:var(--text);}
+.view-title{font-size:13px;color:var(--text-3);letter-spacing:0.04em;text-transform:uppercase;}
+.listening{
+  display:flex;align-items:center;gap:7px;
+  font-size:11px;color:var(--text-2);
+  font-family:var(--font-mono);letter-spacing:0.04em;
+}
+.listening-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--gold);
+  animation:listenPulse 2.2s ease-in-out infinite;
+  box-shadow:0 0 10px var(--gold);
+}
+@keyframes listenPulse{
+  0%,100%{opacity:0.55;transform:scale(1);}
+  50%{opacity:1;transform:scale(1.25);}
+}
+#gradLine{
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold) 30%,var(--c-1) 60%,transparent);
+  opacity:0.55;
+}
+
+#canvas{flex:1;overflow-y:auto;padding:18px 20px 150px;}
+.canvas-header{margin-bottom:16px;}
+.canvas-eyebrow{font-size:10.5px;color:var(--text-3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.canvas-title{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-0.015em;line-height:1.2;margin-bottom:6px;}
+.canvas-sub{font-size:13.5px;color:var(--text-2);line-height:1.5;}
+
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.metric-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  position:relative;overflow:hidden;
+  transition:border-color 0.15s;
+}
+.metric-card:hover{border-color:var(--border-hover);}
+.metric-value{font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-mono);letter-spacing:-0.02em;margin-bottom:2px;}
+.metric-label{font-size:10px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;line-height:1.35;}
+.metric-card.accent-1 .metric-value{color:var(--c-1);}
+.metric-card.accent-2 .metric-value{color:var(--c-2);}
+.metric-card.accent-3 .metric-value{color:var(--c-3);}
+.metric-card.accent-4 .metric-value{color:var(--c-4);}
+
+.section-label{
+  font-size:10.5px;color:var(--text-3);
+  letter-spacing:0.1em;text-transform:uppercase;
+  margin:20px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:"";flex:1;height:1px;background:var(--border);}
+
+.insight-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:10px;
+  transition:border-color 0.15s;
+  cursor:pointer;
+}
+.insight-card:hover{border-color:var(--border-hover);}
+.insight-tag{
+  display:inline-block;padding:2px 8px;border-radius:999px;
+  font-size:10px;font-weight:600;letter-spacing:0.04em;
+  margin-bottom:6px;font-family:var(--font-mono);
+}
+.insight-tag.t-metric{background:rgba(139,92,246,0.12);color:var(--c-1);}
+.insight-tag.t-pulse{background:rgba(34,197,94,0.12);color:var(--c-4);}
+.insight-tag.t-warn{background:rgba(249,115,22,0.14);color:var(--c-5);}
+.insight-tag.t-action{background:var(--gold-dim);color:var(--gold);}
+.insight-tag.t-you{background:var(--surface-2);color:var(--text-2);}
+.insight-headline{font-size:14.5px;font-weight:500;color:var(--text);line-height:1.45;}
+.insight-headline strong{color:var(--text);font-weight:600;}
+.insight-sub{font-size:12.5px;color:var(--text-3);margin-top:4px;line-height:1.45;}
+
+.draft-card{
+  background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  border:1px solid var(--gold-dim);
+  border-radius:var(--radius);
+  padding:14px 16px;margin:10px 0;
+  position:relative;
+}
+.draft-card::before{
+  content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;
+  background:var(--gold);border-radius:0 2px 2px 0;
+}
+.draft-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap;}
+.draft-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:999px;
+  background:var(--gold-dim);color:var(--gold);
+  font-size:10.5px;font-weight:600;letter-spacing:0.05em;
+  font-family:var(--font-mono);text-transform:uppercase;
+}
+.draft-context{font-size:11px;color:var(--text-3);}
+.draft-to{font-size:12px;color:var(--text-2);margin-bottom:4px;}
+.draft-to strong{color:var(--text);}
+.draft-subject{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.draft-body{
+  font-size:13px;color:var(--text-2);line-height:1.55;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 12px;
+  white-space:pre-wrap;max-height:220px;overflow-y:auto;
+  margin-bottom:10px;
+  font-family:var(--font);
+  width:100%;
+  resize:vertical;
+}
+.draft-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.draft-btn{
+  padding:7px 12px;border-radius:8px;
+  font-size:12px;font-weight:600;
+  border:1px solid var(--border);color:var(--text-2);
+  background:var(--bg);
+  transition:background 0.12s,border-color 0.12s,color 0.12s;
+}
+.draft-btn:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-hover);}
+.draft-btn.primary{background:var(--gold);color:#0A0A0A;border-color:var(--gold);}
+.draft-btn.primary:hover{background:#D4A843;}
+.draft-btn.ghost{color:var(--text-3);}
+
+.coming-preview{
+  border:1px dashed var(--border);
+  border-radius:var(--radius);
+  padding:18px 16px;margin-bottom:12px;
+  background:rgba(255,255,255,0.008);
+}
+.coming-preview .coming-title{
+  font-size:13px;font-weight:600;color:var(--text-2);
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.coming-preview .coming-soon-pill{
+  font-size:9.5px;padding:2px 7px;border-radius:999px;
+  background:var(--surface-2);color:var(--text-3);
+  letter-spacing:0.06em;text-transform:uppercase;font-family:var(--font-mono);
+}
+.coming-preview .coming-body{font-size:12.5px;color:var(--text-3);line-height:1.55;}
+.coming-preview ul{list-style:none;margin-top:10px;}
+.coming-preview li{font-size:12.5px;color:var(--text-2);padding:4px 0 4px 12px;position:relative;line-height:1.5;}
+.coming-preview li::before{content:"";position:absolute;left:0;top:11px;width:4px;height:4px;border-radius:50%;background:var(--accent,var(--text-4));}
+
+#chatbar{
+  position:fixed;bottom:0;left:var(--sidebar-w);right:0;
+  padding:14px 20px max(14px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,var(--bg) 28%);
+  z-index:30;
+}
+.chatbar-inner{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:24px;padding:4px 4px 4px 16px;
+  transition:border-color 0.15s;
+}
+.chatbar-inner:focus-within{border-color:var(--border-hover);}
+#chatInput{
+  flex:1;font-size:14px;padding:10px 0;color:var(--text);
+  background:transparent;
+}
+#chatInput::placeholder{color:var(--text-4);}
+.send-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--gold);color:#0A0A0A;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background 0.12s,transform 0.12s;
+}
+.send-btn:hover{background:#D4A843;}
+.send-btn:active{transform:scale(0.96);}
+.send-btn svg{width:16px;height:16px;}
+.chatbar-foot{
+  text-align:center;font-size:10.5px;color:var(--text-4);
+  letter-spacing:0.02em;margin-top:8px;
+}
+
+#sidebarOverlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  z-index:35;backdrop-filter:blur(2px);
+}
+#sidebarOverlay.open{display:block;}
+
 .toast{
-  position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
-  background:#1a1a2e;border:1px solid var(--border);border-radius:12px;
-  padding:10px 18px;font-size:13px;color:var(--cream);font-family:var(--font-ui);
-  z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;
+  position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:var(--surface-2);border:1px solid var(--border);
+  padding:10px 16px;border-radius:999px;
+  font-size:12.5px;color:var(--text);
+  opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;
+  z-index:50;max-width:calc(100% - 32px);
 }
-.toast.show{opacity:1;}
-@media(min-width:431px){body{background:var(--bg);}}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media (max-width: 820px){
+  :root{--sidebar-w:0px;}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);box-shadow:20px 0 60px rgba(0,0,0,0.5);}
+  .menu-btn{display:flex;}
+  #chatbar{left:0;}
+  .metric-card{padding:11px 10px;}
+  .metric-value{font-size:18px;}
+  .metric-label{font-size:9px;}
+  #canvas{padding:14px 14px 160px;}
+  .canvas-title{font-size:18px;}
+}
+@media (max-width: 420px){
+  .metric-value{font-size:16px;}
+}
 </style>
 </head>
 <body>
+
 <div id="app">
-  <div id="topBar">
-    <div class="logo"><img src="logo.png" alt="Fanded"><span>fanded</span></div>
-    <div class="title">MAWD</div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="agent-dots">
-        <div class="agent-dot" data-agent="dollar"></div>
-        <div class="agent-dot" data-agent="pulse"></div>
-        <div class="agent-dot" data-agent="scout"></div>
-        <div class="agent-dot" data-agent="compass"></div>
-        <div class="agent-dot" data-agent="hype"></div>
-        <div class="agent-dot" data-agent="ledger"></div>
+
+  <aside id="sidebar">
+    <div class="sidebar-top">
+      <div class="from-pill"><span class="from-pill-dot"></span><span>From <span id="ownerFirst">Travis</span></span></div>
+      <div class="brand-row">
+        <div class="brand-mark">M</div>
+        <div>
+          <div class="brand-name">MAWD</div>
+          <div class="brand-by">by Fanded</div>
+        </div>
       </div>
-      <button class="docs-badge" id="docsBtn" aria-label="Documents">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span class="badge-count" id="docsBadge">0</span>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+
+    <div class="sidebar-bottom">
+      <button class="settings-btn" onclick="openSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
       </button>
     </div>
-  </div>
-  <div id="gradLine"></div>
-  <div id="statusPill">
-    <div class="pill"><span class="dot"></span> MAWD is active</div>
-  </div>
-  <div id="chatArea"></div>
-  <!-- Documents Drawer -->
-  <div id="docsOverlay"></div>
-  <div id="docsDrawer">
-    <div class="drawer-handle"></div>
-    <div class="drawer-header">
-      <h2>Documents</h2>
-      <button class="drawer-close" id="drawerClose">&times;</button>
-    </div>
-    <div class="drawer-list" id="docsList">
-      <div class="drawer-empty" id="docsEmpty">No documents yet. Ask MAWD to generate a P&L, expense report, or tax summary.</div>
-    </div>
-  </div>
-  <div class="toast" id="toast"></div>
+  </aside>
+  <div id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
 
-  <div id="inputBar">
-    <button class="mic-btn" aria-label="Voice input">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-        <line x1="12" y1="19" x2="12" y2="23"/>
-        <line x1="8" y1="23" x2="16" y2="23"/>
-      </svg>
-    </button>
-    <input type="text" id="userInput" placeholder="Reply to MAWD..." autocomplete="off">
-    <button class="send-btn" id="sendBtn" aria-label="Send">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--cream)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/>
-        <polygon points="22 2 15 22 11 13 2 9 22 2" fill="var(--cream)" stroke="var(--cream)"/>
-      </svg>
-    </button>
+  <div id="main">
+    <div id="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="view-title" id="viewTitle">Today</div>
+      </div>
+      <div class="listening"><span class="listening-dot"></span><span>listening</span></div>
+    </div>
+    <div id="gradLine"></div>
+
+    <div id="canvas"></div>
+
+    <div id="chatbar">
+      <div class="chatbar-inner">
+        <input id="chatInput" type="text" placeholder="Ask MAWD anything..." autocomplete="off"/>
+        <button class="send-btn" onclick="sendMessage()" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/></svg>
+        </button>
+      </div>
+      <div class="chatbar-foot">MAWD learns what you approve, skip, and ask for. It gets better every week.</div>
+    </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 </div>
 
 <script>
-(function(){
-  var AGENTS = {
-    dollar:{color:'#C4953A',label:'DOLLAR',thinking:'DOLLAR is calculating...'},
-    pulse:{color:'#7C3AED',label:'PULSE',thinking:'PULSE is reading your fans...'},
-    scout:{color:'#0D9488',label:'SCOUT',thinking:'SCOUT is searching...'},
-    compass:{color:'#3B82F6',label:'COMPASS',thinking:'COMPASS is thinking...'},
-    hype:{color:'#EC4899',label:'HYPE',thinking:'HYPE is writing...'},
-    ledger:{color:'#22C55E',label:'LEDGER',thinking:'LEDGER is organizing...'}
+var ROLES = {
+  founder: {
+    label:'Founder',
+    sidebar:[
+      {key:'investors',label:'Investors',color:'c-1',primary:true,
+        dossierEyebrow:'THE RAISE',dossierTitle:'Who has gone cold on you?',
+        dossierSub:'MAWD scanned your inbox for investor threads. Here is who asked for updates, who went quiet, and who you still owe a reply.'},
+      {key:'pipeline',label:'Pipeline',color:'c-2',
+        preview:{title:'Pipeline',desc:'Every live business conversation in one place: ICs, warm intros, follow-ups. MAWD auto-tags stage (Intro to Pitch to DD to Commit to Cold) from your emails.',items:['Stage detection from thread language','Days-since-last-touch per contact','Suggested re-engage templates per stage']}},
+      {key:'traction',label:'Traction',color:'c-3',
+        preview:{title:'Traction',desc:'Your growth numbers synthesized across Stripe, analytics, and user interviews. The proof points you repeat on every investor call.',items:['MRR, users, retention at a glance','Narrative beats pulled from user emails','Quote bank for pitch decks']}},
+      {key:'raise',label:'Raise',color:'c-4',
+        preview:{title:'Raise',desc:'Your round at a glance: committed, soft-circled, open slots. MAWD tracks valuation, SAFE terms, and total raised in real time.',items:['Committed vs soft-circled dollar tracker','Auto-drafted update emails to existing investors','Close-date countdown + reminder cadence']}},
+      {key:'journal',label:'Journal',color:'c-6',
+        preview:{title:'Journal',desc:'Voice-note to the team and investors. Record. MAWD transcribes, summarizes, and sends as a crisp update.',items:['Weekly founder update from voice memos','Monthly investor update auto-drafted','Decision log with searchable transcripts']}}
+    ]
+  },
+  influencer: {
+    label:'Influencer',
+    sidebar:[
+      {key:'brands',label:'Brands',color:'c-1',primary:true,
+        dossierEyebrow:'BRAND DEALS',dossierTitle:'Who went cold mid-negotiation?',
+        dossierSub:'MAWD pulled every brand conversation in your inbox. Here is who pitched, who ghosted, and what money is still on the table.'},
+      {key:'deals',label:'Deals',color:'c-2',
+        preview:{title:'Deals',desc:'Active deals, stalled ones, and ones that slipped. MAWD tracks every campaign from pitch to payment.',items:['Deal stage tracking (Pitch to Brief to Contract to Shipped to Paid)','Rate-card adherence flag when brands lowball','Payment due dates with auto-reminder']}},
+      {key:'audience',label:'Audience',color:'c-3',
+        preview:{title:'Audience',desc:'Your followers, engagement, and fan LTV across platforms. The numbers brands ask for, ready to paste.',items:['Cross-platform follower + engagement rate','Top 1% fans pulled from comments and DMs','Auto-generated media kit PDF']}},
+      {key:'rate-card',label:'Rate Card',color:'c-4',
+        preview:{title:'Rate Card',desc:'Your current rates, recent deal sizes, and what brands actually paid. MAWD benchmarks every incoming offer.',items:['Rolling average paid rate by deliverable','Do not take less than X floor alert','One-tap send of current rate card PDF']}},
+      {key:'journal',label:'Journal',color:'c-6',
+        preview:{title:'Journal',desc:'Voice-note your week. MAWD turns it into a weekly update for managers, agencies, or a closed circle.',items:['Weekly check-in summaries for your team','Searchable log of what you shot, posted, pitched','What happened this month PDF for reps']}}
+    ]
+  },
+  actor: {
+    label:'Actor',
+    sidebar:[
+      {key:'projects',label:'Projects',color:'c-1',primary:true,
+        dossierEyebrow:'CASTING',dossierTitle:'Which projects stalled on you?',
+        dossierSub:'MAWD read every casting and producer thread in your inbox. Here is who is waiting, who ghosted, and who still needs a reply.'},
+      {key:'reps',label:'Reps',color:'c-2',
+        preview:{title:'Reps',desc:'Every conversation with agents, managers, and lawyers centralized. Notes, check-in cadence, and context MAWD holds so you do not have to.',items:['Last-touched timer per rep','Auto-draft check-in when it has been too long','Contract deadlines flagged in advance']}},
+      {key:'auditions',label:'Auditions',color:'c-3',
+        preview:{title:'Auditions',desc:'Self-tape tracker, sides library, callback log. What booked, what did not, and why.',items:['Win rate by project type','Sides searchable by role, writer, production','Callback follow-up templates']}},
+      {key:'network',label:'Network',color:'c-4',
+        preview:{title:'Network',desc:'Directors, writers, casting you have worked with. MAWD remembers the last coffee, the last text, the last favor.',items:['Relationship strength scoring','Birthdays and milestones auto-tracked','Re-engage drafts in your voice']}},
+      {key:'journal',label:'Journal',color:'c-6',
+        preview:{title:'Journal',desc:'Record voice notes between auditions. MAWD keeps the log for reps, taxes, and your own memory.',items:['Daily voice memo to reps on request','Mileage + audition log for Schedule C','What I am working on PDF for your team']}}
+    ]
+  },
+  musician: {
+    label:'Musician',
+    sidebar:[
+      {key:'fans',label:'Fans',color:'c-1',primary:true,
+        dossierEyebrow:'THE PULSE',dossierTitle:'Who are your highest-value fans?',
+        dossierSub:'MAWD scanned emails, DMs, and subscriptions to find fans who pay you, fans who show up, and fans who introduce you.'},
+      {key:'collabs',label:'Collabs',color:'c-2',
+        preview:{title:'Collabs',desc:'Every artist, producer, and feature conversation. Who replied, who went quiet, who still owes stems.',items:['Days-since-last-touch per collaborator','Stem + session file tracker','Re-engage drafts in your voice']}},
+      {key:'sync',label:'Sync',color:'c-3',
+        preview:{title:'Sync',desc:'Sync licensing opportunities: pitches sent, syncs landed, money still waiting. MAWD keeps the paper trail.',items:['Sync pitch tracker by song, supervisor','Publishing royalty reconciliation','Auto-generated one-sheets per track']}},
+      {key:'touring',label:'Touring',color:'c-4',
+        preview:{title:'Touring',desc:'Venue and promoter contacts, routing, fan density by market. Where the shows are and who to call.',items:['Fan density heatmap by city','Promoter contact book with last-touched','Routing suggestions from your listener map']}},
+      {key:'journal',label:'Journal',color:'c-6',
+        preview:{title:'Journal',desc:'Voice-note between sessions. MAWD turns it into fan letters, tour diaries, and posts in your voice.',items:['Fan letter drafts from voice memos','Tour diary auto-published to club members','Studio session log searchable by project']}}
+    ]
+  },
+  other: {
+    label:'Other',
+    sidebar:[
+      {key:'relationships',label:'Relationships',color:'c-1',primary:true,
+        dossierEyebrow:'YOUR PEOPLE',dossierTitle:'Who should you reconnect with?',
+        dossierSub:'MAWD read your inbox for people who matter: paid you, hired you, replied fast, or waited too long. Here is who to re-engage.'},
+      {key:'opportunities',label:'Opportunities',color:'c-2',
+        preview:{title:'Opportunities',desc:'Inbound offers, warm intros, and leads MAWD pulls from your inbox before they go cold.',items:['Auto-tagged opportunity stages','Days-until-stale alerts','One-tap re-engage in your voice']}},
+      {key:'pipeline',label:'Pipeline',color:'c-3',
+        preview:{title:'Pipeline',desc:'Every active conversation that could become money. Stage, next-step, and days-since-last-touch.',items:['Pipeline health score','Next-step suggestions per thread','Stalled-deal alerts']}},
+      {key:'money',label:'Money',color:'c-4',
+        preview:{title:'Money',desc:'Who has paid you, who owes you, and when the next payment hits. MAWD watches your inbox for invoices, receipts, and payouts.',items:['Overdue invoice chaser drafts','Revenue by source auto-categorized','Payment reminder cadence']}},
+      {key:'journal',label:'Journal',color:'c-6',
+        preview:{title:'Journal',desc:'Voice-note your day. MAWD keeps the record and can turn it into updates, recaps, or posts on request.',items:['Searchable voice-note archive','Auto-drafted weekly recaps','Decision log with transcripts']}}
+    ]
+  }
+};
+
+var state = {
+  owner:{name:'Travis',email:'travis@fanded.com',role:'musician',specifically:''},
+  activeView:null,
+  dossier:null,
+  drafts:[]
+};
+
+function loadOwner(){
+  try { var saved = JSON.parse(localStorage.getItem('mawd_owner')||'{}'); if(saved&&saved.name) state.owner = Object.assign(state.owner, saved); } catch(e){}
+}
+function saveOwner(){ try { localStorage.setItem('mawd_owner', JSON.stringify(state.owner)); } catch(e){} }
+function getRole(){ var r = (state.owner.role||'other').toLowerCase(); if(!ROLES[r]) r='other'; return r; }
+
+function renderSidebar(){
+  var role = ROLES[getRole()];
+  var nav = document.getElementById('sidebarNav');
+  nav.innerHTML = '';
+  role.sidebar.forEach(function(item){
+    var el = document.createElement('div');
+    el.className = 'nav-item' + (state.activeView === item.key ? ' active' : '');
+    el.style.setProperty('--accent', 'var(--' + item.color + ')');
+    el.setAttribute('data-key', item.key);
+    var badgeHtml = '';
+    if (item.primary && state.dossier && state.dossier.insights && state.dossier.insights.length) {
+      badgeHtml = '<span class="nav-badge">' + state.dossier.insights.length + '</span>';
+    } else if (!item.primary) {
+      badgeHtml = '<span class="nav-coming">soon</span>';
+    }
+    el.innerHTML = navIcon(item.key) + '<span class="nav-label">' + item.label + '</span>' + badgeHtml;
+    el.addEventListener('click', function(){ setView(item.key); });
+    nav.appendChild(el);
+  });
+  document.getElementById('ownerFirst').textContent = (state.owner.name||'you').split(' ')[0];
+}
+
+function navIcon(key){
+  var iconMap = {
+    investors:'users',pipeline:'columns',traction:'trending-up',raise:'dollar',journal:'book-open',
+    brands:'star',deals:'briefcase',audience:'users','rate-card':'file-text',
+    projects:'film',reps:'phone',auditions:'mic',network:'share',
+    fans:'heart',collabs:'music',sync:'radio',touring:'map',
+    relationships:'users',opportunities:'target',money:'dollar'
   };
-
-  var chatArea = document.getElementById('chatArea');
-  var userInput = document.getElementById('userInput');
-  var sendBtn = document.getElementById('sendBtn');
-  var docsBtn = document.getElementById('docsBtn');
-  var docsBadge = document.getElementById('docsBadge');
-  var docsOverlay = document.getElementById('docsOverlay');
-  var docsDrawer = document.getElementById('docsDrawer');
-  var drawerClose = document.getElementById('drawerClose');
-  var docsList = document.getElementById('docsList');
-  var docsEmpty = document.getElementById('docsEmpty');
-  var toastEl = document.getElementById('toast');
-  var isTyping = false;
-  var conversationHistory = [];
-  var currentAgent = 'compass';
-  var activeTip = null;
-  var savedDocs = JSON.parse(localStorage.getItem('mawd_docs') || '[]');
-
-  // ── Documents system ──
-  var DOC_ICONS = {
-    'pnl':'📊','expense-report':'🧾','tax-summary':'💰',
-    'email':'✉️','plan':'📋','contract':'📄'
+  var svgs = {
+    users:'<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/>',
+    heart:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+    music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    radio:'<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>',
+    map:'<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>',
+    star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+    'file-text':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    film:'<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>',
+    phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/>',
+    mic:'<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>',
+    share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+    target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    dollar:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    'trending-up':'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+    columns:'<path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"/>',
+    'book-open':'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'
   };
+  var glyph = iconMap[key] || 'users';
+  var path = svgs[glyph] || svgs.users;
+  return '<span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg></span>';
+}
 
-  function saveDoc(type, title, content){
-    var doc = {
-      id: Date.now(),
-      type: type,
-      title: title,
-      content: content,
-      date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
-    };
-    savedDocs.unshift(doc);
-    localStorage.setItem('mawd_docs', JSON.stringify(savedDocs));
-    updateDocsBadge();
-    return doc;
+function setView(key){
+  state.activeView = key;
+  var role = ROLES[getRole()];
+  var item = role.sidebar.find(function(s){ return s.key === key; });
+  renderSidebar();
+  if (!item) return renderCanvasPrimary();
+  document.getElementById('viewTitle').textContent = item.label;
+  if (item.primary) renderCanvasPrimary(item);
+  else renderCanvasComing(item);
+  if (window.innerWidth <= 820) toggleSidebar(false);
+  document.getElementById('canvas').scrollTop = 0;
+}
+
+function renderCanvasPrimary(item){
+  var role = ROLES[getRole()];
+  if (!item) item = role.sidebar.find(function(s){ return s.primary; });
+  var d = state.dossier;
+  var metricHtml = '';
+  if (d && d.metrics && d.metrics.length) {
+    metricHtml = '<div class="metric-grid">' + d.metrics.map(function(m,i){
+      var accent = 'accent-' + (((i) % 4) + 1);
+      return '<div class="metric-card '+accent+'"><div class="metric-value">'+m.value+'</div><div class="metric-label">'+m.label+'</div></div>';
+    }).join('') + '</div>';
+  } else {
+    metricHtml = '<div class="metric-grid">' +
+      '<div class="metric-card accent-1"><div class="metric-value">—</div><div class="metric-label">Connect Gmail</div></div>' +
+      '<div class="metric-card accent-2"><div class="metric-value">—</div><div class="metric-label">To populate</div></div>' +
+      '<div class="metric-card accent-3"><div class="metric-value">—</div><div class="metric-label">Your dossier</div></div>' +
+    '</div>';
   }
 
-  function updateDocsBadge(){
-    var count = savedDocs.length;
-    docsBadge.textContent = count;
-    if(count > 0) docsBadge.classList.add('has-docs');
-    else docsBadge.classList.remove('has-docs');
+  var insightHtml = '';
+  if (d && d.insights && d.insights.length) {
+    insightHtml = '<div class="section-label">What is live in your inbox</div>' +
+      d.insights.map(function(ins){
+        return '<div class="insight-card" onclick="draftFor(\''+ins.id+'\')">' +
+          '<span class="insight-tag '+(ins.tagClass||'t-metric')+'">'+(ins.tag||'INSIGHT')+'</span>' +
+          '<div class="insight-headline">'+ins.headline+'</div>' +
+          (ins.sub ? '<div class="insight-sub">'+ins.sub+'</div>' : '') +
+        '</div>';
+      }).join('');
+  } else {
+    insightHtml = '<div class="section-label">What MAWD will surface once connected</div>' +
+      '<div class="insight-card" onclick="scanInbox()">' +
+        '<span class="insight-tag t-action">CONNECT</span>' +
+        '<div class="insight-headline">Connect Gmail to populate this canvas with people from your inbox.</div>' +
+        '<div class="insight-sub">MAWD reads every thread, tags who matters, and drafts re-engage messages you approve before anything sends.</div>' +
+      '</div>' +
+      '<div class="insight-card">' +
+        '<span class="insight-tag t-pulse">NEXT</span>' +
+        '<div class="insight-headline">Tap the chat bar and tell MAWD what you want to focus on first.</div>' +
+        '<div class="insight-sub">Who in my inbox is still waiting for a reply? is a good opener.</div>' +
+      '</div>';
   }
 
-  function openDrawer(){
-    renderDocsList();
-    docsOverlay.classList.add('open');
-    docsDrawer.classList.add('open');
-  }
+  var draftsHtml = state.drafts.map(renderDraftCard).join('');
 
-  function closeDrawer(){
-    docsOverlay.classList.remove('open');
-    docsDrawer.classList.remove('open');
-  }
+  var canvas = document.getElementById('canvas');
+  canvas.innerHTML =
+    '<div class="canvas-header">' +
+      '<div class="canvas-eyebrow">'+(item.dossierEyebrow||role.label.toUpperCase())+'</div>' +
+      '<div class="canvas-title">'+(item.dossierTitle||'Your dossier')+'</div>' +
+      '<div class="canvas-sub">'+(item.dossierSub||'')+'</div>' +
+    '</div>' + metricHtml + insightHtml + draftsHtml;
+}
 
-  docsBtn.addEventListener('click', openDrawer);
-  docsOverlay.addEventListener('click', closeDrawer);
-  drawerClose.addEventListener('click', closeDrawer);
+function renderCanvasComing(item){
+  var p = item.preview || {};
+  var itemsHtml = (p.items||[]).map(function(x){ return '<li>'+x+'</li>'; }).join('');
+  var primaryKey = ROLES[getRole()].sidebar.find(function(s){return s.primary;}).key;
+  var canvas = document.getElementById('canvas');
+  canvas.innerHTML =
+    '<div class="canvas-header">' +
+      '<div class="canvas-eyebrow">'+item.label.toUpperCase()+'</div>' +
+      '<div class="canvas-title">'+(p.title||item.label)+'</div>' +
+      '<div class="canvas-sub">This surface is coming right after the demo. Here is what will live here.</div>' +
+    '</div>' +
+    '<div class="coming-preview" style="--accent:var(--'+item.color+');">' +
+      '<div class="coming-title"><span class="coming-soon-pill">Coming soon</span><span>'+(p.title||item.label)+'</span></div>' +
+      '<div class="coming-body">'+(p.desc||'')+'</div>' +
+      (itemsHtml ? '<ul>'+itemsHtml+'</ul>' : '') +
+    '</div>' +
+    '<div class="insight-card" onclick="setView(\''+primaryKey+'\')">' +
+      '<span class="insight-tag t-action">GO BACK</span>' +
+      '<div class="insight-headline">The dossier is where the work happens today.</div>' +
+      '<div class="insight-sub">Tap to return to your primary view and see who is in your inbox.</div>' +
+    '</div>';
+}
 
-  function renderDocsList(){
-    docsList.innerHTML = '';
-    if(savedDocs.length === 0){
-      docsList.innerHTML = '<div class="drawer-empty">No documents yet. Ask MAWD to generate a P&L, expense report, or tax summary.</div>';
-      return;
-    }
-    savedDocs.forEach(function(doc){
-      var item = document.createElement('div');
-      item.className = 'doc-item';
-      var icon = document.createElement('div');
-      icon.className = 'doc-icon ' + doc.type;
-      icon.textContent = DOC_ICONS[doc.type] || '📄';
-      var info = document.createElement('div');
-      info.className = 'doc-info';
-      info.innerHTML = '<div class="doc-title">' + doc.title + '</div><div class="doc-meta">' + doc.date + '</div>';
-      var actions = document.createElement('div');
-      actions.className = 'doc-item-actions';
-      // Download button
-      var dlBtn = document.createElement('button');
-      dlBtn.className = 'doc-item-btn';
-      dlBtn.title = 'Download';
-      dlBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-      dlBtn.addEventListener('click',function(e){e.stopPropagation();downloadDoc(doc);});
-      // Share/forward button
-      var shareBtn = document.createElement('button');
-      shareBtn.className = 'doc-item-btn';
-      shareBtn.title = 'Share';
-      shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
-      shareBtn.addEventListener('click',function(e){e.stopPropagation();shareDoc(doc);});
-      // Delete button
-      var delBtn = document.createElement('button');
-      delBtn.className = 'doc-item-btn';
-      delBtn.title = 'Delete';
-      delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
-      delBtn.addEventListener('click',function(e){
-        e.stopPropagation();
-        savedDocs = savedDocs.filter(function(d){return d.id !== doc.id;});
-        localStorage.setItem('mawd_docs', JSON.stringify(savedDocs));
-        updateDocsBadge();
-        renderDocsList();
-        showToast('Document deleted');
-      });
-      actions.appendChild(dlBtn);
-      actions.appendChild(shareBtn);
-      actions.appendChild(delBtn);
-      item.appendChild(icon);
-      item.appendChild(info);
-      item.appendChild(actions);
-      item.addEventListener('click',function(){downloadDoc(doc);});
-      docsList.appendChild(item);
-    });
-  }
+function renderDraftCard(draft){
+  return '<div class="draft-card" data-draft-id="'+draft.id+'">' +
+    '<div class="draft-head">' +
+      '<span class="draft-tag">Draft for your approval</span>' +
+      '<span class="draft-context">'+(draft.contextPill||'')+'</span>' +
+    '</div>' +
+    '<div class="draft-to">To: <strong>'+escapeHtml(draft.to||'')+'</strong></div>' +
+    '<div class="draft-subject">'+escapeHtml(draft.subject||'(no subject)')+'</div>' +
+    '<textarea class="draft-body" onchange="updateDraftBody(\''+draft.id+'\', this.value)">'+escapeHtml(draft.body||'')+'</textarea>' +
+    '<div class="draft-actions">' +
+      '<button class="draft-btn primary" onclick="approveDraft(\''+draft.id+'\')">Approve and send</button>' +
+      '<button class="draft-btn" onclick="rewriteDraft(\''+draft.id+'\')">Rewrite</button>' +
+      '<button class="draft-btn ghost" onclick="skipDraft(\''+draft.id+'\')">Skip</button>' +
+    '</div>' +
+  '</div>';
+}
 
-  function downloadDoc(doc){
-    // Generate a clean text file
-    var text = doc.title + '\n' + '='.repeat(doc.title.length) + '\n\n' + doc.content;
-    var blob = new Blob([text], {type:'text/plain'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = doc.title.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,'-').toLowerCase() + '.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Downloaded: ' + doc.title);
-  }
+function updateDraftBody(id, val){
+  var d = state.drafts.find(function(x){ return x.id === id; });
+  if (d) d.body = val;
+}
 
-  function shareDoc(doc){
-    var text = doc.title + '\n\n' + doc.content;
-    if(navigator.share){
-      navigator.share({title:doc.title, text:text}).catch(function(){});
-    } else if(navigator.clipboard){
-      navigator.clipboard.writeText(text).then(function(){
-        showToast('Copied to clipboard — paste into email or message');
-      });
-    } else {
-      // Fallback: open mailto
-      var subject = encodeURIComponent(doc.title);
-      var body = encodeURIComponent(doc.content);
-      window.open('mailto:?subject='+subject+'&body='+body);
-    }
-  }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 
-  function showToast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    setTimeout(function(){toastEl.classList.remove('show');},2500);
-  }
-
-  // Detect document markers in MAWD response and extract/save
-  function processDocMarkers(text){
-    var match = text.match(/<!--DOC:([^:]+):([^>]+)-->/);
-    if(!match) return {cleanText:text, doc:null};
-    var type = match[1].trim();
-    var title = match[2].trim();
-    var cleanText = text.replace(/<!--DOC:[^>]+-->/g,'').trim();
-    var doc = saveDoc(type, title, cleanText);
-    return {cleanText:cleanText, doc:doc};
-  }
-
-  // Add download/share buttons after a document message
-  function addDocActions(contentDiv, doc){
-    var actionsDiv = document.createElement('div');
-    actionsDiv.className = 'doc-actions';
-    var dlBtn = document.createElement('button');
-    dlBtn.className = 'doc-btn';
-    dlBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download';
-    dlBtn.addEventListener('click',function(){downloadDoc(doc);});
-    var shareBtn = document.createElement('button');
-    shareBtn.className = 'doc-btn';
-    shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Send to accountant';
-    shareBtn.addEventListener('click',function(){shareDoc(doc);});
-    actionsDiv.appendChild(dlBtn);
-    actionsDiv.appendChild(shareBtn);
-    contentDiv.appendChild(actionsDiv);
-  }
-
-  updateDocsBadge();
-
-  // ── Tax Package Generator (same data as fanded-journal Books) ──
-  var BOOKS_STORAGE_KEY = 'fanded_books_2025';
-  function loadBooks(){ try { return JSON.parse(localStorage.getItem(BOOKS_STORAGE_KEY)) || []; } catch(e){ return []; } }
-
-  function isTaxPackageRequest(text){
-    var t = text.toLowerCase();
-    return /tax.*(package|doc|document|prep|filing|return)|generate.*(tax|package|for.*(accountant|cpa|citrine))|send.*(accountant|cpa|citrine)|prep.*(tax|filing)|package.*accountant/.test(t);
-  }
-
-  function generateTaxPackage(){
-    var entries = loadBooks();
-    var year = '2025';
-    var incByCat = {}, expByCat = {}, totalInc = 0, totalExp = 0;
-
-    entries.forEach(function(e){
-      if(e.type === 'income'){ incByCat[e.category] = (incByCat[e.category]||0) + e.amount; totalInc += e.amount; }
-      else { expByCat[e.category] = (expByCat[e.category]||0) + e.amount; totalExp += e.amount; }
-    });
-
-    var html = '<!DOCTYPE html><html><head><title>Tax Package - Travis Atreo Productions LLC - '+year+'</title>'+
-      '<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#222;line-height:1.6;padding:20px}'+
-      'h1{font-size:24px;border-bottom:2px solid #222;padding-bottom:8px}h2{font-size:18px;color:#444;margin-top:32px}'+
-      'table{width:100%;border-collapse:collapse;margin:16px 0}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #ddd}'+
-      'th{background:#f5f5f5;font-weight:600}.total{font-weight:700;border-top:2px solid #222}'+
-      '.note{background:#f9f9f2;padding:16px;border-left:4px solid #3BADE4;margin:20px 0;font-size:14px}'+
-      '@media print{body{margin:20px}}</style></head><body>';
-
-    html += '<h1>Tax Package: '+year+' Tax Year</h1>';
-    html += '<p><strong>Travis Atreo Productions LLC</strong> (S-Corp / Form 1120-S)</p>';
-    html += '<p>Prepared: '+new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'</p>';
-    html += '<p>Prepared for: Citrine CPAs</p><hr>';
-
-    html += '<h2>Summary</h2><table>';
-    html += '<tr><td>Total Income</td><td style="text-align:right;color:green"><strong>$'+totalInc.toFixed(2)+'</strong></td></tr>';
-    html += '<tr><td>Total Expenses</td><td style="text-align:right;color:#c0392b"><strong>$'+totalExp.toFixed(2)+'</strong></td></tr>';
-    html += '<tr class="total"><td>Net Income</td><td style="text-align:right"><strong>$'+(totalInc-totalExp).toFixed(2)+'</strong></td></tr>';
-    html += '<tr><td>Logged Entries</td><td style="text-align:right">'+entries.length+'</td></tr></table>';
-
-    if(Object.keys(incByCat).length){
-      html += '<h2>Income by Category</h2><table><tr><th>Category</th><th style="text-align:right">Amount</th></tr>';
-      Object.keys(incByCat).sort().forEach(function(c){ html += '<tr><td>'+c+'</td><td style="text-align:right">$'+incByCat[c].toFixed(2)+'</td></tr>'; });
-      html += '<tr class="total"><td>Total</td><td style="text-align:right">$'+totalInc.toFixed(2)+'</td></tr></table>';
-    }
-
-    if(Object.keys(expByCat).length){
-      html += '<h2>Expenses by Category</h2><table><tr><th>Category</th><th style="text-align:right">Amount</th></tr>';
-      Object.keys(expByCat).sort().forEach(function(c){ html += '<tr><td>'+c+'</td><td style="text-align:right">$'+expByCat[c].toFixed(2)+'</td></tr>'; });
-      html += '<tr class="total"><td>Total</td><td style="text-align:right">$'+totalExp.toFixed(2)+'</td></tr></table>';
-    }
-
-    html += '<h2>Detailed Transactions</h2><table><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right">Amount</th></tr>';
-    entries.sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).forEach(function(e){
-      var sign = e.type==='income' ? '+' : '-';
-      var color = e.type==='income' ? 'green' : '#c0392b';
-      html += '<tr><td>'+(e.date||'')+'</td><td>'+(e.description||e.category)+'</td><td>'+e.category+'</td><td style="text-align:right;color:'+color+'">'+sign+'$'+e.amount.toFixed(2)+'</td></tr>';
-    });
-    html += '</table>';
-
-    html += '<div class="note"><strong>Additional items needed for filing:</strong><ul>';
-    html += '<li>All 1099s received (Ingrooves, Studio 71/YouTube, Songtrust, BMI)</li>';
-    html += '<li>W-2 for owner salary (if payroll was run through the S-Corp)</li>';
-    html += '<li>Home office: square footage of office space vs total home square footage</li>';
-    html += '<li>Health insurance premium documentation (S-Corp: reported on W-2)</li>';
-    html += '<li>Bank statements: BofA Business Checking, AmEx, Capital One, Amazon Store Card</li>';
-    html += '<li>Vehicle mileage log (if applicable)</li>';
-    html += '<li>Retirement contribution records (Roth IRA)</li>';
-    html += '<li>Any contractor payments over $600 (1099-NEC obligations)</li>';
-    html += '</ul></div>';
-
-    html += '<p style="color:#999;font-size:12px;margin-top:40px">Generated by MAWD \u00b7 fanded.com</p></body></html>';
-
-    // Plain text summary for doc storage
-    var summary = 'Tax Package: '+year+' Tax Year\nTravis Atreo Productions LLC (S-Corp / Form 1120-S)\n';
-    summary += 'Prepared: '+new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'\n';
-    summary += 'Prepared for: Citrine CPAs\n\n';
-    summary += 'SUMMARY\nTotal Income: $'+totalInc.toFixed(2)+'\nTotal Expenses: $'+totalExp.toFixed(2)+'\nNet Income: $'+(totalInc-totalExp).toFixed(2)+'\nEntries: '+entries.length+'\n\n';
-    if(Object.keys(expByCat).length){
-      summary += 'EXPENSES BY CATEGORY\n';
-      Object.keys(expByCat).sort().forEach(function(c){ summary += c+': $'+expByCat[c].toFixed(2)+'\n'; });
-    }
-    if(Object.keys(incByCat).length){
-      summary += '\nINCOME BY CATEGORY\n';
-      Object.keys(incByCat).sort().forEach(function(c){ summary += c+': $'+incByCat[c].toFixed(2)+'\n'; });
-    }
-
-    var doc = saveDoc('tax-summary', 'Tax Package '+year+' - Travis Atreo Productions LLC', summary);
-
-    // Open in new window for print/PDF
-    var win = window.open('','_blank');
-    if(win){ win.document.write(html); win.document.close(); setTimeout(function(){ win.print(); },500); }
-
-    return {entries:entries.length, totalInc:totalInc, totalExp:totalExp, net:totalInc-totalExp, doc:doc};
-  }
-
-  // ── Glossary ──
-  var GLOSSARY = {
-    'MRR':{def:'Monthly Recurring Revenue \u2014 the predictable income you earn every month from subscriptions like Patreon or your fan club.',link:'https://www.investopedia.com/terms/m/mrr.asp'},
-    'churn':{def:'The rate at which subscribers cancel. If 5 out of 100 leave this month, that\'s 5% churn. Lower is better.',link:null},
-    'churn rate':{def:'The percentage of subscribers who cancel in a given period. If 5 out of 100 leave this month, that\'s 5% churn. Lower is better.',link:null},
-    'churn forecast':{def:'A prediction of how many subscribers are likely to cancel soon, based on their recent engagement patterns. Lets you save them before they leave.',link:null},
-    'churn risk':{def:'How likely a subscriber is to cancel. High churn risk means they\'ve stopped engaging and might leave soon.',link:null},
-    'patrons':{def:'People who pay a monthly subscription to support you directly, usually through Patreon or a fan club.',link:null},
-    'win-back':{def:'A strategy to bring back fans who canceled their subscription. Usually a personal message or special offer.',link:null},
-    'engagement':{def:'How actively fans interact with your content \u2014 likes, comments, shares, watch time, opens. High engagement = real fans, not just followers.',link:null},
-    'recurring revenue':{def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',link:null},
-    'recurring':{def:'Money that comes in automatically every month without you doing anything new. The holy grail of creator income.',link:null},
-    'audience overlap':{def:'When a brand\'s customers and your fans are the same type of people. Higher overlap = better partnership fit and more money.',link:null},
-    'fan profile':{def:'A picture of who your fans are \u2014 age, location, interests, spending habits. Built from your actual data, not guesses.',link:null},
-    'sync':{def:'Licensing your music for use in a TV show, film, ad, or video game. Can pay anywhere from $1,500 to $500,000+.',link:null},
-    'sync opportunity':{def:'A chance to license your music for use in a TV show, film, ad, or video game. Can be a major payday.',link:'https://www.ascap.com/help/music-business-101/sync-licensing'},
-    'catalog':{def:'Your entire library of released music \u2014 every song, album, and feature you\'ve ever put out. It\'s an asset that earns money forever.',link:null},
-    'CPM':{def:'Cost Per Mille \u2014 how much a brand pays per 1,000 views or impressions on your content. Higher CPM = more money per post.',link:'https://www.investopedia.com/terms/c/cpm.asp'},
-    'brand deal':{def:'When a company pays you to promote their product to your audience. Can be a social post, video mention, or full campaign.',link:null},
-    'conversion rate':{def:'The percentage of people who take an action you want \u2014 like going from follower to email subscriber, or from free to paid member.',link:null},
-    'first-party data':{def:'Information you collect directly from your fans (emails, purchases, preferences) \u2014 as opposed to data platforms collect about your fans and keep from you.',link:null},
-    'owned database':{def:'A list of your fans\' contact info (emails, phones) that YOU control. Unlike followers on Instagram or Spotify, no algorithm can take this away.',link:null},
-    'fan density':{def:'How concentrated your fans are in a specific city or region. High density = enough fans to sell out a venue there.',link:null},
-    'recoupment':{def:'When a label or distributor gave you an advance (upfront money), they keep your earnings until that advance is paid back. You don\'t see streaming money until it recoups.',link:null},
-    'advance':{def:'Upfront money from a label or distributor. Sounds great, but they keep your future earnings until it\'s paid back (recouped).',link:null},
-    'retention':{def:'How well you keep subscribers over time. 95% retention means only 5% leave each month. The higher the better.',link:null},
-    'LTV':{def:'Lifetime Value \u2014 the total amount of money a fan will spend on you over their entire relationship with you. A fan who pays $10/mo for 3 years has an LTV of $360.',link:null},
-    'top of funnel':{def:'The first point of contact with a potential fan. A TikTok video or Spotify play is top of funnel \u2014 it introduces you. The goal is to move them deeper (email, club, purchase).',link:null},
-    'funnel':{def:'The journey a person takes from discovering you to becoming a paying fan. Top = discovery (Spotify, TikTok). Middle = connection (email, follow). Bottom = revenue (club, merch, tickets).',link:null},
-    'income streams':{def:'The different ways you make money \u2014 streaming, fan clubs, merch, brand deals, sync, touring, production. More streams = more stable income.',link:null},
-    'revenue streams':{def:'The different ways you make money \u2014 streaming, fan clubs, merch, brand deals, sync, touring, production. More streams = more stable income.',link:null}
-  };
-
-  // ── Jargon detection + tooltips ──
-  function applyGlossary(bubble){
-    var html = bubble.innerHTML;
-    var terms = Object.keys(GLOSSARY).sort(function(a,b){return b.length-a.length;});
-    terms.forEach(function(term){
-      var escaped = term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-      var regex = new RegExp('(?<![<\\w])(' + escaped + ')(?![\\w>])','gi');
-      html = html.replace(regex, function(match){
-        return '<span class="jargon" data-term="'+term+'">'+match+'</span>';
-      });
-    });
-    bubble.innerHTML = html;
-    bubble.querySelectorAll('.jargon').forEach(function(el){
-      el.addEventListener('click',function(e){
-        e.stopPropagation();
-        showTip(el, el.getAttribute('data-term'));
-      });
-    });
-  }
-
-  function showTip(el, termKey){
-    closeTip();
-    var entry = GLOSSARY[termKey];
-    if(!entry) return;
-    var tip = document.createElement('div');
-    tip.className='jargon-tip';
-    var close = document.createElement('button');
-    close.className='tip-close';
-    close.innerHTML='&times;';
-    close.addEventListener('click',function(e){e.stopPropagation();closeTip();});
-    tip.appendChild(close);
-    var title = document.createElement('div');
-    title.className='tip-term';
-    title.textContent=termKey;
-    tip.appendChild(title);
-    var def = document.createElement('div');
-    def.className='tip-def';
-    def.textContent=entry.def;
-    tip.appendChild(def);
-    if(entry.link){
-      var a = document.createElement('a');
-      a.className='tip-link';a.href=entry.link;a.target='_blank';a.rel='noopener';
-      a.textContent='Learn more \u2192';
-      tip.appendChild(a);
-    }
-    document.body.appendChild(tip);
-    activeTip = tip;
-    var rect = el.getBoundingClientRect();
-    var tipW = Math.min(280, window.innerWidth - 32);
-    var left = rect.left + rect.width/2 - tipW/2;
-    if(left < 16) left = 16;
-    if(left + tipW > window.innerWidth - 16) left = window.innerWidth - 16 - tipW;
-    var top = rect.bottom + 8;
-    if(top + 120 > window.innerHeight){
-      top = rect.top - 8;
-      tip.style.transform='translateY(-100%)';
-    }
-    tip.style.left = left+'px';
-    tip.style.top = top+'px';
-    tip.style.width = tipW+'px';
-    requestAnimationFrame(function(){tip.classList.add('visible');});
-  }
-
-  function closeTip(){if(activeTip){activeTip.remove();activeTip=null;}}
-  document.addEventListener('click',closeTip);
-
-  // ── Helpers ──
-  function scrollBottom(){
-    requestAnimationFrame(function(){
-      chatArea.scrollTo({top:chatArea.scrollHeight,behavior:'smooth'});
-    });
-  }
-
-  function setActiveAgent(agent){
-    document.querySelectorAll('.agent-dot').forEach(function(d){
-      d.classList.remove('active');d.style.color='';
-    });
-    if(agent && AGENTS[agent]){
-      var dot = document.querySelector('.agent-dot[data-agent="'+agent+'"]');
-      if(dot){dot.classList.add('active');dot.style.color=AGENTS[agent].color;}
-    }
-    currentAgent = agent || currentAgent;
-  }
-
-  function addTimestamp(text){
-    var div = document.createElement('div');
-    div.className='timestamp';div.textContent=text;
-    chatArea.appendChild(div);scrollBottom();
-  }
-
-  function addTalentMessage(text){
-    var wrap = document.createElement('div');
-    wrap.className='msg-wrap msg-talent';
-    var bubble = document.createElement('div');
-    bubble.className='talent-bubble';bubble.textContent=text;
-    wrap.appendChild(bubble);chatArea.appendChild(wrap);scrollBottom();
-  }
-
-  function showThinking(agent){
-    setActiveAgent(agent);
-    var a = AGENTS[agent] || AGENTS.compass;
-    var wrap = document.createElement('div');
-    wrap.className='thinking-wrap';wrap.id='thinkingIndicator';
-    var avatar = document.createElement('div');
-    avatar.className='mawd-avatar';avatar.textContent='M';
-    wrap.appendChild(avatar);
-    var content = document.createElement('div');
-    content.className='thinking-content';
-    var dots = document.createElement('div');
-    dots.className='thinking-dots';
-    for(var i=0;i<3;i++){
-      var s=document.createElement('span');s.style.background=a.color;dots.appendChild(s);
-    }
-    content.appendChild(dots);
-    var label = document.createElement('div');
-    label.className='thinking-label';label.textContent=a.thinking;
-    content.appendChild(label);
-    wrap.appendChild(content);
-    chatArea.appendChild(wrap);scrollBottom();
-  }
-
-  function hideThinking(){
-    var el = document.getElementById('thinkingIndicator');
-    if(el) el.remove();
-  }
-
-  function typeMessage(agent, text, quickReplies, callback){
-    isTyping = true;
-    var a = AGENTS[agent] || AGENTS.compass;
-    setActiveAgent(agent);
-
-    // Check for document markers before displaying
-    var result = processDocMarkers(text);
-    var displayText = result.cleanText;
-    var generatedDoc = result.doc;
-
-    var wrap = document.createElement('div');
-    wrap.className='msg-wrap msg-mawd';
-    var avatar = document.createElement('div');
-    avatar.className='mawd-avatar';avatar.textContent='M';
-    var contentDiv = document.createElement('div');
-    contentDiv.className='mawd-content';
-    var lbl = document.createElement('div');
-    lbl.className='agent-label';lbl.style.color=a.color;lbl.textContent=a.label;
-    var bubble = document.createElement('div');
-    bubble.className='mawd-bubble';
-    bubble.style.borderLeftColor=a.color;
-    bubble.style.borderLeftWidth='3px';
-    bubble.style.borderLeftStyle='solid';
-    var cursor = document.createElement('span');
-    cursor.className='typing-cursor';
-    contentDiv.appendChild(lbl);
-    contentDiv.appendChild(bubble);
-    wrap.appendChild(avatar);
-    wrap.appendChild(contentDiv);
-    chatArea.appendChild(wrap);
-    scrollBottom();
-
-    // For long documents, skip character-by-character and render instantly
-    var isLongDoc = displayText.length > 600;
-
-    if(isLongDoc){
-      bubble.innerHTML = '';
-      // Render the text with line breaks
-      var lines = displayText.split('\n');
-      lines.forEach(function(line, i){
-        if(i > 0) bubble.appendChild(document.createElement('br'));
-        if(line.trim()) bubble.appendChild(document.createTextNode(line));
-      });
-      applyGlossary(bubble);
-      isTyping = false;
-      scrollBottom();
-
-      if(generatedDoc){
-        addDocActions(contentDiv, generatedDoc);
-        showToast('Document saved — tap 📄 to access anytime');
-        scrollBottom();
-      }
-
-      if(quickReplies && quickReplies.length){
-        var qrDiv = document.createElement('div');
-        qrDiv.className='quick-replies';
-        quickReplies.forEach(function(r){
-          var btn = document.createElement('button');
-          btn.className='qr-btn';btn.textContent=r;
-          btn.addEventListener('click',function(){
-            qrDiv.querySelectorAll('.qr-btn').forEach(function(b){
-              b.style.pointerEvents='none';b.style.opacity='0.4';
-            });
-            btn.style.opacity='1';btn.classList.add('selected');
-            sendMessage(r);
-          });
-          qrDiv.appendChild(btn);
-        });
-        contentDiv.appendChild(qrDiv);
-        scrollBottom();
-      }
-
-      if(callback) callback();
-      return;
-    }
-
-    var chars = displayText.split('');
-    var idx = 0;
-    bubble.innerHTML='';
-    bubble.appendChild(cursor);
-
-    function typeNext(){
-      if(idx < chars.length){
-        var ch = chars[idx];
-        if(ch==='\n'){
-          bubble.insertBefore(document.createElement('br'),cursor);
-        } else {
-          bubble.insertBefore(document.createTextNode(ch),cursor);
-        }
-        idx++;
-        if(idx%3===0) scrollBottom();
-        var speed = 15;
-        if(ch==='.') speed=100;
-        else if(ch===',') speed=50;
-        else if(ch==='\n') speed=60;
-        else if(ch==='\u2014') speed=60;
-        setTimeout(typeNext,speed);
-      } else {
-        bubble.removeChild(cursor);
-        applyGlossary(bubble);
-        isTyping = false;
-        scrollBottom();
-
-        if(generatedDoc){
-          addDocActions(contentDiv, generatedDoc);
-          showToast('Document saved — tap 📄 to access anytime');
-          scrollBottom();
-        }
-
-        if(quickReplies && quickReplies.length){
-          var qrDiv = document.createElement('div');
-          qrDiv.className='quick-replies';
-          quickReplies.forEach(function(r){
-            var btn = document.createElement('button');
-            btn.className='qr-btn';btn.textContent=r;
-            btn.addEventListener('click',function(){
-              qrDiv.querySelectorAll('.qr-btn').forEach(function(b){
-                b.style.pointerEvents='none';b.style.opacity='0.4';
-              });
-              btn.style.opacity='1';btn.classList.add('selected');
-              sendMessage(r);
-            });
-            qrDiv.appendChild(btn);
-          });
-          contentDiv.appendChild(qrDiv);
-          scrollBottom();
-        }
-
-        if(callback) callback();
-      }
-    }
-    typeNext();
-  }
-
-  // ── Suggest quick replies based on response ──
-  function generateQuickReplies(text){
-    var replies = [];
-    var lower = text.toLowerCase();
-
-    // 1. Extract numbered options like (1) Do X ... (2) Do Y or 1. Do X ... 2. Do Y
-    var numberedPattern = /\((\d)\)\s+([^\n(]+)/g;
-    var dotPattern = /(?:^|\n)\s*(\d)\.\s+([^\n]+)/g;
-    var numbered = [];
-    var m;
-    while((m = numberedPattern.exec(text)) !== null){
-      var label = m[2].trim().replace(/\s*[-—–:].*/,''); // take text before dash/colon for short label
-      if(label.length > 50) label = label.substring(0, 47) + '...';
-      numbered.push(label);
-    }
-    if(numbered.length === 0){
-      while((m = dotPattern.exec(text)) !== null){
-        var label = m[2].trim().replace(/\s*[-—–:].*/,'');
-        if(label.length > 50) label = label.substring(0, 47) + '...';
-        numbered.push(label);
-      }
-    }
-    if(numbered.length >= 2){
-      return numbered.slice(0, 4); // max 4 buttons
-    }
-
-    // 2. "Which of the remaining..." or "which should" — look for option phrases
-    if((lower.indexOf('which') > -1 || lower.indexOf('what should') > -1) && lower.indexOf('?') > -1){
-      // Try to find short quoted or emphasized options
-      var optPattern = /"([^"]+)"|'([^']+)'|\*\*([^*]+)\*\*/g;
-      var opts = [];
-      while((m = optPattern.exec(text)) !== null){
-        opts.push(m[1] || m[2] || m[3]);
-      }
-      if(opts.length >= 2) return opts.slice(0, 4);
-    }
-
-    // 3. Confirmation questions — "should I", "want me to", "shall I"
-    if(lower.indexOf('should i') > -1 || lower.indexOf('shall i') > -1 || lower.indexOf('want me to') > -1){
-      // Extract what the action is for a contextual "yes" button
-      var actionMatch = text.match(/(?:should I|shall I|want me to)\s+(.{10,60}?)(?:\?|$)/i);
-      if(actionMatch){
-        var action = actionMatch[1].replace(/\?.*$/,'').trim();
-        if(action.length > 40) action = action.substring(0, 37) + '...';
-        replies = ['Yes, ' + action, 'Not yet', 'Something else first'];
-      } else {
-        replies = ['Yes, do it', 'Not yet', 'Something else first'];
-      }
-      return replies;
-    }
-
-    // 4. Specific known patterns
-    if(lower.indexOf('what do you do') > -1 || lower.indexOf('what kind of') > -1 || lower.indexOf('what type') > -1){
-      return ["I'm a musician","I'm an actor","I'm a creator","I manage talent"];
-    }
-    if(lower.indexOf('want me to show') > -1 || lower.indexOf('want to see') > -1){
-      return ['Show me','Tell me more','What else can you do?'];
-    }
-    if(lower.indexOf('connect') > -1 && lower.indexOf('?') > -1){
-      return ['What happens when I connect?','Show me an example','What data do you need?'];
-    }
-
-    // 5. "Ready?" / simple yes-no
-    if(/ready\s*\?|good to go\?|sound good\?|make sense\?|approve/i.test(text)){
-      return ['Let\'s go', 'Hold on', 'Show me first'];
-    }
-
-    // 6. Generic fallback — only if there's actually a question
-    if(lower.indexOf('?') > -1){
-      replies = ['Yes','Tell me more','What else?'];
-    }
-
-    return replies;
-  }
-
-  // ── API call ──
-  function callMAWD(messages, agent, callback){
-    fetch('/api/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:messages, agent:agent, mode: window.location.search.includes('demo') ? 'demo' : 'personal'})
+function sendMessage(){
+  var input = document.getElementById('chatInput');
+  var text = (input.value||'').trim();
+  if (!text) return;
+  input.value = '';
+  pushInsight({tag:'YOU',tagClass:'t-you',headline:text,sub:'Asked just now'});
+  callChat(text);
+}
+function pushInsight(ins){
+  if (!state.dossier) state.dossier = {metrics:[],insights:[]};
+  ins.id = ins.id || ('ins_'+Date.now()+'_'+Math.random().toString(36).slice(2,7));
+  state.dossier.insights.unshift(ins);
+  renderSidebar();
+  renderCanvasPrimary();
+}
+function callChat(text){
+  var role = getRole();
+  fetch('/api/chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      messages:[{role:'user',content:text}],
+      mode:'personal',
+      mawd:{name:state.owner.name,email:state.owner.email,role:role,specifically:state.owner.specifically},
+      assistantName:'MAWD'
     })
-    .then(function(r){return r.json();})
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (data && data.reply) {
+      pushInsight({tag:'MAWD',tagClass:'t-pulse',headline:data.reply,sub:'Just now'});
+      maybeExtractDraft(data.reply);
+    } else if (data && data.error) {
+      showToast('MAWD had trouble: ' + data.error);
+    }
+  }).catch(function(err){ showToast('Could not reach MAWD'); console.error(err); });
+}
+function maybeExtractDraft(text){
+  var m = /(?:^|\n)To:\s*([^\n]+)\n(?:Subject:\s*([^\n]+)\n)?\n([\s\S]+)/i.exec(text||'');
+  if (!m) return;
+  addDraft({to:m[1].trim(),subject:(m[2]||'').trim(),body:m[3].trim(),contextPill:'From MAWD'});
+}
+function addDraft(d){
+  d.id = 'd_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  state.drafts.unshift(d);
+  renderCanvasPrimary();
+}
+function approveDraft(id){
+  var d = state.drafts.find(function(x){ return x.id === id; });
+  if (!d) return;
+  showToast('Saving to Gmail Drafts...');
+  fetch('/api/chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      messages:[{role:'user',content:'Save this as a Gmail draft (do not send):\nTo: '+d.to+'\nSubject: '+d.subject+'\n\n'+d.body}],
+      mode:'personal',
+      mawd:{name:state.owner.name,email:state.owner.email,role:getRole()},
+      executeAction:true,
+      assistantName:'MAWD'
+    })
+  }).then(function(r){ return r.json(); }).then(function(){
+    showToast('Saved to Gmail Drafts');
+    skipDraft(id);
+  }).catch(function(){ showToast('Could not reach MAWD'); });
+}
+function rewriteDraft(id){
+  var d = state.drafts.find(function(x){ return x.id === id; });
+  if (!d) return;
+  showToast('Asking MAWD to rewrite...');
+  fetch('/api/chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      messages:[{role:'user',content:'Rewrite this email in my voice, shorter and warmer. Reply with only the rewritten body:\n\n'+d.body}],
+      mode:'personal',
+      mawd:{name:state.owner.name,email:state.owner.email,role:getRole()},
+      assistantName:'MAWD'
+    })
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (data && data.reply) { d.body = data.reply.trim(); renderCanvasPrimary(); showToast('Rewritten'); }
+  });
+}
+function skipDraft(id){
+  state.drafts = state.drafts.filter(function(x){ return x.id !== id; });
+  renderCanvasPrimary();
+}
+function draftFor(insightId){
+  var ins = (state.dossier&&state.dossier.insights||[]).find(function(i){ return i.id === insightId; });
+  if (!ins || !ins.draftTarget) return;
+  addDraft({to:ins.draftTarget.to,subject:ins.draftTarget.subject||'Catching up',body:ins.draftTarget.body||'',contextPill:ins.draftTarget.context||''});
+}
+
+function scanInbox(){
+  showToast('MAWD is reading your inbox...');
+  fetch('/api/inbox-scan?role='+encodeURIComponent(getRole())+'&owner='+encodeURIComponent(state.owner.email))
+    .then(function(r){ return r.json(); })
     .then(function(data){
-      if(data.error){
-        callback('I\'m having trouble connecting right now. Try again in a moment.', agent);
-      } else {
-        callback(data.reply, data.agent || agent);
+      if (data && data.dossier) {
+        state.dossier = data.dossier;
+        renderSidebar();
+        renderCanvasPrimary();
+        showToast('Dossier updated');
+      } else if (data && data.needsConnect) {
+        showToast('Connect Gmail to scan your inbox');
       }
     })
-    .catch(function(){
-      callback('I\'m having trouble connecting. Let\'s try again in a moment.', agent);
-    });
-  }
+    .catch(function(){ /* silent */ });
+}
 
-  // ── Send message ──
-  function sendMessage(text){
-    if(!text){
-      text = userInput.value.trim();
+function toggleSidebar(force){
+  var el = document.getElementById('sidebar');
+  var ov = document.getElementById('sidebarOverlay');
+  var open = force === undefined ? !el.classList.contains('open') : force;
+  el.classList.toggle('open', open);
+  ov.classList.toggle('open', open);
+}
+function openSettings(){
+  var choice = prompt('Settings:\n1. Re-run onboarding\n2. Change role (current: '+getRole()+')\n3. Disconnect Gmail\n\nEnter 1, 2, or 3:');
+  if (choice === '1') window.location.href = '/onboard.html';
+  else if (choice === '2') {
+    var r = prompt('Role (founder, influencer, actor, musician, other):', getRole());
+    if (r && ROLES[r.toLowerCase()]) { state.owner.role = r.toLowerCase(); saveOwner(); renderSidebar(); setView(ROLES[getRole()].sidebar[0].key); }
+  } else if (choice === '3') {
+    localStorage.removeItem('mawd_gmail_refresh');
+    showToast('Gmail disconnected');
+  }
+}
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2800);
+}
+
+function needsOnboarding(){
+  try {
+    var saved = JSON.parse(localStorage.getItem('mawd_owner')||'null');
+    return !saved || !saved.name || !saved.role;
+  } catch(e){ return true; }
+}
+
+(function init(){
+  var qp = new URLSearchParams(window.location.search);
+  if (qp.get('name')) {
+    state.owner.name = qp.get('name');
+    state.owner.email = qp.get('email') || state.owner.email;
+    state.owner.role = (qp.get('role')||state.owner.role).toLowerCase();
+    state.owner.specifically = qp.get('specifically') || '';
+    saveOwner();
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
     }
-    if(!text || isTyping) return;
-    userInput.value = '';
-
-    addTalentMessage(text);
-    conversationHistory.push({role:'user', content:text});
-
-    // Intercept tax package requests — use local books if available, otherwise let AI handle
-    var booksEntries = loadBooks();
-    if(isTaxPackageRequest(text) && booksEntries.length > 0){
-      showThinking('ledger');
-      setTimeout(function(){
-        hideThinking();
-        var result = generateTaxPackage();
-        var reply = 'Tax package generated — '+result.entries+' entries, $'+Math.abs(result.net).toFixed(2)+' net '+(result.net >= 0 ? 'income' : 'loss')+'. I opened it in a new tab for you to save as PDF. It\'s also saved in your documents. Ready to send to Citrine when you are.';
-        conversationHistory.push({role:'assistant', content:reply});
-        typeMessage('ledger', reply, ['Send to Citrine','Show me what\'s missing'], function(){
-          var msgs = chatArea.querySelectorAll('.msg-mawd');
-          var lastMsg = msgs[msgs.length-1];
-          if(lastMsg){
-            var content = lastMsg.querySelector('.mawd-content');
-            if(content && result.doc) addDocActions(content, result.doc);
-            scrollBottom();
-          }
-        });
-      }, 800);
-      return;
-    }
-
-    // Pick agent based on content keywords
-    var agent = pickAgent(text);
-    showThinking(agent);
-
-    callMAWD(conversationHistory, agent, function(reply, detectedAgent){
-      hideThinking();
-      conversationHistory.push({role:'assistant', content:reply});
-      var qr = generateQuickReplies(reply);
-      typeMessage(detectedAgent || agent, reply, qr, null);
-    });
+  } else {
+    loadOwner();
   }
 
-  function pickAgent(text){
-    var t = text.toLowerCase();
-    if(/money|revenue|income|earn|pay|financ|churn|mrr|subscri|pricing/.test(t)) return 'dollar';
-    if(/fan|audience|listen|follower|engage|data|database/.test(t)) return 'pulse';
-    if(/brand|deal|partner|sponsor|opportun|inbox|collab/.test(t)) return 'scout';
-    if(/content|write|draft|post|voice|copy|social|messag|design|album|website/.test(t)) return 'hype';
-    if(/tax|expense|deduct|receipt|accountant|cpa|s.corp|llc|bookkeep|invoice|p&l|p\+l|profit.?loss|report|statement|generat/.test(t)) return 'ledger';
-    return 'compass';
+  if (needsOnboarding()) {
+    window.location.href = '/onboard.html';
+    return;
   }
 
-  // ── Event listeners ──
-  sendBtn.addEventListener('click', function(){sendMessage();});
-  userInput.addEventListener('keydown', function(e){
-    if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendMessage();}
+  var role = ROLES[getRole()];
+  state.activeView = role.sidebar[0].key;
+  document.getElementById('viewTitle').textContent = role.sidebar[0].label;
+  renderSidebar();
+  renderCanvasPrimary(role.sidebar[0]);
+
+  document.getElementById('chatInput').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') sendMessage();
   });
 
-  // ── Deep link context messages ──
-  // When MAWD texts you a prep message with a link like
-  // ?context=prep_tomorrow, the chat opens with that context loaded.
-  // Add new contexts here as needed.
-  var DEEP_LINK_CONTEXTS = {
-    'prep_tomorrow': {
-      agent: 'compass',
-      // The iMessage text — shown as MAWD's opening message
-      mawdOpening: "Here's your prep for tomorrow. Tell me which ones to run and I'll get started.",
-      // Items shown as quick-reply buttons so Travis can approve each
-      quickReplies: [
-        'Draft the Jason Sparks reply',
-        'Confirm Max Diez Thursday',
-        'Pull my top 15 whale fans',
-        'Draft the Shawn Xu email'
-      ],
-      // Hidden system context so MAWD knows what's happening
-      systemContext: 'Travis tapped the PREP FOR TOMORROW link from your iMessage. You texted him these 4 items: (1) Draft reply to Jason Sparks explaining the $1.56M ARR math (1,000 creator accounts x $130/mo avg) so it\'s ready to send Monday. (2) Draft reply to Max Diez confirming Thursday after 4:30pm + send calendar invite. (3) Pull top 15 whale fans from fan_scores_ranked.csv and draft personal outreach message for Songs From Dad pre-launch. (4) Draft the materials email to send Shawn Xu at Lower Carbon (deck + MAWD demo link). He\'s now choosing which ones to approve. When he picks one, execute it immediately. Be short — he already knows the context from the text.'
-    },
-    'morning_briefing': {
-      agent: 'compass',
-      mawdOpening: null, // null = use the live API opening like normal
-      quickReplies: [],
-      systemContext: 'Travis opened MAWD from his morning briefing text. Give him today\'s priorities based on what day it is.'
-    }
-  };
-
-  function getDeepLinkContext(){
-    var params = new URLSearchParams(window.location.search);
-    var ctx = params.get('context');
-    if(ctx && DEEP_LINK_CONTEXTS[ctx]) return DEEP_LINK_CONTEXTS[ctx];
-    return null;
-  }
-
-  // ── Opening sequence ──
-  function startMAWD(){
-    var now = new Date();
-    var hours = now.getHours();
-    var mins = now.getMinutes().toString().padStart(2,'0');
-    var ampm = hours >= 12 ? 'PM' : 'AM';
-    var h = hours % 12 || 12;
-    addTimestamp('Today, ' + h + ':' + mins + ' ' + ampm);
-
-    var deepLink = getDeepLinkContext();
-
-    if(deepLink && deepLink.mawdOpening){
-      // Deep link mode — show the pre-built opening, no API call needed
-      showThinking(deepLink.agent);
-      setTimeout(function(){
-        hideThinking();
-        // Inject the system context into conversation history so the API
-        // knows what happened when Travis replies
-        conversationHistory.push({role:'user', content: deepLink.systemContext});
-        conversationHistory.push({role:'assistant', content: deepLink.mawdOpening});
-        typeMessage(deepLink.agent, deepLink.mawdOpening, deepLink.quickReplies, null);
-      }, 800);
-    } else {
-      // Normal mode or deep link without preset opening — call API
-      showThinking('compass');
-      var openingPrompt = (deepLink && deepLink.systemContext)
-        ? deepLink.systemContext
-        : 'Morning. What\'s up today?';
-
-      callMAWD(
-        [{role:'user', content: openingPrompt}],
-        deepLink ? deepLink.agent : 'compass',
-        function(reply, detectedAgent){
-          hideThinking();
-          conversationHistory.push({role:'assistant', content:reply});
-          var qr = (deepLink && deepLink.quickReplies.length) ? deepLink.quickReplies : generateQuickReplies(reply);
-          typeMessage(detectedAgent || 'compass', reply, qr, null);
-        }
-      );
-    }
-  }
-
-  setTimeout(startMAWD, 600);
-
+  setTimeout(scanInbox, 400);
 })();
 </script>
 </body>
