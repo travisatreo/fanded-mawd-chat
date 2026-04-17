@@ -81,14 +81,10 @@ export default async function handler(req, res) {
       findings = userFindings.filter(Boolean).concat(findings);
     }
 
-    // 2. Cross-reference insight (when 2+ user-vouched findings exist)
-    const userVouched = findings.filter(f => f.userProvided);
-    const xrefInsight = userVouched.length >= 2 ? crossReferenceInsight(userVouched) : null;
+    // 2. Claude Opus synthesis
+    const synthesis = await synthesizeDossier(apiKey, name, findings, socials, fallbackHint);
 
-    // 3. Claude Opus synthesis
-    const synthesis = await synthesizeDossier(apiKey, name, findings, socials, fallbackHint, xrefInsight);
-
-    // 4. Confidence tiering
+    // 3. Confidence tiering
     const tier = classifyConfidenceTier(findings);
 
     const result = {
@@ -97,13 +93,10 @@ export default async function handler(req, res) {
         title: f.title,
         url: f.url,
         snippet: (f.snippet || '').slice(0, 300),
-        weight: f.weight,
-        userProvided: !!f.userProvided
+        weight: f.weight
       })),
       inferred_role: synthesis.inferred_role || 'other',
       dossier_text: synthesis.dossier_text || '',
-      cross_reference_insight: xrefInsight || null,
-      user_vouched_count: userVouched.length,
       confidence_tier: tier.tier,
       confidence_debug: tier.debug  // server-side diagnostics; client can ignore
     };
@@ -225,119 +218,10 @@ async function crawlPublicFootprint(name, socials, fallbackHint) {
 }
 
 // ── User-provided link fetch ───────────────────────────────────────────────
-// When a user pastes a link during the rung ladder, fetch the page and
-// build a high-weight finding. Order of preference per platform:
-//   YouTube   → YouTube Data API v3 (if YOUTUBE_API_KEY) → Tavily extract
-//   Spotify   → Spotify Web API client credentials (if keys) → Tavily extract
-//   Everything else → Tavily /extract → direct GET + <title>/og: fallback
-// All paths fall back to an empty-but-labeled finding if every method
-// fails, so the crawl always returns something for the user to see.
-
-async function fetchYouTubeChannel(url) {
-  const key = process.env.YOUTUBE_API_KEY;
-  if (!key) return null;
-  try {
-    // Accept /@handle, /channel/UCxxx, /user/xxx, /c/xxx patterns
-    const u = new URL(url);
-    const path = u.pathname.replace(/\/$/, '');
-    let lookupUrl = null;
-    let idParam = null;
-    if (/^\/@/.test(path)) {
-      const handle = path.slice(2).split('/')[0];
-      lookupUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=@${encodeURIComponent(handle)}&key=${key}`;
-    } else if (/^\/channel\//.test(path)) {
-      const id = path.split('/')[2];
-      lookupUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(id)}&key=${key}`;
-    } else {
-      // /user/xxx or /c/xxx — use search endpoint
-      const q = path.split('/').filter(Boolean).pop() || '';
-      if (!q) return null;
-      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(q)}&maxResults=1&key=${key}`;
-      const searchResp = await fetch(searchUrl);
-      if (!searchResp.ok) return null;
-      const searchData = await searchResp.json();
-      const channelId = searchData.items?.[0]?.snippet?.channelId || searchData.items?.[0]?.id?.channelId;
-      if (!channelId) return null;
-      lookupUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(channelId)}&key=${key}`;
-    }
-    if (!lookupUrl) return null;
-    const resp = await fetch(lookupUrl);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const ch = data.items?.[0];
-    if (!ch) return null;
-    const s = ch.statistics || {};
-    const sn = ch.snippet || {};
-    const snippet = [
-      sn.title ? `Channel: ${sn.title}` : '',
-      s.subscriberCount ? `Subscribers: ${Number(s.subscriberCount).toLocaleString()}` : '',
-      s.videoCount ? `Videos: ${Number(s.videoCount).toLocaleString()}` : '',
-      s.viewCount ? `Total views: ${Number(s.viewCount).toLocaleString()}` : '',
-      sn.description ? `Description: ${String(sn.description).slice(0, 400)}` : ''
-    ].filter(Boolean).join('. ');
-    return {
-      source: 'youtube',
-      url,
-      title: sn.title ? `YouTube: ${sn.title}` : `YouTube channel`,
-      snippet,
-      weight: 10,
-      userProvided: true
-    };
-  } catch (e) {
-    console.warn('YouTube API fetch failed:', e.message);
-    return null;
-  }
-}
-
-async function fetchSpotifyArtist(url) {
-  const cid = process.env.SPOTIFY_CLIENT_ID;
-  const cs = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!cid || !cs) return null;
-  try {
-    // Extract artist ID from https://open.spotify.com/artist/{id}
-    const m = /\/artist\/([A-Za-z0-9]+)/.exec(url);
-    if (!m) return null;
-    const artistId = m[1];
-    // Client credentials flow
-    const tokResp = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${cid}:${cs}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: 'grant_type=client_credentials'
-    });
-    if (!tokResp.ok) return null;
-    const tok = await tokResp.json();
-    const auth = { 'Authorization': `Bearer ${tok.access_token}` };
-    const [artistResp, topTracksResp] = await Promise.all([
-      fetch(`https://api.spotify.com/v1/artists/${artistId}`, { headers: auth }),
-      fetch(`https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`, { headers: auth })
-    ]);
-    if (!artistResp.ok) return null;
-    const artist = await artistResp.json();
-    const topTracks = topTracksResp.ok ? await topTracksResp.json() : { tracks: [] };
-    const trackNames = (topTracks.tracks || []).slice(0, 5).map(t => t.name).filter(Boolean);
-    const snippet = [
-      artist.name ? `Artist: ${artist.name}` : '',
-      artist.followers?.total ? `Followers: ${Number(artist.followers.total).toLocaleString()}` : '',
-      Array.isArray(artist.genres) && artist.genres.length ? `Genres: ${artist.genres.join(', ')}` : '',
-      trackNames.length ? `Top tracks: ${trackNames.join(', ')}` : ''
-    ].filter(Boolean).join('. ');
-    return {
-      source: 'spotify',
-      url,
-      title: artist.name ? `Spotify: ${artist.name}` : 'Spotify artist',
-      snippet,
-      weight: 10,
-      userProvided: true
-    };
-  } catch (e) {
-    console.warn('Spotify API fetch failed:', e.message);
-    return null;
-  }
-}
-
+// When a user pastes a link during the tier-2 "sharpen" flow, fetch the
+// page and build a high-weight finding. Prefer Tavily /extract when the
+// key is available (returns cleaned LLM-ready content). Otherwise direct
+// GET + title/meta heuristics.
 async function fetchUserLink(rawUrl) {
   if (!rawUrl) return null;
   let url = String(rawUrl).trim();
@@ -353,22 +237,6 @@ async function fetchUserLink(rawUrl) {
     weight: 10, // user explicitly vouched for this
     userProvided: true
   };
-
-  // Platform-specific enriched fetchers first (progressive enhancement).
-  // Each returns null if the key is missing or the fetch fails, in which
-  // case we fall through to Tavily extract below.
-  try {
-    if (/youtube\.com|youtu\.be/.test(host)) {
-      const yt = await fetchYouTubeChannel(url);
-      if (yt) return yt;
-    }
-    if (/open\.spotify\.com/.test(host) && /\/artist\//.test(url)) {
-      const sp = await fetchSpotifyArtist(url);
-      if (sp) return sp;
-    }
-  } catch (e) {
-    console.warn('Platform-specific fetch failed, falling back:', e.message);
-  }
 
   // Try Tavily extract first if the key is configured
   const tavilyKey = process.env.TAVILY_API_KEY;
@@ -648,129 +516,8 @@ function decodeHtmlEntities(s){
     .replace(/&#x2F;/g,'/');
 }
 
-// Server-side source-label prettifier (mirrors client's pretty()).
-function pretty(source){
-  const map = { wikipedia:'Wikipedia', imdb:'IMDb', spotify:'Spotify', linkedin:'LinkedIn', youtube:'YouTube', instagram:'Instagram', tiktok:'TikTok', twitter:'X', github:'GitHub', press:'press', crunchbase:'Crunchbase', tavily:'web', ddg:'web' };
-  return map[source] || source;
-}
-
-// ── Cross-reference insight engine ─────────────────────────────────────────
-// Triggered when >= 2 user-vouched platform findings are present. Tries the
-// 7 deterministic patterns in order; returns the first that fires. Returns
-// null if no pattern has enough data, in which case the synthesis prompt
-// asks Claude to generate an open-ended non-obvious pattern observation.
-//
-// Patterns use regex + number extraction from the fetched snippets. They
-// only fire when the data actually supports the insight — no speculation.
-function parseFollowers(snippet){
-  if (!snippet) return null;
-  const s = String(snippet);
-  const toNum = (raw) => {
-    const clean = raw.replace(/,/g, '').trim();
-    const n = parseFloat(clean);
-    if (isNaN(n)) return null;
-    if (/k$/i.test(clean)) return n * 1000;
-    if (/m$/i.test(clean)) return n * 1000000;
-    return n;
-  };
-  // Pattern A: "Followers: 29,000" / "Subscribers: 316K" / "Monthly listeners: 1.2M"
-  let m = /(?:followers|subscribers|monthly listeners)[:\s]+([\d,.]+\s*[kmKM]?)/i.exec(s);
-  if (m) { const n = toNum(m[1]); if (n) return n; }
-  // Pattern B: "45K followers" / "316K subscribers" / "1.2M monthly listeners"
-  m = /([\d,.]+\s*[kmKM]?)\s+(?:followers|subscribers|monthly listeners)/i.exec(s);
-  if (m) { const n = toNum(m[1]); if (n) return n; }
-  return null;
-}
-function parseVideoOrPostCount(snippet){
-  const m = /(?:videos?|posts?|tracks?|releases?)[:\s]+([\d,]+)/i.exec(snippet || '');
-  return m ? parseFloat(m[1].replace(/,/g, '')) : null;
-}
-
-function crossReferenceInsight(userFindings){
-  if (!Array.isArray(userFindings) || userFindings.length < 2) return null;
-  // Normalize up to 3 platforms with parsed stats
-  const platforms = userFindings.slice(0, 3).map(f => ({
-    source: f.source,
-    title: f.title,
-    snippet: f.snippet || '',
-    followers: parseFollowers(f.snippet),
-    output: parseVideoOrPostCount(f.snippet)
-  }));
-
-  const [a, b] = platforms;
-  if (!a || !b) return null;
-
-  // Pattern 1: audience size asymmetry (follower ratio >= 3x)
-  if (a.followers && b.followers) {
-    const ratio = Math.max(a.followers, b.followers) / Math.min(a.followers, b.followers);
-    if (ratio >= 3) {
-      const big = a.followers > b.followers ? a : b;
-      const small = a.followers > b.followers ? b : a;
-      return `Your ${pretty(big.source)} audience is roughly ${Math.round(ratio)}x the size of your ${pretty(small.source)} one. The two platforms are reaching pretty different rooms.`;
-    }
-  }
-
-  // Pattern 2: output/catalog asymmetry
-  if (a.output && b.output) {
-    const outRatio = Math.max(a.output, b.output) / Math.min(a.output, b.output);
-    if (outRatio >= 3) {
-      const heavy = a.output > b.output ? a : b;
-      const light = a.output > b.output ? b : a;
-      return `You've put out ${Math.round(outRatio)}x more on ${pretty(heavy.source)} than on ${pretty(light.source)}. That's where your habit lives.`;
-    }
-  }
-
-  // Pattern 3: format-fit (short-form vs long-form platforms)
-  const shortForm = new Set(['tiktok', 'instagram', 'twitter']);
-  const longForm = new Set(['youtube', 'podcast']);
-  const aShort = shortForm.has(a.source), bShort = shortForm.has(b.source);
-  const aLong = longForm.has(a.source), bLong = longForm.has(b.source);
-  if ((aShort && bLong) || (aLong && bShort)) {
-    if (a.followers && b.followers) {
-      const shortP = aShort ? a : b;
-      const longP = aLong ? a : b;
-      if (shortP.followers > longP.followers * 2) {
-        return `Your short-form reach on ${pretty(shortP.source)} is meaningfully ahead of your long-form presence on ${pretty(longP.source)}. People know you in bites, not sessions.`;
-      }
-      if (longP.followers > shortP.followers * 2) {
-        return `Your long-form following on ${pretty(longP.source)} is ahead of your short-form reach on ${pretty(shortP.source)}. Your audience wants depth from you.`;
-      }
-    }
-  }
-
-  // Pattern 4: platform dominance (one platform is clearly the "home")
-  const strongestFollowers = platforms
-    .filter(p => p.followers)
-    .sort((x, y) => y.followers - x.followers)[0];
-  if (strongestFollowers && strongestFollowers.followers >= 50000) {
-    return `Your center of gravity is ${pretty(strongestFollowers.source)}. That's your main room. The others are extensions.`;
-  }
-
-  // Pattern 5: title/description overlap (same themes across platforms)
-  const words = s => (s || '').toLowerCase().match(/[a-z]{5,}/g) || [];
-  const wordsA = new Set(words(a.snippet).slice(0, 40));
-  const wordsB = new Set(words(b.snippet).slice(0, 40));
-  let shared = 0;
-  for (const w of wordsA) if (wordsB.has(w)) shared++;
-  if (wordsA.size >= 10 && shared >= 4) {
-    return `Your ${pretty(a.source)} and ${pretty(b.source)} are telling the same story with different tools. The consistency is real.`;
-  }
-
-  // Pattern 6: voice divergence (very few shared theme words)
-  if (wordsA.size >= 10 && wordsB.size >= 10 && shared <= 1) {
-    return `The way you show up on ${pretty(a.source)} and on ${pretty(b.source)} reads like two different people. Different audiences get different versions of you.`;
-  }
-
-  // Pattern 7: scarce-output signal (bio-heavy but low post count)
-  if ((a.followers || b.followers) && !a.output && !b.output) {
-    return `You have the audience on both platforms, but not much recent output visible. There's leverage sitting unused.`;
-  }
-
-  return null;
-}
-
 // ── Claude Opus synthesis ──────────────────────────────────────────────────
-async function synthesizeDossier(apiKey, name, findings, socials, fallbackHint, crossReferenceInsightText) {
+async function synthesizeDossier(apiKey, name, findings, socials, fallbackHint) {
   // Findings are already sorted by weight desc. Take the top 10.
   const top = findings.slice(0, 10);
   const anyUserProvided = findings.some(f => f.userProvided);
@@ -804,12 +551,6 @@ Your task:
 2. Write a 2-4 sentence first-person summary as if MAWD just did its homework.
 ${anyUserProvided ? `
 USER-VOUCHED RULE: At least one finding is marked [USER-VOUCHED]. The user pasted this link themselves, so treat it as ground truth. Lead the dossier with facts from those pages. If other findings contradict user-vouched content, the user-vouched content wins. Do not ask "Sound right?" at the end of a user-vouched dossier; instead end with "Better?" or "Sharper?"` : ''}
-${crossReferenceInsightText ? `
-CROSS-REFERENCE INSIGHT: The user has now connected multiple platforms. A deterministic analysis produced this insight, which you MUST include verbatim or near-verbatim as its own short paragraph in the dossier:
-
-"${crossReferenceInsightText}"
-
-Structure the response as: (paragraph 1) 2-3 sentences of updated identity based on the user-vouched findings; (paragraph 2, separated by a blank line) the cross-reference insight above; (paragraph 3) one short closing sentence ending with "Better?" or "Sharper?"` : ''}
 
 CRITICAL RULES ON FABRICATION:
 - Use ONLY facts that appear in the findings above. Do NOT use your own training knowledge about this person.

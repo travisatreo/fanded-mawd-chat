@@ -140,34 +140,6 @@ textarea.field{min-height:80px;resize:vertical;}
   margin-top:12px;padding:10px 12px;border-radius:10px;
   background:rgba(59,173,228,0.06);border:1px solid rgba(59,173,228,0.16);
 }
-.dossier-xref{
-  font-size:14px;color:var(--text);line-height:1.55;
-  margin-top:12px;padding:12px 14px;border-radius:10px;
-  background:linear-gradient(180deg,rgba(139,92,246,0.09),rgba(59,173,228,0.05));
-  border:1px solid rgba(139,92,246,0.25);
-  position:relative;
-}
-.dossier-xref::before{
-  content:"OBSERVATION";
-  position:absolute;top:-7px;left:12px;
-  font-size:9.5px;font-weight:700;letter-spacing:0.12em;
-  color:var(--c-1);
-  background:var(--surface-2);padding:0 6px;border-radius:4px;
-  font-family:var(--font-mono);
-}
-
-/* Rung progress dots */
-.rung-dots{
-  display:flex;gap:6px;justify-content:center;
-  margin-bottom:28px;
-}
-.rung-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--border);
-  transition:background 0.2s,box-shadow 0.2s;
-}
-.rung-dot.done{background:var(--color-brand-primary);opacity:0.55;}
-.rung-dot.current{background:var(--color-brand-primary);box-shadow:0 0 8px var(--color-brand-primary);}
 .confirm-stack{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .confirm-stack .btn{flex:none;width:100%;}
 
@@ -279,38 +251,33 @@ textarea.field{min-height:80px;resize:vertical;}
   </section>
 
   <section class="screen" id="s-dossier">
-    <div class="rung-dots" id="dossier-dots"></div>
     <div class="headline" style="font-size:20px;margin-bottom:14px;" id="dossier-headline">Here's what I pieced together.</div>
     <div class="dossier-card">
       <div class="dossier-from">MAWD</div>
       <div class="dossier-text" id="dossier-text"></div>
-      <div class="dossier-xref" id="dossier-xref" style="display:none;"></div>
       <div class="dossier-nudge" id="dossier-nudge" style="display:none;"></div>
       <div class="dossier-findings" id="dossier-findings"></div>
     </div>
     <div class="confirm-stack" id="dossier-actions"></div>
   </section>
 
-  <section class="screen" id="s-rung-ask">
-    <div class="rung-dots" id="rung-ask-dots"></div>
-    <div class="headline" style="font-size:20px;margin-bottom:8px;" id="rung-ask-headline">One quick thing so I get you right.</div>
-    <div class="sub" id="rung-ask-sub">Drop me your Instagram or YouTube. I'll pull the current picture so the rest of this is based on today, not five years ago.</div>
+  <section class="screen" id="s-paste-link">
+    <div class="headline" style="font-size:20px;margin-bottom:8px;" id="paste-link-headline">Drop me a link.</div>
+    <div class="sub" id="paste-link-sub">Your Spotify, YouTube, or site works. I'll pull what matters and rewrite the summary.</div>
     <div class="input-wrap">
-      <input type="text" class="field" id="q-rung-ask" placeholder="@handle or https://..." autocomplete="off" autocapitalize="off">
+      <input type="text" class="field" id="q-paste-link" placeholder="https://open.spotify.com/artist/... or your site" autocomplete="off" autocapitalize="off">
     </div>
-    <div class="btn-row" style="flex-direction:column;gap:10px;">
-      <button class="btn primary" id="btn-rung-submit" onclick="submitRungLink()">Sharpen my dossier</button>
-      <button class="btn link" onclick="skipRung()">Skip for now</button>
+    <div class="btn-row">
+      <button class="btn ghost" onclick="show('s-dossier')">Back</button>
+      <button class="btn primary" onclick="submitPasteLink()">Sharpen</button>
     </div>
-    <div class="error-note" id="rung-ask-err">Try a different platform or skip.</div>
   </section>
 
   <section class="screen" id="s-refresh">
-    <div class="rung-dots" id="refresh-dots"></div>
     <div class="orb"></div>
     <div class="headline" id="refresh-headline" style="text-align:center;font-size:22px;">One sec.</div>
     <div class="status-stack" id="refresh-status"></div>
-    <div class="caption" id="refresh-caption">Reading the page you sent and rebuilding the summary.</div>
+    <div class="caption">Reading the page you sent and rebuilding the summary.</div>
   </section>
 
   <section class="screen" id="s-fallback">
@@ -409,82 +376,8 @@ var state = {
   findings:[], inferredRole:'', dossierText:'',
   confidenceTier: 'low', // 'high' | 'medium' | 'low' — drives dossier UI
   dossierConfirmed:false, gmailConnected:false, handles:{},
-  connectionMode: 'session', // default to safer session mode
-  // Trust ladder state
-  rung: 0,              // 0 = post-crawl dossier. 1,2,3 = platform asks. 4 = Gmail.
-  userLinks: [],        // accumulated user-vouched URLs across rungs
-  xrefInsight: null     // populated by server when userLinks.length >= 2
+  connectionMode: 'session' // default to safer session mode
 };
-
-// ── Rung platform suggestions (role-aware) ──
-// Returns {headline, sub, placeholder, submitLabel} for a given rung+role.
-function rungAskCopy(rung, role, previouslyGiven){
-  role = (role||'other').toLowerCase();
-  if (rung === 1) {
-    var hints = {
-      musician:   { platforms: 'Instagram or YouTube', placeholder: '@yourhandle or youtube.com/@you' },
-      influencer: { platforms: 'Instagram or TikTok',  placeholder: '@yourhandle or tiktok.com/@you' },
-      actor:      { platforms: 'Instagram or your IMDb URL', placeholder: '@yourhandle or imdb.com/name/...' },
-      founder:    { platforms: 'X or LinkedIn URL', placeholder: '@you or linkedin.com/in/you' },
-      creator:    { platforms: 'Instagram or YouTube', placeholder: '@yourhandle or youtube.com/@you' },
-      other:      { platforms: 'Instagram or YouTube', placeholder: '@yourhandle or a URL' }
-    };
-    var h = hints[role] || hints.other;
-    return {
-      headline: 'One quick thing so I get you right.',
-      sub: "Drop me your " + h.platforms + ". I'll pull the current picture, followers, recent work, what's actually happening now, so the rest of this is based on today, not five years ago.",
-      placeholder: h.placeholder,
-      submitLabel: 'Sharpen my dossier'
-    };
-  }
-  if (rung === 2) {
-    // Suggest a complementary platform based on what was given at rung 1
-    var givenLower = (previouslyGiven || '').toLowerCase();
-    var suggestion = 'YouTube or TikTok';
-    if (/instagram/.test(givenLower)) suggestion = 'YouTube or TikTok';
-    else if (/youtube|youtu\.be/.test(givenLower)) suggestion = 'Instagram or TikTok';
-    else if (/tiktok/.test(givenLower)) suggestion = 'Instagram or YouTube';
-    else if (/twitter|x\.com/.test(givenLower)) suggestion = 'Instagram or YouTube';
-    else if (/linkedin/.test(givenLower)) suggestion = 'X/Twitter or Instagram';
-    else if (/imdb/.test(givenLower)) suggestion = 'Instagram or your website';
-    else suggestion = role === 'musician' ? 'YouTube or TikTok' : 'YouTube or Instagram';
-    return {
-      headline: 'One more and I start to see patterns.',
-      sub: "Different platforms show me different sides of you. Drop me a second one, " + suggestion + " works.",
-      placeholder: '@yourhandle or a URL',
-      submitLabel: 'Connect it'
-    };
-  }
-  if (rung === 3) {
-    var r3 = {
-      musician:   { label: 'Spotify', placeholder: 'https://open.spotify.com/artist/...' },
-      influencer: { label: 'Linktree or your main website', placeholder: 'linktr.ee/you or yoursite.com' },
-      actor:      { label: 'IMDb', placeholder: 'imdb.com/name/...' },
-      founder:    { label: 'Crunchbase or your company site', placeholder: 'crunchbase.com/organization/... or company.com' },
-      creator:    { label: 'your main site, Linktree, or newsletter', placeholder: 'yoursite.com or linktr.ee/you' },
-      other:      { label: 'your primary site or Linktree', placeholder: 'yoursite.com or linktr.ee/you' }
-    };
-    var rr = r3[role] || r3.other;
-    return {
-      headline: 'Last layer before I get to work.',
-      sub: rr.label + " shows me the business side, where your actual output lives. Once I have this, I've got enough to be useful.",
-      placeholder: rr.placeholder,
-      submitLabel: 'Connect it'
-    };
-  }
-  return null;
-}
-
-// Render progress dots inside a container. `current` is the 0-4 rung.
-function renderRungDots(container, current){
-  if (!container) return;
-  container.innerHTML = '';
-  for (var i = 0; i <= 4; i++) {
-    var d = document.createElement('div');
-    d.className = 'rung-dot' + (i < current ? ' done' : (i === current ? ' current' : ''));
-    container.appendChild(d);
-  }
-}
 
 // Returns true if the input looks like a handle or stage name, rather than a
 // legal first-last pair. Heuristic, not strict. Examples:
@@ -660,59 +553,37 @@ function markLastActive(stack){
 }
 
 function showDossier(){
-  // Tier 3 (low) at Rung 0 (before any user-vouched links): route to
-  // fallback so the user can paste a link or describe themselves.
-  if (state.confidenceTier === 'low' && !state.userLinks.length) { show('s-fallback'); return; }
+  // Tier 3 (low): don't show the dossier card at all — send them to the
+  // fallback flow so they can paste a link or describe themselves.
+  if (state.confidenceTier === 'low') { show('s-fallback'); return; }
 
   document.getElementById('dossier-text').textContent = state.dossierText;
   var findingsEl = document.getElementById('dossier-findings');
   var sources = uniqueSources(state.findings).slice(0, 6);
   findingsEl.textContent = sources.length ? ('Pulled from: ' + sources.map(pretty).join(', ')) : '';
 
-  // Rung progress dots reflect the current rung (0 at first view, >=1 after
-  // any rung submission).
-  renderRungDots(document.getElementById('dossier-dots'), state.rung);
-
-  // Cross-reference insight (only populated when 2+ user-vouched links)
-  var xrefEl = document.getElementById('dossier-xref');
-  if (state.xrefInsight) {
-    xrefEl.style.display = 'block';
-    xrefEl.textContent = state.xrefInsight;
-  } else {
-    xrefEl.style.display = 'none';
-    xrefEl.textContent = '';
-  }
-
-  // Tier-aware nudge (only on first-view Rung 0 dossier)
+  // Tier-aware nudge + actions
   var nudgeEl = document.getElementById('dossier-nudge');
   var actionsEl = document.getElementById('dossier-actions');
   var headlineEl = document.getElementById('dossier-headline');
 
-  if (state.rung === 0) {
-    if (state.confidenceTier === 'medium') {
-      headlineEl.textContent = "Here's what I pieced together.";
-      var hint = platformHintForRole(state.inferredRole);
-      nudgeEl.style.display = 'block';
-      nudgeEl.textContent = "This might be old or incomplete. I'll sharpen it in the next step.";
-    } else {
-      headlineEl.textContent = "Here's what I pieced together.";
-      nudgeEl.style.display = 'none';
-    }
+  if (state.confidenceTier === 'medium') {
+    headlineEl.textContent = "Here's what I pieced together.";
+    var hint = platformHintForRole(state.inferredRole);
+    nudgeEl.style.display = 'block';
+    nudgeEl.textContent = "This might be old or incomplete. Drop me your " + hint + " and I'll fill in the current picture.";
+    actionsEl.innerHTML =
+      '<button class="btn primary" onclick="openPasteLink()">Paste link or handle</button>' +
+      '<button class="btn ghost" onclick="confirmDossier()">This is accurate, move on</button>' +
+      '<button class="btn link" onclick="notMe()">Not me</button>';
+  } else {
+    // high: confident declarative flow
+    headlineEl.textContent = "Here's what I pieced together.";
+    nudgeEl.style.display = 'none';
+    nudgeEl.textContent = '';
     actionsEl.innerHTML =
       '<button class="btn primary" onclick="confirmDossier()">Yes, that\'s me</button>' +
       '<button class="btn ghost" id="btn-edit" onclick="editDossier()">Close, let me correct</button>' +
-      '<button class="btn link" onclick="notMe()">Not me</button>';
-  } else {
-    // Post-rung dossier (rungs 1, 2, 3): show "Continue" to advance to the
-    // next rung. Final rung uses different label.
-    nudgeEl.style.display = 'none';
-    if (state.rung === 1) headlineEl.textContent = "Got it. Here's the current picture.";
-    else if (state.rung === 2) headlineEl.textContent = "Okay, here's what I notice.";
-    else if (state.rung === 3) headlineEl.textContent = "Got it. Full picture.";
-    var nextLabel = state.rung >= 3 ? 'Continue to the last step' : (state.rung === 1 ? "Yes, that's me — continue" : "Yes, that's me — continue");
-    actionsEl.innerHTML =
-      '<button class="btn primary" onclick="advanceRung()">' + nextLabel + '</button>' +
-      '<button class="btn ghost" id="btn-edit" onclick="editDossier()">Correct something</button>' +
       '<button class="btn link" onclick="notMe()">Not me</button>';
   }
   show('s-dossier');
@@ -760,64 +631,21 @@ function editDossier(){
 
 function confirmDossier(){ state.dossierConfirmed = true; proceedAfterDossier(); }
 
-// After dossier confirmation, advance the rung ladder. On Rung 0 confirm,
-// we first resolve a preferred name (only for handle-ish inputs) and then
-// enter Rung 1. Rungs 1-3 advance through platform asks. Rung 4 = Gmail.
+// After dossier confirmation, decide whether to ask for a preferred name.
+// Skip if the typed input is already clearly a simple first name so we don't
+// add friction for users who typed "Trav" or "Maya Akana".
 function proceedAfterDossier(){
-  // Handle preferred-name step only when leaving Rung 0 for the first time.
-  if (state.rung === 0 && !state.preferredName) {
-    var typed = state.publicName || state.name || '';
-    if (looksLikeHandle(typed)) {
-      document.getElementById('q-preferred').value = deriveFirstNameCandidate(typed);
-      show('s-preferred');
-      return;
-    }
+  var typed = state.publicName || state.name || '';
+  if (!looksLikeHandle(typed)) {
+    // Legal-name-ish input. Default preferred to the first token. Skip asking.
     state.preferredName = deriveFirstNameCandidate(typed);
-  }
-  advanceRung();
-}
-
-// Advance from the current rung to the next. Called by the dossier's
-// primary "Continue" button on rungs 1-3 and by the Rung 0 dossier
-// confirmation (via proceedAfterDossier).
-function advanceRung(){
-  var next = state.rung + 1;
-  if (next >= 4) {
-    state.rung = 4;
     show('s-gmail');
     adaptGmailCopy();
-    adaptGmailLadderCopy();
     return;
   }
-  state.rung = next;
-  showRungAsk(next);
-}
-
-// Skip the current rung ask without providing a link.
-function skipRung(){
-  advanceRung();
-}
-
-function showRungAsk(rung){
-  var copy = rungAskCopy(rung, state.inferredRole, state.userLinks[state.userLinks.length - 1] || '');
-  if (!copy) { advanceRung(); return; }
-  document.getElementById('rung-ask-headline').textContent = copy.headline;
-  document.getElementById('rung-ask-sub').textContent = copy.sub;
-  var input = document.getElementById('q-rung-ask');
-  input.value = '';
-  input.placeholder = copy.placeholder;
-  document.getElementById('btn-rung-submit').textContent = copy.submitLabel;
-  document.getElementById('rung-ask-err').classList.remove('show');
-  renderRungDots(document.getElementById('rung-ask-dots'), rung);
-  show('s-rung-ask');
-  setTimeout(function(){ input.focus(); }, 80);
-}
-
-function submitRungLink(){
-  var val = (document.getElementById('q-rung-ask').value || '').trim();
-  if (!val) { skipRung(); return; }
-  state.userLinks.push(val);
-  startRefreshFlow(state.userLinks.slice());
+  // Handle-ish input. Pre-fill a reasonable candidate and show Screen 3.5.
+  document.getElementById('q-preferred').value = deriveFirstNameCandidate(typed);
+  show('s-preferred');
 }
 
 function submitPreferred(){
@@ -825,8 +653,8 @@ function submitPreferred(){
   // Field is optional. If empty, fall back to the candidate we pre-filled.
   if (!v) v = deriveFirstNameCandidate(state.publicName || state.name);
   state.preferredName = v;
-  // Enter the rung ladder rather than jumping straight to Gmail.
-  advanceRung();
+  show('s-gmail');
+  adaptGmailCopy();
 }
 
 // Conditional Screen 4 copy: if the typed input looks like a handle, add the
@@ -843,25 +671,46 @@ function adaptGmailCopy(){
 }
 function notMe(){ show('s-fallback'); }
 
-// ── Rung fetch + refresh flow ─────────────────────────────────────────────
-// Shared orchestrator: shows live status keyed to the detected platform,
-// calls /api/onboard-crawl with the full accumulated userLinks[], picks up
-// any cross-reference insight, and lands on the updated dossier.
+// ── Tier 2 paste-link flow ────────────────────────────────────────────────
+function openPasteLink(){
+  var input = document.getElementById('q-paste-link');
+  input.value = '';
+  // Role-aware headline + placeholder
+  var role = (state.inferredRole||'').toLowerCase();
+  var hintPh = 'https://example.com or your handle';
+  if (role === 'musician')   hintPh = 'https://open.spotify.com/artist/... or youtube.com/@you';
+  else if (role === 'influencer') hintPh = 'instagram.com/you or tiktok.com/@you';
+  else if (role === 'actor') hintPh = 'imdb.com/name/... or your site';
+  else if (role === 'founder') hintPh = 'linkedin.com/in/you or your company site';
+  else if (role === 'creator') hintPh = 'youtube.com/@you or your site';
+  input.placeholder = hintPh;
+  document.getElementById('paste-link-headline').textContent = 'Drop me a link.';
+  document.getElementById('paste-link-sub').textContent = "Your " + platformHintForRole(role) + " works. I'll pull what matters and rewrite the summary.";
+  show('s-paste-link');
+  setTimeout(function(){ input.focus(); }, 80);
+}
+
+function submitPasteLink(){
+  var url = (document.getElementById('q-paste-link').value || '').trim();
+  if (!url) return;
+  startRefreshFlow([url]);
+}
+
+// Orchestrates the second-pass crawl: shows live status keyed to the
+// detected platform, calls /api/onboard-crawl with userLinks, replaces the
+// dossier, and returns the user to the dossier screen.
 function startRefreshFlow(urls){
   show('s-refresh');
   var stack = document.getElementById('refresh-status');
   stack.innerHTML = '';
-  document.getElementById('refresh-headline').textContent = 'One sec.';
-  renderRungDots(document.getElementById('refresh-dots'), state.rung);
+  var hl = document.getElementById('refresh-headline');
+  hl.textContent = 'One sec.';
 
-  var platform = detectPlatform(urls[urls.length - 1]);
-  appendStatus(stack, 'Pulling your ' + platform + '...', 'active');
+  var platform = detectPlatform(urls[0]);
+  var first = 'Pulling your ' + platform + '...';
+  appendStatus(stack, first, 'active');
 
-  var msgs = ['Reading the page.'];
-  if (state.rung === 2) msgs.push('Cross-checking with your other platform.');
-  else msgs.push('Cross-checking with what I already had.');
-  msgs.push('Rewriting the summary.');
-
+  var msgs = ['Reading the page.', 'Cross-checking with what I already had.', 'Rewriting the summary.'];
   var idx = 0;
   var revealTimer = setInterval(function(){
     if (idx >= msgs.length) { clearInterval(revealTimer); return; }
@@ -870,19 +719,11 @@ function startRefreshFlow(urls){
     idx++;
   }, 2100);
 
-  // 10s platform timeout per spec. After 10s we give up on the user's link
-  // but we'll still surface whatever the server returns (if anything) so
-  // the flow keeps moving.
   var hardTimeout = setTimeout(function(){
     clearInterval(revealTimer);
-    markLastActive(stack);
-    appendStatus(stack, platform + " isn't responding right now. Try another or skip ahead.", 'done');
-    setTimeout(function(){
-      // Pop the failing URL so it doesn't stay attached to state
-      state.userLinks.pop();
-      showRungAsk(state.rung);
-    }, 1600);
-  }, 10000);
+    appendStatus(stack, 'Taking longer than expected. Keeping what I had before.', 'done');
+    setTimeout(function(){ show('s-dossier'); }, 900);
+  }, 15000);
 
   fetch('/api/onboard-crawl', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -897,33 +738,27 @@ function startRefreshFlow(urls){
       state.inferredRole = data.inferred_role || state.inferredRole;
       state.dossierText = data.dossier_text;
       state.confidenceTier = data.confidence_tier || state.confidenceTier;
-      state.xrefInsight = data.cross_reference_insight || null;
     }
     markLastActive(stack);
     appendStatus(stack, 'Done.', 'done');
-    setTimeout(showDossier, 500);
+    setTimeout(function(){
+      // Update headline so the user sees the refreshed framing
+      document.getElementById('dossier-headline').textContent = "Here's the sharpened version.";
+      showDossier();
+      // Swap the headline AFTER showDossier re-renders, so the tier-aware
+      // renderer doesn't overwrite it.
+      setTimeout(function(){
+        document.getElementById('dossier-headline').textContent = "Here's the sharpened version. Sound right now?";
+      }, 0);
+    }, 700);
   })
   .catch(function(err){
     console.error('refresh crawl failed:', err);
     clearTimeout(hardTimeout);
     clearInterval(revealTimer);
-    markLastActive(stack);
-    appendStatus(stack, "That link didn't pull cleanly. Keeping what I had.", 'done');
-    // Pop the failing URL and send the user back to the rung ask
-    state.userLinks.pop();
-    setTimeout(function(){ showRungAsk(state.rung); }, 1600);
+    appendStatus(stack, 'That link did not pull cleanly. Keeping what I had.', 'done');
+    setTimeout(function(){ show('s-dossier'); }, 1200);
   });
-}
-
-// Adapt Gmail screen copy for the ladder context (Rung 4): acknowledge
-// that the user already went through the public/creative/professional
-// rungs, so the Gmail ask reads as a natural next step, not a cliff.
-function adaptGmailLadderCopy(){
-  var headline = document.querySelector('#s-gmail .connect-headline');
-  var sub = document.querySelector('#s-gmail .connect-sub');
-  if (!headline || !sub) return;
-  headline.textContent = "Last layer, your inbox.";
-  sub.textContent = "You've shown me who you are publicly, creatively, and professionally. Gmail is where the relationships live, the people who paid you, pitched you, went cold, or are waiting on you. I only read. You approve anything that sends.";
 }
 
 function detectPlatform(url){
