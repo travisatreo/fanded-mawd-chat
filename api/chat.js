@@ -1,6 +1,7 @@
 import { MAWD_SYSTEM_PROMPT, TRAVIS_BRAIN } from '../lib/brain.js';
 import { getBusinessSnapshot, getMemories, saveMemory, supabaseQuery } from '../lib/supabase.js';
 import { executeTool, sendEmail, listEmails } from '../lib/google.js';
+import { personaSystemBlock } from '../lib/persona.js';
 
 // ── Load MAWD brain by slug (multi-MAWD support) ──
 // Returns full instance including google_refresh_token for per-user OAuth
@@ -707,7 +708,8 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
     const requestBody = {
       model: 'claude-sonnet-4-20250514',
       max_tokens: maxTokens,
-      system: systemPrompt,
+      // Persona first (cached), endpoint-specific systemPrompt second (uncached).
+      system: [...personaSystemBlock(), { type: 'text', text: systemPrompt }],
       messages: apiMessages
     };
 
@@ -825,7 +827,9 @@ Your memories from past conversations are injected above in "MAWD MEMORY". Refer
             body: JSON.stringify({
               model: 'claude-sonnet-4-20250514',
               max_tokens: maxTokens,
-              system: systemPrompt,
+              // Same cached persona + endpoint systemPrompt shape as the
+              // first call so the cache-hit carries through tool-use loops.
+              system: [...personaSystemBlock(), { type: 'text', text: systemPrompt }],
               messages: loopMessages,
               tools: TOOLS
             })
@@ -1238,6 +1242,9 @@ async function handleInboxScan(req, res) {
         body: JSON.stringify({
           model: 'claude-opus-4-6',
           max_tokens: 2500,
+          // Inbox-scan synthesis inherits the MAWD persona for voice
+          // consistency with the rest of the app.
+          system: personaSystemBlock(),
           messages: [{ role: 'user', content: userPrompt }]
         })
       });

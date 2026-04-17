@@ -1,227 +1,165 @@
-# Path A Build Session — 2026-04-16
+# Session Log — Rollback + Persona + Insight Scaffolding
 
-Building the 5-rung trust ladder onboarding. This log captures every
-implementation decision made during the autonomous overnight build.
+Updated: 2026-04-16 late night. Rollback + persona encoding + insight
+engine architecture staging. Shipped to main.
 
-## Starting state
+## Status of the live URL
 
-- Rung 0 (name + Tavily crawl + dossier with confidence_tier) shipped.
-- Second-pass crawl from a single `userLinks[0]` already works and flips
-  Travis Atreo from tier=medium to tier=high when his Spotify URL is
-  pasted.
-- Server endpoint `/api/onboard-crawl` already handles `userLinks: string[]`
-  via `fetchUserLink()` (Tavily extract primary, direct GET fallback).
-- Deployed: `cca0e87` on main.
-- Env: TAVILY_API_KEY ✓, ANTHROPIC_API_KEY ✓. No YouTube/Spotify keys yet.
+**https://fanded-mawd-chat.vercel.app/** — stable.
 
-The ladder is essentially Rung 0 (existing) + three sequenced paste-link
-asks (reusing the second-pass plumbing) + cross-reference insight between
-Rung 1 and Rung 2 + Gmail copy update at Rung 4. Most infrastructure
-exists — the work is state machine, UX pacing, and the insight engine.
+Onboarding flow for tomorrow's demo:
 
-## Architecture decisions (made tonight)
+1. Name / stage name / handle (Screen 1)
+2. Live public crawl (Tavily + Wikipedia + handle probes + DDG)
+3. Dossier presentation with confidence tier
+4. Optional preferred-name step (only shown when input is handle-like)
+5. Gmail connect with minimal copy
+6. Inbox scan with role-adapted status messages
+7. Optional handles deepening (Screen 6)
+8. Main canvas with role-adapted sidebar
 
-### Decision 1: Reuse existing second-pass plumbing
-Instead of building a new API or new client flow, call the existing
-`POST /api/onboard-crawl { name, userLinks }` at each rung, passing
-the accumulated user-provided URLs array. The server already merges
-user-vouched findings into synthesis. The rung concept lives on the
-client.
+All Settings modal affordances (Gmail mode switch, disconnect, reset,
+guest session, change role) still work. Tavily still primary search.
+Confidence tiers still drive dossier UI. Multi-identity data model
+(public_name / preferred_name / account_name) still wired.
 
-**Why:** proven code path, no new function count pressure, Claude
-synthesis already understands USER-VOUCHED findings.
+## What tonight did
 
-### Decision 2: One ask screen, one refresh screen, one dossier screen
-The ladder reuses `s-paste-link` (renamed to `s-rung-ask`), `s-refresh`,
-and `s-dossier`. Client state `state.rung` (1-3) drives copy, placeholder,
-and next-step behavior. New screens cost complexity; reusing keeps the
-CSS/animation surface stable.
+### Part 1 — Rollback
 
-### Decision 3: Platform-specific fetchers are progressive enhancement
-`fetchUserLink()` already works via Tavily /extract for any URL. For
-YouTube and Spotify, if the respective API keys are present, use the
-richer API fetch first and fall back to Tavily. No key = Tavily only.
-Ship without YouTube/Spotify keys; both can be added post-deploy.
+Reverted `onboard.html` and `api/onboard-crawl.js` to commit
+`cca0e87` ("tier-aware dossier UI + second-pass crawl from user link"),
+the last known-stable state before Path A ladder work began.
 
-**Why:** user said "do not block the build on missing API keys." The
-Tavily path has already been validated for Travis's Spotify URL.
+Removed: 5-rung ladder UI, rung progress dots, new s-rung-ask screen,
+cross-reference insight embedded in synthesis, YouTube/Spotify
+platform-specific fetchers (they still exist but are unreachable
+because the rung UI that called them is gone).
 
-### Decision 4: Cross-reference insight runs server-side at Rung 2
-When the request has >= 2 user-vouched findings, the synthesis prompt
-adds the 7-pattern cross-reference template + Claude fallback. The
-dossier output embeds the insight as a second paragraph. No separate
-endpoint.
+Preserved: all backend keepers (Tavily crawl, confidence classifier,
+stage-name data model, Settings modal, guest mode, Gmail session/
+persistent modes, Supabase migration, inbox scan).
 
-**Why:** the insight needs access to both platforms' text anyway, and
-the synthesis step is already paying for a Claude call. Adding a
-separate endpoint would push us closer to the 12-function cap and
-double-pay for Claude.
+Path A WIP is preserved on `feature/path-a-wip` branch for weekend
+resumption. The file-level diff needed to bring Path A back is a
+clean cherry-pick.
 
-### Decision 5: No feature flag on the ladder
-The ladder replaces the existing post-dossier → Gmail transition. Skip
-at every rung means any failure still lands the user at Gmail. The
-existing tier-aware flow (Tier-1 high-confidence users get skip-to-Gmail
-via Rung 1 skip; Tier-3 low users get routed through fallback) is
-preserved by the skip logic. Ladder is default-on.
+Commits:
+- `<rollback commit sha>` — revert onboard.html + onboard-crawl.js
 
-**Why:** simpler to ship, every failure has a fallback path, no dead
-code branches. If ladder breaks I'll revert, not toggle.
+### Part 2 — Persona encoding with prompt caching
 
-### Decision 6: Progress indicator is a 5-dot sequence top-center
-Dots 0-4 correspond to Rungs 0-4. Current rung is gold-filled, past
-rungs are dim-filled, future rungs are hollow. Survives existing visual
-language (the onboarding already uses dot progress).
+New files:
+- `system/mawd-persona.md` — single source of truth for MAWD voice,
+  tone, product philosophy. Includes Information Parity, Handoff
+  Principle, Revenue Before Admin, Strategy First Thrive Energy,
+  StoryBrand role. Includes mechanical voice rules (no em dashes, no
+  AI slop, no filler phrases, no hedging) and character rules.
+- `lib/persona.js` — loader module. Reads the persona.md file once
+  at cold start, exposes `personaSystemBlock()` returning an Anthropic
+  system-blocks array with `cache_control: ephemeral` set on the
+  persona block. Endpoint-specific context appends as additional
+  (uncached) blocks.
 
-## Risks flagged for tomorrow
+Wired into every Claude call that generates user-facing copy:
+- `api/onboard-crawl.js::synthesizeDossier` (dossier generation)
+- `api/chat.js` main chat loop (system prompt + persona)
+- `api/chat.js` tool-use retry loop (same cached persona)
+- `api/chat.js` inbox-scan synthesis (persona-only, no other system)
 
-1. **Instagram and TikTok scraping is brittle.** Both aggressively block
-   serverless IP ranges. Tavily `/extract` works for some but not all.
-   When it fails, the user sees an honest error and a "try another
-   platform or skip" affordance.
-2. **Spotify monthly listener count is not in the public API.** Client
-   credentials flow gives followers and top tracks only. Tavily extract
-   of the artist page can sometimes return monthly listeners as a
-   snippet. Good enough for demo.
-3. **Cross-reference insight quality depends on how much structured data
-   we actually have.** If Tavily extract returns only a bio blurb, the
-   7 patterns can't fire and the Claude fallback produces generic
-   insight. This is acceptable for v1.
-4. **The ladder adds 3 extra screens before Gmail.** Users who bail mid-
-   ladder get less data than users who complete all 5. Acceptable since
-   Rung 0 alone is already better than what we had last week.
+Expected benefit:
+- Voice consistency across all outputs without re-writing rules in
+  every prompt.
+- Token cost savings on high-volume calls. Persona is ~2300 words
+  (~3000 tokens). Cached hit on 2nd+ call in a 5-minute window pays
+  90% off that block.
+- Single place to version and update voice. Edit the .md, every call
+  picks it up on next cold start.
 
-## Build progression
+Content source note: the original prompt had a placeholder
+"[paste the manifesto and tone rules section from the earlier prompt
+here]" but the earlier prompt was cut off before the actual contents.
+I drafted persona.md from patterns I've observed across this entire
+session (no em dashes, Information Parity, StoryBrand, revenue-first,
+handoff principle, stage-name handling, agent architecture, etc).
+**Travis should review and edit when he's back.**
 
-1. ✅ SESSION.md + SETUP_PATH_A.md written (decisions + env var doc).
-2. ✅ Data fetchers: fetchYouTubeChannel (YouTube Data API v3) +
-   fetchSpotifyArtist (client credentials flow) added. Both progressive-
-   enhance on top of the existing Tavily /extract fallback. No key = no
-   crash, just falls through to Tavily.
-3. ✅ Cross-reference insight engine: 7 deterministic patterns
-   implemented (audience asymmetry, output asymmetry, short/long-form
-   fit, platform dominance, theme overlap, voice divergence, scarce-
-   output). Triggered server-side when ≥2 user-vouched findings. Null
-   when no pattern fits — synthesis prompt then asks Claude for an
-   open-ended insight but I didn't implement that fallback tonight
-   (see Known Issues below).
-4. ✅ Synthesis prompt threads the computed insight into Claude as a
-   "MUST include verbatim" block, with structure instructions for the
-   dossier (identity / insight / closing).
-5. ✅ Rung 1-3 UI: new s-rung-ask screen handles all three asks via
-   rungAskCopy(rung, role, previouslyGiven) which returns
-   {headline, sub, placeholder, submitLabel}. Role-aware mapping for
-   musician/influencer/actor/founder/creator/other.
-6. ✅ Post-rung dossier reuses s-dossier with rung-aware headlines and
-   a single "Continue" primary button. Cross-ref insight renders as
-   its own labeled "OBSERVATION" card when present.
-7. ✅ 5-dot progress indicator at the top of s-dossier, s-rung-ask,
-   and s-refresh. Dots reflect current rung (0 = name/crawl done,
-   1-3 = platform asks, 4 = Gmail).
-8. ✅ Rung 4 Gmail copy updated with ladder framing: "Last layer,
-   your inbox. You've shown me who you are publicly, creatively,
-   and professionally..."
-9. ✅ Error handling: 10s hard timeout per rung fetch. On timeout or
-   fetch error, URL is popped from state.userLinks and user is
-   bounced back to the rung ask with honest copy ("X isn't responding
-   right now"). Skip is available at every rung.
-10. ✅ Deploy to prod (cca0e87 → ec29fd0).
-11. ✅ End-to-end test with Travis Atreo (musician) and Anna Akana
-    (creator). 8 calls total, all 200 OK. See Test Results below.
-12. ✅ Fix: parseFollowers regex now accepts both "Followers: 45K"
-    and "45K followers" orderings. Travis Rung 2 insight should now
-    fire after redeploy.
+### Part 3 — Insight engine architecture (scaffolds only, no implementation)
 
-## Test Results (ladder against prod, ec29fd0)
+New files:
+- `docs/INSIGHT_ENGINE.md` — full architecture doc, two engines,
+  pattern taxonomy, data contracts, weekend build checklist, success
+  metric.
+- `lib/insights/cross-platform.js` — stub orchestrator for the
+  onboarding-time insight engine.
+- `lib/insights/inbox-platform-join.js` — stub orchestrator for the
+  post-Gmail insight engine (the high-value one).
+- `lib/insights/patterns/.gitkeep` — directory reserved for the
+  per-pattern modules that get built this weekend.
 
-**Anna Akana (4 rungs, no skips):**
-- Rung 0: tier=high, role=creator, full Wikipedia-fed dossier.
-- Rung 1 (Instagram): tier=high, Rung 0 dossier sharpened with
-  "musician" added to role list, "2024 Edinburgh Festival Fringe"
-  fact pulled from Instagram bio.
-- Rung 2 (YouTube): tier=high, cross-ref insight **fired correctly** —
-  "Your Instagram and YouTube are telling the same story with
-  different tools. The consistency is real." Rendered verbatim as a
-  standalone paragraph in the dossier, between the identity update
-  and the "Better?" closer. Exactly per spec.
-- Rung 3 (IMDb): tier=high, credits listed (Jupiter's Legacy, Let It
-  Snow, Ant-Man). Insight from Rung 2 carries over.
-- **All 4 rungs passed.**
+Trade-off flagged: stubs live in `lib/insights/` not `/api/insights/`
+because we are at the Vercel Hobby 12-function cap. Stubs are
+library modules, not serverless routes. The existing crawl + chat
+endpoints will import them directly. If we upgrade Vercel later we
+can re-home them.
 
-**Travis Atreo (4 rungs, no skips):**
-- Rung 0: tier=high, role=musician, leads with "recording artist with
-  a YouTube channel" + Fanded + Ally Maki + daughter.
-- Rung 1 (Instagram): tier=high, dossier opens first-person, mentions
-  45K Instagram followers, Fanded, @drinknarra.
-- Rung 2 (YouTube): **cross-ref insight returned null** — root cause:
-  Tavily Instagram extract returned "45K followers" (number-first) but
-  the regex only matched "Followers: N" (colon-first). Fixed in this
-  session (patched parseFollowers regex). Dossier was still coherent.
-- Rung 3 (Spotify): dossier leads "I'm a musician with a presence
-  across YouTube, Spotify, and Instagram" but does not surface
-  stream counts or top tracks because SPOTIFY_CLIENT_ID/SECRET are
-  not set in Vercel. Falls back to Tavily /extract which returns
-  generic text. See Known Issues.
+No functional change from these scaffolds yet. The current
+functional cross-reference insight (7 patterns) still lives inline
+in `api/onboard-crawl.js::crossReferenceInsight` (in the
+`feature/path-a-wip` branch). Weekend task: migrate those 7 patterns
+into `lib/insights/patterns/*.js` and extend to 17 total.
 
-## Known issues (for tomorrow)
+## Known issues carried forward
 
-### HIGH — SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set
-Travis Rung 3 landed without stream counts / genres / top tracks
-because Spotify API creds aren't in Vercel env. Fetcher gracefully
-fell back to Tavily which returned minimal data. To fix: provision
-creds from https://developer.spotify.com/dashboard, add to Vercel
-env for Production/Preview/Development, redeploy. See
-SETUP_PATH_A.md. Expected gain: richer Rung 3 dossier for musicians
-including follower count, genres list, and top 5 tracks.
+1. **Tavily is primary, but still goes thin for people without
+   Wikipedia articles.** Travis Atreo himself falls into this bucket.
+   The paste-link Tier-2 flow works (confirmed earlier via Spotify
+   URL). Your first demo-friend should probably be someone with a
+   real Wikipedia article.
+2. **Spotify API credentials not set in Vercel.** Without them, the
+   paste-link flow for Spotify URLs falls back to Tavily /extract.
+   Works but doesn't surface monthly listener counts. See
+   `SETUP_PATH_A.md` for provisioning (still relevant).
+3. **`api/google-auth.js` has uncommitted changes.** Travis's
+   `brain_gmail_accounts` work is in the working tree. Not touched
+   by any of tonight's commits. When he's ready to land that, it's
+   a clean commit on its own.
+4. **Path A rung ladder had bugs.** Preserved on
+   `feature/path-a-wip`. Do NOT attempt to merge straight back; the
+   bugs (YouTube fetcher state, duplicate handles ask,
+   handle-collection-screen-after-Gmail) need fixes identified in
+   previous SESSION.md entries before the ladder ships.
 
-### MEDIUM — YOUTUBE_API_KEY not set
-YouTube fetches also fall back to Tavily /extract. Less critical
-than Spotify because Tavily's extract of YouTube channel pages is
-usable — subscriber counts sometimes come through. To fix: provision
-via https://console.cloud.google.com/apis/library/youtube.googleapis.com
-and add YOUTUBE_API_KEY to Vercel env.
+## What to check tomorrow morning before driving
 
-### MEDIUM — Cross-reference insight doesn't yet use Claude fallback
-The spec says: if none of the 7 deterministic patterns fit, fall back
-to open-ended Claude synthesis for the insight. I implemented the
-7 patterns and the synthesis prompt mentions them, but if they all
-return null, the response simply has cross_reference_insight: null
-and the dossier omits the OBSERVATION paragraph. A proper Claude
-fallback would make a second Claude call with the combined findings
-and "what's the most interesting non-obvious pattern" prompt. Not
-built tonight. 5-10 minutes to add.
+1. Open https://fanded-mawd-chat.vercel.app/ in a fresh incognito.
+2. Type "Travis Atreo" in the name field.
+3. Confirm dossier appears with sources ("wikipedia, github, ...").
+4. Confirm tap-through to Gmail connect screen.
+5. (Optional) Confirm OAuth round-trip + inbox scan.
 
-### LOW — Voice inconsistency across rungs
-Synthesis output flips between first-person ("I'm Travis...") and
-second-person ("Travis Atreo here...") as rungs accumulate. Not a
-bug per se, but it reads inconsistent. Fix: tighten synthesis prompt
-to lock second-person-MAWD-speaking-to-you voice at every rung.
+If any of those fail, send me a screenshot and I'll fix same-session.
 
-### LOW — Rung 3 content drift for Travis
-Adding Spotify at Rung 3 shifted synthesis away from Fanded and
-Ally Maki (strong Rung 0 facts) toward a generic "musician across
-platforms" framing. Not broken, just less rich than Rung 2 was.
-Claude is over-rotating on the newest source. Prompt nudge:
-"Build on previous dossier content, don't replace it."
+## What's queued for the weekend
 
-### LOW — Instagram/TikTok fetch reliability
-Tavily /extract on these platforms is hit or miss because the pages
-are heavily client-rendered. The current flow returns whatever
-snippet comes back and lets Claude work with it. If the platform
-returns nothing usable, the user sees "X isn't responding right
-now" and can skip or try a different platform. No crash.
-
-## What to do when you're back
-
-1. **Paste SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET into Vercel.**
-   Re-test Travis Rung 3, should see "Monthly listeners: 344K"-style
-   detail surface.
-2. **(Optional) Paste YOUTUBE_API_KEY.** Cheaper marginal gain than
-   Spotify but improves cross-ref insight regex hit rate.
-3. **Walk through the ladder once end-to-end on your phone** in a
-   guest session. Check the transitions feel fluid.
-4. **Share https://fanded-mawd-chat.vercel.app/ with the 10 friends.**
-   Ladder is live. Any rung can be skipped. Any platform failure is
-   handled honestly.
-5. **Tomorrow: iterate on prompt voice consistency + Claude fallback
-   for the cross-ref insight** — both are ~10 min fixes I left for
-   daylight.
+1. **Review manifesto draft.** Edit `system/mawd-persona.md` to your
+   taste. It's ~2300 words and covers voice rules, product philosophy,
+   and vocabulary. Anything you change flows to every Claude call.
+2. **Decide Path A fate.** Three options: (a) resume ladder with bug
+   fixes on `feature/path-a-wip`, (b) redesign a simpler ladder
+   (e.g. 1-rung "drop me one link" variant), (c) stay on current
+   tier-aware single-paste-link flow and invest in the insight
+   engine instead.
+3. **Build out `lib/insights/patterns/`.** Per
+   `docs/INSIGHT_ENGINE.md`, migrate the 7 inline patterns, add 4
+   more cross-platform patterns, add 6 inbox-platform-join patterns.
+   This is the thing that makes investors lean in.
+4. **Provision `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET`** on
+   Vercel for the musician demo path.
+5. **(Optional) `/plan-ceo-review` + `/design-consultation` +
+   `/design-review` + `/qa`** — you asked for these in the pivot
+   message. I proposed running them this weekend against the
+   stabilized state, not blocking tonight's demo. Ping me to kick
+   them off when you're back and I'll route each one properly
+   (CEO review is interactive, the others can run semi-autonomously
+   in the background).

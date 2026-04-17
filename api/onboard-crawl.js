@@ -3,6 +3,7 @@
 // weight findings by quality, and have Claude Opus synthesize a warm, factual
 // first-person dossier.
 //
+import { personaSystemBlock } from '../lib/persona.js';
 // POST /api/onboard-crawl
 //   body: { name: string, socials?: {...}, fallbackHint?: string }
 // Response:
@@ -585,6 +586,9 @@ Respond ONLY with valid JSON in this shape:
     body: JSON.stringify({
       model: 'claude-opus-4-6',
       max_tokens: 500,
+      // Persona is a cached system block so voice stays consistent across
+      // all dossier syntheses without re-paying tokens on every call.
+      system: personaSystemBlock(),
       messages: [{ role: 'user', content: userPrompt }]
     })
   });
